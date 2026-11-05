@@ -61,4 +61,5 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   look the same everywhere. Emoji showed as empty boxes where the system's emoji font couldn't be
   drawn, including in the AppImage. Toolbar "＋" and "⎙" symbols became a plain "+" and text for the
   same reason.
-- CI builds Linux only for now; Windows and macOS builds are paused.
+- CI builds Linux only for now; Windows and macOS builds are paused. A newer push cancels the CI run it
+  supersedes.
