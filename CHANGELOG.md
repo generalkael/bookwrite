@@ -23,6 +23,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
 ### Fixed
 - **Save As** now copies snapshots (and imported files) to the new project instead of leaving
   them behind.
+- **Ctrl+N** no longer clashes between New Project and New Document: it is New Project on the
+  start screen and New Document once a project is open.
 
 ### Changed
 - CI builds Linux only for now; Windows and macOS builds are paused.

@@ -122,7 +122,9 @@ ApplicationWindow {
     menuBar: MenuBar {
         Menu {
             title: qsTr("&File")
-            Action { text: qsTr("&New Project…"); shortcut: StandardKey.New; onTriggered: win.newProject() }
+            // Ctrl+N means New Document once a project is open; two actions on one
+            // key would make Qt treat it as ambiguous and fire neither.
+            Action { text: qsTr("&New Project…"); shortcut: win.ws === null ? StandardKey.New : ""; onTriggered: win.newProject() }
             Action { text: qsTr("&Open Project…"); shortcut: StandardKey.Open; onTriggered: win.openProject() }
             Menu {
                 id: recentMenu
