@@ -36,6 +36,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   `Cargo.lock`), as Flathub requires, and the AppStream metadata has screenshots.
 
 ### Fixed
+- **Narrow windows.** The editor header no longer overflows (less-used buttons fold into a ⋯
+  menu), the split editor opens at half the space and fits beside the inspector in a 1000 px
+  window, and narrow pages use smaller margins.
 - **Clicking a document opens the editor.** After a folder had switched to the corkboard (or from
   the outliner), selecting a document in it kept showing the corkboard.
 - **Editor page resizes with the window.** It fills the editor pane by default (⇔ still offers fixed

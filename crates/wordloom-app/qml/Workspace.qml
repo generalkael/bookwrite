@@ -258,6 +258,7 @@ Item {
             }
 
             SplitView {
+                id: centre
                 SplitView.fillWidth: true
                 SplitView.minimumWidth: 300
                 orientation: Qt.Horizontal
@@ -269,7 +270,8 @@ Item {
 
                 StackLayout {
                     SplitView.fillWidth: true
-                    SplitView.minimumWidth: 300
+                    // Small enough that two editors fit side by side in a narrow window.
+                    SplitView.minimumWidth: 180
                     currentIndex: ws.focusMode ? 0 : ["editor", "corkboard", "outliner", "timeline", "relations"].indexOf(ws.viewMode)
 
                     EditorView {
@@ -310,8 +312,9 @@ Item {
                 EditorView {
                     id: splitEditor
                     visible: ws.splitId !== "" && !ws.focusMode
-                    SplitView.preferredWidth: 480
-                    SplitView.minimumWidth: 300
+                    // Opens at half the space; drag the handle to change it.
+                    SplitView.preferredWidth: centre.width / 2
+                    SplitView.minimumWidth: 180
                     secondary: true
                     nodeId: ws.splitId
                     node: ws.splitNode

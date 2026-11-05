@@ -140,8 +140,12 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // Editor header
+        // Editor header. When the pane is narrow, the view buttons (and, narrower
+        // still, the format buttons) fold into a "⋯" menu so the title stays visible.
         Rectangle {
+            id: header
+            readonly property bool compact: width < 680
+            readonly property bool tiny: width < 470
             Layout.fillWidth: true
             Layout.preferredHeight: 34
             visible: !ev.focusMode && ev.node !== null
@@ -151,12 +155,12 @@ Rectangle {
                 anchors.leftMargin: 12
                 anchors.rightMargin: 8
                 KindIcon { visible: ev.node !== null; kind: ev.node ? ev.node.kind : ""; role: ev.node ? (ev.node.role || "") : "" }
-                Label { text: ev.node ? ev.node.title : ""; font.bold: true; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
-                Label { visible: ev.docs.length > 1; text: qsTr("Composite · %1 parts").arg(ev.docs.length); color: Theme.subtext }
+                Label { text: ev.node ? ev.node.title : ""; font.bold: true; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true; Layout.minimumWidth: 40 }
+                Label { visible: ev.docs.length > 1 && !header.compact; text: qsTr("Composite · %1 parts").arg(ev.docs.length); color: Theme.subtext }
                 ToolButton { visible: ev.hasFile; text: qsTr("Open in Default App"); onClicked: fileViewer.openExternally() }
                 // Format bar
                 Repeater {
-                    model: ev.hasFile || ev.preview ? [] : [
+                    model: ev.hasFile || ev.preview || header.tiny ? [] : [
                         { label: "B", tip: qsTr("Bold (Ctrl+B)"), act: () => ev.toggleEmphasis(2), bold: true },
                         { label: "I", tip: qsTr("Italic (Ctrl+I)"), act: () => ev.toggleEmphasis(1), italic: true },
                         { label: "H", tip: qsTr("Heading: none → # → ## → ###"), act: () => ev.cycleHeading(), bold: true },
@@ -175,17 +179,44 @@ Rectangle {
                         ToolTip.text: modelData.tip
                     }
                 }
-                ToolSeparator { visible: !ev.hasFile && !ev.preview }
-                ToolButton { visible: !ev.hasFile; text: qsTr("Preview"); checkable: true; checked: ev.preview; onToggled: { ev.flush(); ev.preview = checked; } ToolTip.visible: hovered; ToolTip.text: qsTr("Render Markdown formatting") }
-                ToolButton { visible: !ev.hasFile; text: qsTr("Typewriter"); checkable: true; checked: ev.typewriter; onToggled: ev.typewriter = checked; ToolTip.visible: hovered; ToolTip.text: qsTr("Keep the current line centred") }
-                ToolButton { visible: !ev.hasFile; text: "A−"; onClicked: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
-                ToolButton { visible: !ev.hasFile; text: "A+"; onClicked: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
+                ToolSeparator { visible: !ev.hasFile && !ev.preview && !header.tiny }
+                ToolButton { visible: !ev.hasFile && !header.compact; text: qsTr("Preview"); checkable: true; checked: ev.preview; onToggled: { ev.flush(); ev.preview = checked; } ToolTip.visible: hovered; ToolTip.text: qsTr("Render Markdown formatting") }
+                ToolButton { visible: !ev.hasFile && !header.compact; text: qsTr("Typewriter"); checkable: true; checked: ev.typewriter; onToggled: ev.typewriter = checked; ToolTip.visible: hovered; ToolTip.text: qsTr("Keep the current line centred") }
+                ToolButton { visible: !ev.hasFile && !header.compact; text: "A−"; onClicked: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
+                ToolButton { visible: !ev.hasFile && !header.compact; text: "A+"; onClicked: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
                 ToolButton {
-                    visible: !ev.hasFile; text: "⇔"
+                    visible: !ev.hasFile && !header.compact; text: "⇔"
                     // Fit → 560 → 740 → 920 → 1100 → Fit
                     onClicked: Theme.pageWidth = Theme.pageWidth === 0 ? 560 : Theme.pageWidth >= 1100 ? 0 : Theme.pageWidth + 180
                     ToolTip.visible: hovered
                     ToolTip.text: Theme.pageWidth === 0 ? qsTr("Page width: fit the window (click for a fixed width)") : qsTr("Page width: %1 px (click to change)").arg(Theme.pageWidth)
+                }
+                ToolButton {
+                    id: moreButton
+                    visible: !ev.hasFile && header.compact
+                    text: "⋯"
+                    focusPolicy: Qt.NoFocus
+                    onClicked: moreMenu.popup(moreButton, 0, moreButton.height)
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("More editor options")
+                    Menu {
+                        id: moreMenu
+                        MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Bold"); enabled: ev.activeArea !== null; onTriggered: ev.toggleEmphasis(2) }
+                        MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Italic"); enabled: ev.activeArea !== null; onTriggered: ev.toggleEmphasis(1) }
+                        MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Heading"); enabled: ev.activeArea !== null; onTriggered: ev.cycleHeading() }
+                        MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Block Quote"); enabled: ev.activeArea !== null; onTriggered: ev.toggleQuote() }
+                        MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Scene Break"); enabled: ev.activeArea !== null; onTriggered: ev.sceneBreak() }
+                        MenuSeparator { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0 }
+                        MenuItem { text: qsTr("Preview"); checkable: true; checked: ev.preview; onTriggered: { ev.flush(); ev.preview = !ev.preview; } }
+                        MenuItem { text: qsTr("Typewriter Scrolling"); checkable: true; checked: ev.typewriter; onTriggered: ev.typewriter = !ev.typewriter }
+                        MenuSeparator {}
+                        MenuItem { text: qsTr("Larger Text"); onTriggered: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
+                        MenuItem { text: qsTr("Smaller Text"); onTriggered: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
+                        MenuItem {
+                            text: Theme.pageWidth === 0 ? qsTr("Page Width: Fit (click to change)") : qsTr("Page Width: %1 px (click to change)").arg(Theme.pageWidth)
+                            onTriggered: Theme.pageWidth = Theme.pageWidth === 0 ? 560 : Theme.pageWidth >= 1100 ? 0 : Theme.pageWidth + 180
+                        }
+                    }
                 }
                 ToolSeparator { visible: ev.secondary }
                 ToolButton { visible: ev.secondary; text: "⇄"; onClicked: ev.swapRequested(); ToolTip.visible: hovered; ToolTip.text: qsTr("Swap with the main editor") }
@@ -221,11 +252,13 @@ Rectangle {
                     id: page
                     // Fills the pane unless a fixed page width is chosen (⇔). In focus
                     // mode "fit" keeps a readable column instead of the whole screen.
-                    width: Theme.pageWidth > 0 ? Math.min(Theme.pageWidth + 96, parent.width - 24)
-                        : ev.focusMode ? Math.min(860 + 96, parent.width - 24)
+                    width: Theme.pageWidth > 0 ? Math.min(Theme.pageWidth + 2 * pad, parent.width - 24)
+                        : ev.focusMode ? Math.min(860 + 2 * pad, parent.width - 24)
                         : parent.width - 24
                     // At least as tall as the visible area, so the paper fills the pane.
-                    height: Math.max(col.height + 96, scroller.height - 48)
+                    height: Math.max(col.height + 2 * pad, scroller.height - 48)
+                    // Inner margin; smaller on a narrow page so the text column isn't a sliver.
+                    readonly property int pad: width < 520 ? 20 : 48
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 24
                     color: Theme.paper
@@ -235,9 +268,9 @@ Rectangle {
 
                     Column {
                         id: col
-                        x: 48
-                        y: 48
-                        width: page.width - 96
+                        x: page.pad
+                        y: page.pad
+                        width: page.width - 2 * page.pad
                         spacing: 6
 
                         Repeater {
