@@ -11,6 +11,8 @@ pub enum Format {
     Markdown,
     Html,
     PlainText,
+    Epub,
+    Docx,
 }
 
 impl Format {
@@ -19,6 +21,8 @@ impl Format {
             Self::Markdown => "md",
             Self::Html => "html",
             Self::PlainText => "txt",
+            Self::Epub => "epub",
+            Self::Docx => "docx",
         }
     }
 }
@@ -54,13 +58,36 @@ impl Default for CompileOptions {
     }
 }
 
-enum Piece<'a> {
+/// One unit of compiled output, before it is rendered to a format.
+pub(crate) enum Piece<'a> {
     Heading(usize, String),
     Body(&'a str),
     Separator,
 }
 
+/// Compile to text. EPUB and DOCX return an HTML preview of their content;
+/// use [`compile_file`] for the file itself.
 pub fn compile(p: &Project, opts: &CompileOptions) -> String {
+    let pieces = pieces(p, opts);
+    match opts.format {
+        Format::Markdown => render_markdown(p, opts, &pieces),
+        Format::PlainText => render_plain(p, opts, &pieces),
+        Format::Html | Format::Epub | Format::Docx => render_html(p, opts, &pieces),
+    }
+}
+
+/// The bytes of the exported file in the chosen format.
+pub fn compile_file(p: &Project, opts: &CompileOptions) -> Vec<u8> {
+    match opts.format {
+        Format::Epub => crate::epub::build(p, opts, &pieces(p, opts)),
+        Format::Docx => crate::docx::build(p, opts, &pieces(p, opts)),
+        _ => compile(p, opts).into_bytes(),
+    }
+}
+
+/// The manuscript (or `opts.root`) flattened into headings, bodies and
+/// separators, honouring "include in compile".
+pub(crate) fn pieces<'a>(p: &'a Project, opts: &CompileOptions) -> Vec<Piece<'a>> {
     let root = opts.root.unwrap_or_else(|| p.root(RootRole::Manuscript));
     let mut pieces = Vec::new();
     let mut chapter = 0;
@@ -69,11 +96,7 @@ pub fn compile(p: &Project, opts: &CompileOptions) -> String {
             collect(p, *c, 1, opts, &mut pieces, &mut chapter);
         }
     }
-    match opts.format {
-        Format::Markdown => render_markdown(p, opts, &pieces),
-        Format::PlainText => render_plain(p, opts, &pieces),
-        Format::Html => render_html(p, opts, &pieces),
-    }
+    pieces
 }
 
 fn collect<'a>(
@@ -176,17 +199,7 @@ fn render_html(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> String {
         ));
     }
     for piece in pieces {
-        match piece {
-            Piece::Heading(d, t) => {
-                let d = (d + 1).min(6);
-                body.push_str(&format!("<h{d}>{}</h{d}>\n", esc(t)));
-            }
-            Piece::Body(b) => body.push_str(&markdown_to_html(b)),
-            Piece::Separator => body.push_str(&format!(
-                "<p class=\"sep\">{}</p>\n",
-                esc(&opts.scene_separator)
-            )),
-        }
+        body.push_str(&piece_html(piece, opts));
     }
     format!(
         "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{}</title>\n<style>\n\
@@ -202,93 +215,147 @@ fn render_html(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> String {
     )
 }
 
-fn esc(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
+/// One piece as HTML (also valid XHTML). Headings start at `<h2>`; `<h1>`
+/// is the book title.
+pub(crate) fn piece_html(piece: &Piece, opts: &CompileOptions) -> String {
+    match piece {
+        Piece::Heading(d, t) => {
+            let d = (d + 1).min(6);
+            format!("<h{d}>{}</h{d}>\n", esc(t))
+        }
+        Piece::Body(b) => markdown_to_html(b),
+        Piece::Separator => format!("<p class=\"sep\">{}</p>\n", esc(&opts.scene_separator)),
+    }
 }
 
-/// Inline emphasis: `***x***`, `**x**`, `*x*`, `_x_`.
-fn inline_html(s: &str) -> String {
-    let s = esc(s);
-    let mut out = String::with_capacity(s.len());
+/// Escape for HTML and XML. Control characters (other than tab and
+/// newlines) are dropped: XML forbids them.
+pub(crate) fn esc(s: &str) -> String {
+    s.replace(
+        |c: char| c.is_control() && !matches!(c, '\t' | '\n' | '\r'),
+        "",
+    )
+    .replace('&', "&amp;")
+    .replace('<', "&lt;")
+    .replace('>', "&gt;")
+    .replace('"', "&quot;")
+}
+
+/// A run of text with the same emphasis.
+#[derive(Debug, PartialEq)]
+pub(crate) struct Span {
+    pub text: String,
+    pub bold: bool,
+    pub italic: bool,
+}
+
+/// Inline emphasis: `***x***`, `**x**`, `*x*`, `_x_`. Unclosed markers run
+/// to the end of the paragraph; underscores inside words are literal.
+pub(crate) fn spans(s: &str) -> Vec<Span> {
     let chars: Vec<char> = s.chars().collect();
+    let mut out: Vec<Span> = Vec::new();
+    // Open markers, innermost last: 1 = italic, 2 = bold, 3 = both.
+    let mut open: Vec<usize> = Vec::new();
+    let mut text = String::new();
+    let flush = |text: &mut String, open: &[usize], out: &mut Vec<Span>| {
+        if !text.is_empty() {
+            out.push(Span {
+                text: std::mem::take(text),
+                bold: open.iter().any(|r| *r >= 2),
+                italic: open.iter().any(|r| *r != 2),
+            });
+        }
+    };
     let mut i = 0;
-    let mut open: Vec<&str> = Vec::new();
     while i < chars.len() {
         let c = chars[i];
         if c == '*' || c == '_' {
             let run = chars[i..].iter().take_while(|x| **x == c).count().min(3);
-            let tag = match run {
-                3 => "strong><em",
-                2 => "strong",
-                _ => "em",
-            };
-            let close = match run {
-                3 => "em></strong",
-                t => {
-                    if t == 2 {
-                        "strong"
-                    } else {
-                        "em"
-                    }
-                }
-            };
-            // Underscores inside words are literal.
             let inside_word = c == '_'
                 && i > 0
                 && chars[i - 1].is_alphanumeric()
                 && chars.get(i + run).is_some_and(|n| n.is_alphanumeric());
             if inside_word {
-                out.push(c);
+                text.push(c);
                 i += 1;
                 continue;
             }
-            if open.last() == Some(&tag) {
+            flush(&mut text, &open, &mut out);
+            if open.last() == Some(&run) {
                 open.pop();
-                out.push_str(&format!("</{close}>"));
             } else {
-                open.push(tag);
-                out.push_str(&format!("<{tag}>"));
+                open.push(run);
             }
             i += run;
         } else {
-            out.push(c);
+            text.push(c);
             i += 1;
         }
     }
-    while let Some(t) = open.pop() {
-        let close = if t == "strong><em" { "em></strong" } else { t };
-        out.push_str(&format!("</{close}>"));
+    flush(&mut text, &open, &mut out);
+    out
+}
+
+fn inline_html(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for sp in spans(s) {
+        match (sp.bold, sp.italic) {
+            (true, true) => out.push_str(&format!("<strong><em>{}</em></strong>", esc(&sp.text))),
+            (true, false) => out.push_str(&format!("<strong>{}</strong>", esc(&sp.text))),
+            (false, true) => out.push_str(&format!("<em>{}</em>", esc(&sp.text))),
+            (false, false) => out.push_str(&esc(&sp.text)),
+        }
     }
     out
 }
 
-/// A small Markdown subset suitable for prose: paragraphs, headings,
-/// blockquotes, horizontal rules and emphasis.
-pub fn markdown_to_html(md: &str) -> String {
-    let mut out = String::new();
+/// A block of a document body: the small Markdown subset suited to prose.
+pub(crate) enum Block<'a> {
+    /// `#` level (1 = `#`) and text.
+    Heading(usize, &'a str),
+    /// A horizontal rule (`***`, `---`), shown as a scene break.
+    Rule,
+    Quote(String),
+    Para(String),
+}
+
+pub(crate) fn blocks(md: &str) -> Vec<Block<'_>> {
+    let mut out = Vec::new();
     for block in md.split("\n\n").map(str::trim).filter(|b| !b.is_empty()) {
         if let Some(rest) = block.strip_prefix('#') {
             let level = 1 + rest.chars().take_while(|c| *c == '#').count();
-            let text = rest.trim_start_matches('#').trim();
-            let l = (level + 1).min(6);
-            out.push_str(&format!("<h{l}>{}</h{l}>\n", inline_html(text)));
+            out.push(Block::Heading(level, rest.trim_start_matches('#').trim()));
         } else if block.chars().all(|c| matches!(c, '*' | '-' | '_' | ' ')) && block.len() >= 3 {
-            out.push_str("<p class=\"sep\">* * *</p>\n");
+            out.push(Block::Rule);
         } else if block.starts_with('>') {
             let inner: Vec<&str> = block
                 .lines()
                 .map(|l| l.trim_start_matches('>').trim())
                 .collect();
-            out.push_str(&format!(
-                "<blockquote><p>{}</p></blockquote>\n",
-                inline_html(&inner.join(" "))
-            ));
+            out.push(Block::Quote(inner.join(" ")));
         } else {
             let joined: Vec<&str> = block.lines().map(str::trim).collect();
-            out.push_str(&format!("<p>{}</p>\n", inline_html(&joined.join(" "))));
+            out.push(Block::Para(joined.join(" ")));
+        }
+    }
+    out
+}
+
+/// Paragraphs, headings, blockquotes, horizontal rules and emphasis.
+pub fn markdown_to_html(md: &str) -> String {
+    let mut out = String::new();
+    for b in blocks(md) {
+        match b {
+            Block::Heading(level, text) => {
+                let l = (level + 1).min(6);
+                out.push_str(&format!("<h{l}>{}</h{l}>\n", inline_html(text)));
+            }
+            Block::Rule => out.push_str("<p class=\"sep\">* * *</p>\n"),
+            Block::Quote(t) => out.push_str(&format!(
+                "<blockquote><p>{}</p></blockquote>\n",
+                inline_html(&t)
+            )),
+            Block::Para(t) => out.push_str(&format!("<p>{}</p>\n", inline_html(&t))),
         }
     }
     out

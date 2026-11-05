@@ -13,6 +13,8 @@
 pub mod api;
 pub mod compile;
 pub mod demo;
+mod docx;
+mod epub;
 pub mod history;
 pub mod model;
 pub mod recent;
@@ -21,6 +23,7 @@ pub mod session;
 pub mod stats;
 pub mod storage;
 pub mod timeline;
+mod zip;
 
 pub use model::{FlatRow, Label, Node, NodeId, NodeKind, Project, RootRole, Status};
 pub use session::Session;

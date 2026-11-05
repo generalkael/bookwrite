@@ -526,7 +526,7 @@ impl Session {
         if path.extension().is_none() {
             path.set_extension(opts.format.extension());
         }
-        std::fs::write(&path, compile::compile(&self.project, &opts))?;
+        std::fs::write(&path, compile::compile_file(&self.project, &opts))?;
         Ok(path)
     }
 

@@ -23,7 +23,7 @@ version that supports the macOS 26 SDK.
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. |
 | **Search & replace** | Searches titles, text, synopses, notes and keywords across the project, with snippets. Replace-all works across every document. |
-| **Compile** | Exports the manuscript to Markdown, print-styled HTML, or plain text, with a live preview. Options cover the title page, chapter headings and numbering, scene headings, and the scene separator. |
+| **Compile** | Exports the manuscript to EPUB (with a table of contents, one file per chapter), DOCX (named styles, chapters on new pages), Markdown, print-styled HTML, or plain text, with a live preview. No Pandoc or Calibre needed. Options cover the title page, chapter headings and numbering, scene headings, and the scene separator. |
 | **Statistics & targets** | Word counts for the manuscript and the whole project, words written today, writing streak, reading time, a 30-day history chart, a manuscript target with deadline (and the words per day needed to hit it), and a daily session target. |
 | **Labels & statuses** | Editable lists with colours. |
 | **Themes** | Follows the system light/dark setting, or you can force either one. |
@@ -101,6 +101,9 @@ crates/
                    cycle rejection, cascade, conflict detection, chronology
     storage.rs     bundle format, atomic writes, backups, snapshots
     compile.rs     manuscript → Markdown / HTML / plain text
+    epub.rs        EPUB 3 package
+    docx.rs        Word document
+    zip.rs         minimal zip writer for EPUB and DOCX
     search.rs      search & case-insensitive replace
     stats.rs       word counting, targets, daily history, streaks
     history.rs     project-wide undo/redo (structure snapshots + text diffs)
@@ -122,7 +125,6 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 ## Roadmap
 
-- EPUB and DOCX export built in (today: HTML, then Pandoc or Calibre)
 - Rich-text styling (today: plain text with Markdown)
 - Side-by-side comparison of snapshots
 - Split editor (two documents at once), and an image/PDF viewer for research files

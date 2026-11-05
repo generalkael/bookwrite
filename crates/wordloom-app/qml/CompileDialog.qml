@@ -4,7 +4,8 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 import com.wordloom.app
 
-// Compile the manuscript to Markdown, HTML or plain text with a live preview.
+// Compile the manuscript to Markdown, HTML, plain text, EPUB or DOCX with a
+// live preview.
 Dialog {
     id: dlg
     title: qsTr("Compile Manuscript")
@@ -13,7 +14,11 @@ Dialog {
     height: Math.min(720, parent ? parent.height - 60 : 720)
     standardButtons: Dialog.Close
 
-    readonly property var formats: ["markdown", "html", "plain_text"]
+    readonly property var formats: ["markdown", "html", "plain_text", "epub", "docx"]
+    readonly property var suffixes: ["md", "html", "txt", "epub", "docx"]
+    readonly property var filters: ["Markdown (*.md)", "HTML (*.html)", "Text (*.txt)", "EPUB e-book (*.epub)", "Word document (*.docx)"]
+    // EPUB and DOCX preview as formatted text; the others show their source.
+    readonly property bool richPreview: formatBox.currentIndex >= 3
     function options() {
         return {
             format: formats[formatBox.currentIndex],
@@ -35,7 +40,7 @@ Dialog {
             Layout.fillHeight: true
             spacing: 6
             Label { text: qsTr("Format"); font.bold: true }
-            ComboBox { id: formatBox; Layout.fillWidth: true; model: ["Markdown (.md)", "HTML / e-book ready (.html)", "Plain text (.txt)"]; onActivated: dlg.refresh() }
+            ComboBox { id: formatBox; Layout.fillWidth: true; model: ["Markdown (.md)", "HTML, print-styled (.html)", "Plain text (.txt)", "EPUB e-book (.epub)", "Word document (.docx)"]; onActivated: dlg.refresh() }
             CheckBox { id: titlePage; text: qsTr("Title page"); checked: true; onToggled: dlg.refresh() }
             CheckBox { id: folderTitles; text: qsTr("Folder titles as chapter headings"); checked: true; onToggled: dlg.refresh() }
             CheckBox { id: numberChapters; text: qsTr("Number chapters"); onToggled: dlg.refresh() }
@@ -47,7 +52,9 @@ Dialog {
                 wrapMode: Text.Wrap
                 color: Theme.subtext
                 font.pixelSize: 11
-                text: qsTr("Only items with “Include in compile” checked are exported. HTML output is styled for print and converts cleanly to EPUB, DOCX or PDF with tools such as Pandoc or Calibre.")
+                text: dlg.richPreview
+                    ? qsTr("Only items with “Include in compile” checked are exported. Each chapter starts a new page (DOCX) or file (EPUB), and the e-book gets a table of contents. DOCX uses named styles, so you can restyle the whole book in Word.")
+                    : qsTr("Only items with “Include in compile” checked are exported. HTML output is styled for print; use Print to PDF in a browser for a PDF.")
             }
             Item { Layout.fillHeight: true }
             Button { text: qsTr("Export…"); highlighted: true; Layout.fillWidth: true; onClicked: saveDialog.open() }
@@ -59,7 +66,10 @@ Dialog {
                 id: preview
                 readOnly: true
                 wrapMode: TextEdit.Wrap
-                font.family: "monospace"
+                textFormat: dlg.richPreview ? TextEdit.RichText : TextEdit.PlainText
+                font.family: dlg.richPreview ? "serif" : "monospace"
+                leftPadding: dlg.richPreview ? 24 : 6
+                rightPadding: leftPadding
                 background: Rectangle { color: Theme.base; border.color: Theme.border }
             }
         }
@@ -69,8 +79,8 @@ Dialog {
         id: saveDialog
         fileMode: FileDialog.SaveFile
         title: qsTr("Export manuscript")
-        defaultSuffix: ["md", "html", "txt"][formatBox.currentIndex]
-        nameFilters: [["Markdown (*.md)"], ["HTML (*.html)"], ["Text (*.txt)"]][formatBox.currentIndex]
+        defaultSuffix: dlg.suffixes[formatBox.currentIndex]
+        nameFilters: [dlg.filters[formatBox.currentIndex]]
         currentFile: "file:///" + (Wordloom.title || "manuscript") + "." + defaultSuffix
         onAccepted: {
             const p = Api.call("export", selectedFile.toString(), dlg.options());
