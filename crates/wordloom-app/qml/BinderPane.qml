@@ -143,6 +143,26 @@ Rectangle {
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
+                    // Progress toward this item's word target.
+                    Rectangle {
+                        id: targetBar
+                        visible: !!row.modelData.target_words && pane.renamingId !== row.modelData.id
+                        readonly property real p: row.modelData.target_words ? Math.min(1, (row.modelData.words || 0) / row.modelData.target_words) : 0
+                        Layout.preferredWidth: 34
+                        Layout.preferredHeight: 5
+                        Layout.rightMargin: 4
+                        radius: 2
+                        color: Theme.border
+                        Rectangle {
+                            width: parent.width * targetBar.p
+                            height: parent.height
+                            radius: 2
+                            color: targetBar.p >= 1 ? Theme.ok : Theme.accent
+                        }
+                        HoverHandler { id: targetHover }
+                        ToolTip.visible: targetHover.hovered
+                        ToolTip.text: row.modelData.target_words ? qsTr("%1 of %2 words (%3%)").arg(Api.fmtNumber(row.modelData.words || 0)).arg(Api.fmtNumber(row.modelData.target_words)).arg(Math.round(targetBar.p * 100)) : ""
+                    }
                     TextField {
                         id: renameField
                         visible: pane.renamingId === row.modelData.id

@@ -237,6 +237,10 @@ pub struct FlatRow {
     pub has_children: bool,
     pub expanded: bool,
     pub label_color: Option<String>,
+    /// Word target, and words so far (this item and everything inside it);
+    /// `words` is only filled in when there is a target.
+    pub target_words: Option<u32>,
+    pub words: Option<usize>,
 }
 
 pub const FORMAT_VERSION: u32 = 1;
@@ -622,6 +626,8 @@ impl Project {
             has_children: !n.children.is_empty(),
             expanded: n.expanded,
             label_color: n.label.and_then(|l| self.label(l)).map(|l| l.color.clone()),
+            target_words: n.target_words,
+            words: n.target_words.map(|_| self.total_words(id)),
         });
         if n.expanded {
             for c in &n.children {
