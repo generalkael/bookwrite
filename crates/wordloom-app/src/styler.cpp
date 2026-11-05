@@ -4,6 +4,7 @@
 #include <QTextCharFormat>
 #include <QTextDocument>
 #include <QtQml/qqml.h>
+#include <algorithm>
 #include <vector>
 
 MarkdownHighlighter::MarkdownHighlighter(QTextDocument *doc)
@@ -11,10 +12,41 @@ MarkdownHighlighter::MarkdownHighlighter(QTextDocument *doc)
 {
 }
 
+// Emphasis left open at the end of a line carries on to the next line of
+// the same paragraph (compile joins a paragraph's lines). The open runs are
+// packed into the block state, 2 bits each, innermost last; a blank line
+// ends the paragraph and resets it.
+static int packOpen(const std::vector<int> &runs)
+{
+    int state = 0;
+    for (size_t i = 0; i < runs.size() && i < 8; ++i)
+        state |= (runs[i] & 3) << (2 * i);
+    return state;
+}
+
+static std::vector<int> unpackOpen(int state)
+{
+    std::vector<int> runs;
+    if (state <= 0)
+        return runs;
+    for (int i = 0; i < 8; ++i) {
+        const int r = (state >> (2 * i)) & 3;
+        if (!r)
+            break;
+        runs.push_back(r);
+    }
+    return runs;
+}
+
 void MarkdownHighlighter::highlightBlock(const QString &text)
 {
     QTextCharFormat mark;
     mark.setForeground(markColor);
+    if (text.trimmed().isEmpty()) {
+        setCurrentBlockState(0);
+        return;
+    }
+    const std::vector<int> carried = unpackOpen(previousBlockState());
 
     // Scene break: a line of only *, - or _ (at least three), as in compile.
     static const QRegularExpression rule(QStringLiteral("^\\s*([*_-]\\s*){3,}$"));
@@ -22,6 +54,7 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         QTextCharFormat f = mark;
         f.setFontWeight(QFont::Bold);
         setFormat(0, int(text.size()), f);
+        setCurrentBlockState(0);
         return;
     }
 
@@ -59,6 +92,9 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
     std::vector<char> bold(n, 0), italic(n, 0), marker(n, 0);
     struct Open { int run; int pos; };
     std::vector<Open> open;
+    // Runs still open from earlier lines start "before" this one.
+    for (int r : carried)
+        open.push_back({ r, body - r });
     for (int i = body; i < n;) {
         const QChar c = text[i];
         if (c != QLatin1Char('*') && c != QLatin1Char('_')) {
@@ -79,7 +115,7 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         if (!open.empty() && open.back().run == run) {
             const Open o = open.back();
             open.pop_back();
-            for (int k = o.pos + o.run; k < i; ++k) {
+            for (int k = std::max(body, o.pos + o.run); k < i; ++k) {
                 if (run >= 2) bold[k] = 1;
                 if (run != 2) italic[k] = 1;
             }
@@ -88,11 +124,15 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         }
         i += run;
     }
-    for (const Open &o : open)
-        for (int k = o.pos + o.run; k < n; ++k) {
+    std::vector<int> stillOpen;
+    for (const Open &o : open) {
+        stillOpen.push_back(o.run);
+        for (int k = std::max(body, o.pos + o.run); k < n; ++k) {
             if (o.run >= 2) bold[k] = 1;
             if (o.run != 2) italic[k] = 1;
         }
+    }
+    setCurrentBlockState(packOpen(stillOpen));
 
     for (int i = body; i < n;) {
         int j = i;
