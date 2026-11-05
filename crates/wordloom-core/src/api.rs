@@ -281,7 +281,8 @@ impl App {
                 self.opened(s)?
             }
             "openProject" => {
-                let s = Session::open(&to_path(a.str(0)))?;
+                // Second argument true: open even if another Wordloom has it.
+                let s = Session::open_with(&to_path(a.str(0)), a.bool(1))?;
                 self.opened(s)?
             }
             // After "openProject" failed with a damaged project.json.
@@ -487,6 +488,7 @@ fn err_reply(e: &Error) -> Reply {
             backup: Some(_), ..
         } => "damaged",
         Error::Damaged { .. } => "damaged_no_backup",
+        Error::Locked(_) => "locked",
         _ => "",
     };
     Reply {

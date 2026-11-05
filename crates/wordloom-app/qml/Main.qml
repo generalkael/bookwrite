@@ -44,8 +44,9 @@ ApplicationWindow {
     function openProject() { openDialog.open(); }
     function openPath(path) {
         if (Wordloom.projectOpen) Api.call("close");
-        if (Api.call("openProject", path) === undefined && Api.lastErrorKind === "damaged")
-            restoreDialog.offer(path);
+        if (Api.call("openProject", path) !== undefined) return;
+        if (Api.lastErrorKind === "damaged") restoreDialog.offer(path);
+        else if (Api.lastErrorKind === "locked") lockedDialog.offer(path);
     }
     function saveNow() {
         if (!Wordloom.projectOpen) return;
@@ -407,6 +408,27 @@ ApplicationWindow {
         nameFilters: [qsTr("Images and PDFs (*.png *.jpg *.jpeg *.gif *.webp *.bmp *.svg *.pdf)"), qsTr("All files (*)")]
         onAccepted: if (win.ws) win.ws.importFiles(selectedFiles)
     }
+    // The project is open in another Wordloom (window or computer).
+    Dialog {
+        id: lockedDialog
+        title: qsTr("Project already open")
+        modal: true
+        anchors.centerIn: parent
+        width: 480
+        property string path: ""
+        function offer(p) { path = p; open(); }
+        Label {
+            width: parent.width
+            wrapMode: Text.Wrap
+            text: qsTr("This project is open in another Wordloom, in another window or on another computer that shares the folder. If both copies keep working, each will overwrite the other's changes when it saves.\n\nClose it there first. Open it here anyway only if that copy has crashed or you're sure it's closed.")
+        }
+        footer: DialogButtonBox {
+            Button { text: qsTr("Cancel"); DialogButtonBox.buttonRole: DialogButtonBox.RejectRole }
+            Button { text: qsTr("Open Anyway"); DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole }
+        }
+        onAccepted: Api.call("openProject", path, true)
+    }
+
     // Offered when project.json is damaged and a backup exists.
     Dialog {
         id: restoreDialog

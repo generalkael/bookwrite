@@ -22,6 +22,12 @@ pub struct Session {
     pub history: History,
 }
 
+impl Drop for Session {
+    fn drop(&mut self) {
+        storage::remove_lock(&self.dir);
+    }
+}
+
 pub fn parse_id(s: &str) -> Result<Uuid> {
     Uuid::parse_str(s.trim()).map_err(|_| Error::Invalid(format!("bad id {s:?}")))
 }
@@ -43,6 +49,7 @@ impl Session {
         }
         let project = Project::new(title, author);
         storage::save(&project, &dir)?;
+        storage::write_lock(&dir)?;
         Ok(Self {
             project,
             dir,
@@ -52,8 +59,20 @@ impl Session {
     }
 
     pub fn open(path: &Path) -> Result<Self> {
+        Self::open_with(path, false)
+    }
+
+    /// Open a project; unless `force`, refuse with [`Error::Locked`] when
+    /// another Wordloom has it open.
+    pub fn open_with(path: &Path, force: bool) -> Result<Self> {
         let dir = storage::bundle_dir(path);
+        if !force {
+            if let Some(holder) = storage::lock_holder(&dir) {
+                return Err(Error::Locked(holder));
+            }
+        }
         let project = storage::load(&dir)?;
+        storage::write_lock(&dir)?;
         Ok(Self {
             project,
             dir,
@@ -65,6 +84,7 @@ impl Session {
     pub fn save(&mut self) -> Result<()> {
         self.note_totals();
         storage::save(&self.project, &self.dir)?;
+        storage::write_lock(&self.dir)?; // still here
         self.dirty = false;
         Ok(())
     }
@@ -136,6 +156,8 @@ impl Session {
         self.project.meta.title = title.to_string();
         storage::save(&self.project, &dir)?;
         storage::copy_assets(&self.dir, &dir)?;
+        storage::remove_lock(&self.dir);
+        storage::write_lock(&dir)?;
         self.dir = dir;
         self.dirty = false;
         Ok(())

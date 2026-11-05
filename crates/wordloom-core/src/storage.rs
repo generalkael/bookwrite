@@ -74,6 +74,87 @@ fn write_atomic(path: &Path, data: &[u8]) -> Result<()> {
 
 pub const FILES_DIR: &str = "files";
 
+/// Marks a project as open, so a second Wordloom (another window, or
+/// another computer sharing the folder) can warn before both write to it.
+pub const LOCK_FILE: &str = ".wordloom.lock";
+/// A lock not refreshed for this long (by saving) is treated as stale.
+const LOCK_STALE_SECS: i64 = 10 * 60;
+
+#[derive(Serialize, Deserialize)]
+struct LockInfo {
+    pid: u32,
+    host: String,
+    at: DateTime<Utc>,
+}
+
+fn host_name() -> String {
+    fs::read_to_string("/proc/sys/kernel/hostname")
+        .ok()
+        .or_else(|| std::env::var("HOSTNAME").ok())
+        .or_else(|| std::env::var("COMPUTERNAME").ok())
+        .map(|h| h.trim().to_string())
+        .filter(|h| !h.is_empty())
+        .unwrap_or_else(|| "this computer".into())
+}
+
+/// Who else has the project in `dir` open, if anyone ("laptop, 2 minutes
+/// ago"). Our own lock, and locks left by a crash, don't count.
+pub fn lock_holder(dir: &Path) -> Option<String> {
+    let info: LockInfo = serde_json::from_slice(&fs::read(dir.join(LOCK_FILE)).ok()?).ok()?;
+    let here = host_name();
+    if info.host == here && info.pid == std::process::id() {
+        return None;
+    }
+    let age = (Utc::now() - info.at).num_seconds();
+    let proc_dir = Path::new("/proc");
+    let alive = if info.host == here && proc_dir.is_dir() {
+        // Same computer: is that process still running Wordloom?
+        fs::read(proc_dir.join(info.pid.to_string()).join("cmdline"))
+            .map(|c| {
+                String::from_utf8_lossy(&c)
+                    .to_lowercase()
+                    .contains("wordloom")
+            })
+            .unwrap_or(false)
+    } else {
+        age < LOCK_STALE_SECS
+    };
+    alive.then(|| {
+        let when = if age < 90 {
+            "just now".to_string()
+        } else {
+            format!("{} minutes ago", age / 60)
+        };
+        if info.host == here {
+            format!("another window on this computer, active {when}")
+        } else {
+            format!("on {}, active {when}", info.host)
+        }
+    })
+}
+
+/// Take (or refresh) the lock for this process.
+pub fn write_lock(dir: &Path) -> Result<()> {
+    let info = LockInfo {
+        pid: std::process::id(),
+        host: host_name(),
+        at: Utc::now(),
+    };
+    write_atomic(&dir.join(LOCK_FILE), &serde_json::to_vec(&info)?)
+}
+
+/// Remove the lock if it is ours.
+pub fn remove_lock(dir: &Path) {
+    let path = dir.join(LOCK_FILE);
+    if let Ok(info) = fs::read(&path)
+        .and_then(|b| serde_json::from_slice::<LockInfo>(&b).map_err(std::io::Error::other))
+    {
+        if info.pid == std::process::id() && info.host == host_name() {
+            let _ = fs::remove_file(path);
+        }
+    }
+}
+
 /// Copy `src` into the bundle's `files/` directory under a fresh name and
 /// return that name. Imported files are never deleted by Wordloom, so undo,
 /// duplicates and backups can always refer back to them.
@@ -359,6 +440,43 @@ mod tests {
         save(&p, &dir).unwrap();
         assert!(!content_path(&dir, scene).exists());
         assert_eq!(fs::read_dir(dir.join("backups")).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn project_lock() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        assert_eq!(lock_holder(dir), None);
+        // Our own lock never blocks us.
+        write_lock(dir).unwrap();
+        assert_eq!(lock_holder(dir), None);
+        // Another computer, recently active: blocks; long ago: stale.
+        let other = |host: &str, mins: i64| {
+            let info = LockInfo {
+                pid: 1,
+                host: host.into(),
+                at: Utc::now() - chrono::Duration::minutes(mins),
+            };
+            fs::write(dir.join(LOCK_FILE), serde_json::to_vec(&info).unwrap()).unwrap();
+        };
+        other("laptop", 2);
+        assert!(lock_holder(dir).unwrap().contains("laptop"));
+        other("laptop", 60);
+        assert_eq!(lock_holder(dir), None);
+        // This computer, but a process that isn't running (crashed): stale.
+        let info = LockInfo {
+            pid: u32::MAX - 7,
+            host: host_name(),
+            at: Utc::now(),
+        };
+        fs::write(dir.join(LOCK_FILE), serde_json::to_vec(&info).unwrap()).unwrap();
+        assert_eq!(lock_holder(dir), None);
+        // remove_lock only removes ours.
+        remove_lock(dir);
+        assert!(dir.join(LOCK_FILE).exists());
+        write_lock(dir).unwrap();
+        remove_lock(dir);
+        assert!(!dir.join(LOCK_FILE).exists());
     }
 
     #[test]

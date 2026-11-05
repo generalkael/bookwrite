@@ -166,6 +166,7 @@ Title.wordloom/
   snapshots/<uuid>.json saved versions of a document
   files/<uuid>.<ext>    imported research files (images, PDFs, …), copied in unchanged
   backups/              rolling copies of project.json (one per 10 minutes, last 20 kept)
+  .wordloom.lock        present while the project is open (add it to .gitignore if you use git)
 ```
 
 Imported files are not deleted when their item is trashed or the trash is emptied, so undo and
@@ -176,6 +177,11 @@ Your preferences (light/dark, editor font size, page width, styled Markdown, whi
 shown, timeline lanes and the window size) are remembered between runs in
 `~/.config/Wordloom/Wordloom.conf` (in the Flatpak, under `~/.var/app/io.github.generalkael.Wordloom/`).
 They are per user, not stored in projects.
+
+If you open a project that is already open in another Wordloom, in another window or on
+another computer sharing the folder through Dropbox or Syncthing, Wordloom warns you first,
+because two copies saving in turn would overwrite each other's changes. A lock left behind by a
+crash is ignored.
 
 If `project.json` is ever damaged (cut short, or a bad hand edit), opening the project offers
 **Restore from Backup**: Wordloom puts the newest backup that loads in its place, keeps the damaged

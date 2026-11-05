@@ -45,6 +45,9 @@ pub enum Error {
     NoSuchNode(NodeId),
     #[error("{0}")]
     Invalid(String),
+    /// Another Wordloom seems to have the project open (who / when).
+    #[error("This project is already open in another Wordloom ({0}). Opening it twice can let one copy overwrite the other's work.")]
+    Locked(String),
     /// project.json can't be read; `backup` is the newest backup, if any.
     #[error("{reason}")]
     Damaged {
