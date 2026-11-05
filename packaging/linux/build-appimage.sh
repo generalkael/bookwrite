@@ -50,8 +50,8 @@ export OUTPUT="Wordloom-x86_64.AppImage"
 "$tools/linuxdeploy-x86_64.AppImage" \
     --appdir "$appdir" \
     --executable target/release/wordloom \
-    --desktop-file "$here/wordloom.desktop" \
-    --icon-file "$here/wordloom.svg" \
+    --desktop-file "$here/io.github.generalkael.Wordloom.desktop" \
+    --icon-file "$here/io.github.generalkael.Wordloom.svg" \
     --plugin qt \
     --output appimage
 

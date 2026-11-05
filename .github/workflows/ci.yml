@@ -68,3 +68,34 @@ jobs:
         with:
           name: appimage-screenshots
           path: ${{ runner.temp }}/shots
+
+  # Flatpak bundle on the KDE runtime, smoke-tested inside the sandbox.
+  flatpak:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-24.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: Wordloom.flatpak
+          manifest-path: packaging/flatpak/io.github.generalkael.Wordloom.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+      - name: Smoke test (screenshot tour inside the sandbox)
+        run: |
+          flatpak install --user -y --noninteractive Wordloom.flatpak
+          mkdir -p "$HOME/wl-sample" "$HOME/wl-shots"
+          timeout 300 flatpak run --env=QT_QPA_PLATFORM=offscreen io.github.generalkael.Wordloom \
+            --sample="$HOME/wl-sample" --screenshots="$HOME/wl-shots"
+          ls "$HOME/wl-shots"
+          test "$(ls "$HOME/wl-shots" | wc -l)" -ge 15
+          cp -r "$HOME/wl-shots" flatpak-shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flatpak-screenshots
+          path: flatpak-shots
+

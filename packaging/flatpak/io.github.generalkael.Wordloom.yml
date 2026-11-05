@@ -1,0 +1,46 @@
+# Flatpak build of Wordloom on the KDE runtime. Qt PDF comes from the Qt
+# WebEngine base app. Build locally with:
+#   flatpak-builder --user --install --install-deps-from=flathub --force-clean \
+#       build-dir packaging/flatpak/io.github.generalkael.Wordloom.yml
+#
+# The build downloads crates from crates.io (build-args below), which suits a
+# self-distributed bundle; a Flathub submission would vendor them instead.
+id: io.github.generalkael.Wordloom
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+base: io.qt.qtwebengine.BaseApp
+base-version: '6.11'
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: wordloom
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Projects are ordinary folders (default ~/Documents/Wordloom) reopened by
+  # path from the recent list, so the app needs to reach them directly.
+  - --filesystem=home
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  build-args:
+    - --share=network
+  env:
+    CARGO_HOME: /run/build/wordloom/cargo
+modules:
+  - name: wordloom
+    buildsystem: simple
+    build-commands:
+      - cargo build --release --locked -p wordloom
+      - install -Dm755 target/release/wordloom /app/bin/wordloom
+      - install -Dm644 packaging/linux/io.github.generalkael.Wordloom.desktop -t /app/share/applications
+      - install -Dm644 packaging/linux/io.github.generalkael.Wordloom.svg -t /app/share/icons/hicolor/scalable/apps
+      - install -Dm644 packaging/linux/io.github.generalkael.Wordloom.metainfo.xml -t /app/share/metainfo
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - .appimage-tools
+          - .flatpak-builder

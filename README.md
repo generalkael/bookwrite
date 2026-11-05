@@ -53,18 +53,30 @@ version that supports the macOS 26 SDK.
 
 ## Installing on Linux
 
-Every push to `main` builds an AppImage, a single file that runs on most distributions from
-Ubuntu 22.04 on. Download `Wordloom-x86_64.AppImage` from the artifacts of the latest
-[CI run](https://github.com/generalkael/wordloom/actions/workflows/ci.yml), then:
+Every push to `main` builds two packages. Download them from the artifacts of the latest
+[CI run](https://github.com/generalkael/wordloom/actions/workflows/ci.yml).
+
+**AppImage:** a single file that runs on most distributions from Ubuntu 22.04 on. It bundles Qt,
+including the PDF viewer and Wayland and X11 support.
 
 ```sh
 chmod +x Wordloom-x86_64.AppImage
 ./Wordloom-x86_64.AppImage
 ```
 
-It bundles Qt, including the PDF viewer and Wayland and X11 support. To build one yourself, run
-`packaging/linux/build-appimage.sh` (it downloads linuxdeploy into `.appimage-tools/`). The
-desktop entry, icon and AppStream metadata are in `packaging/linux/`.
+**Flatpak:** runs on the KDE runtime from Flathub, which `flatpak` installs for you, and shows up
+in your app launcher. The sandbox can read and write your home folder, where projects live.
+
+```sh
+flatpak install --user Wordloom.flatpak
+flatpak run io.github.generalkael.Wordloom
+```
+
+To build them yourself, run `packaging/linux/build-appimage.sh` (it downloads linuxdeploy into
+`.appimage-tools/`), or
+`flatpak-builder --user --install --install-deps-from=flathub --force-clean build-dir packaging/flatpak/io.github.generalkael.Wordloom.yml`.
+The desktop entry, icon and AppStream metadata are in `packaging/linux/` and use the app ID
+`io.github.generalkael.Wordloom`.
 
 ## Building
 
@@ -176,7 +188,8 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 - Rich-text styling (today: plain text with Markdown)
 - A relationship map of characters, and swim-lane grouping on the timeline
-- Packaged installers: Flatpak, MSI, DMG (the Linux AppImage is done)
+- Packaged installers for Windows (MSI) and macOS (DMG); the Linux AppImage and Flatpak are done
+- Flathub submission (needs vendored crates instead of downloading them during the build)
 
 ## License
 

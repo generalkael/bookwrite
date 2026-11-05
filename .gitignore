@@ -4,3 +4,6 @@
 .qmlls.ini
 /.appimage-tools
 /*.AppImage
+/.flatpak-builder
+/build-dir
+/*.flatpak

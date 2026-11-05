@@ -15,7 +15,7 @@
       It compiles the manuscript to EPUB, DOCX, HTML, Markdown or plain text.
     </p>
   </description>
-  <launchable type="desktop-id">wordloom.desktop</launchable>
+  <launchable type="desktop-id">io.github.generalkael.Wordloom.desktop</launchable>
   <url type="homepage">https://github.com/generalkael/wordloom</url>
   <provides><binary>wordloom</binary></provides>
   <content_rating type="oars-1.1"/>

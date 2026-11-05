@@ -23,6 +23,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
 - Keyboard shortcut reference in the README.
 - **Linux AppImage**, built and smoke-tested by CI on every push to `main`
   (`packaging/linux/build-appimage.sh`), with a desktop entry, icon and AppStream metadata.
+- **Flatpak** (`packaging/flatpak/`), on the KDE 6.11 runtime, built and smoke-tested by CI. The
+  app reports its desktop file name (`io.github.generalkael.Wordloom`), so Wayland docks show the
+  right icon.
 
 ### Fixed
 - **Save As** now copies snapshots (and imported files) to the new project instead of leaving
