@@ -64,7 +64,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -98,7 +98,8 @@ ApplicationWindow {
                 else if (v === "compare") { win.ws.openFirstScene(); win.ws.compareSnapshot(""); }
                 if (v === "corkboard" || v === "outliner") win.ws.select(Api.call("rootId", "manuscript"), v);
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
-                else if (v === "timeline") win.ws.viewMode = "timeline";
+                else if (v === "timeline") win.ws.showLanes(false);
+                else if (v === "lanes") win.ws.showLanes(true, { place: true });
                 else if (v === "start") win.closeProject();
             }
             step++;

@@ -140,6 +140,7 @@ Item {
     }
     function compareDialogRef() { return compareDialog; }
     function editAnEvent() { viewMode = "timeline"; gantt.editFirstEvent(); }
+    function showLanes(on, collapsed) { viewMode = "timeline"; gantt.lanes = on; gantt.collapsed = collapsed || ({}); }
     function searchFor(q) { binder.searchText = q; }
 
     // Word counts change as the user types (text saves don't bump the

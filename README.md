@@ -47,6 +47,8 @@ version that supports the macOS 26 SDK.
   This Scene** to create the scene. The **Chronology** panel lists scenes in story order next to
   their manuscript position and flags (↺) the ones told out of sequence.
 - **Markers** draw vertical lines for act breaks or turning points.
+- **Lanes** groups the tracks into swim lanes by kind (Characters, Places, Plotlines, Themes,
+  Other). Click a lane's header to collapse it; ▴/▾ then move a track within its lane.
 - Drag a bar to move it, drag its right edge to change its length, double-click it to edit, and
   double-click an empty spot on a row to add an event there. Ctrl+scroll zooms around the cursor,
   and **Fit** shows the whole timeline.
@@ -187,7 +189,7 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 ## Roadmap
 
 - Rich-text styling (today: plain text with Markdown)
-- A relationship map of characters, and swim-lane grouping on the timeline
+- A relationship map of characters
 - Packaged installers for Windows (MSI) and macOS (DMG); the Linux AppImage and Flatpak are done
 - Flathub submission (needs vendored crates instead of downloading them during the build)
 

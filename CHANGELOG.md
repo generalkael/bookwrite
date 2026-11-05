@@ -19,6 +19,7 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   types open in the default app. Needs Qt PDF for the PDF viewer.
 - **Snapshot comparison.** *Compare…* on the Snapshots tab shows a snapshot side by side with the
   current text or another snapshot, with paragraphs aligned and changed words highlighted.
+- **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
 - Keyboard shortcut reference in the README.
 - **Linux AppImage**, built and smoke-tested by CI on every push to `main`

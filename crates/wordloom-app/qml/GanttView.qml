@@ -48,7 +48,50 @@ Rectangle {
         for (const s of steps) if (s >= want) return s;
         return 10000;
     }
-    function trackIndex(id) { return tl ? tl.tracks.findIndex(t => t.id === id) : -1; }
+    // Swim lanes: group tracks by kind under collapsible headers.
+    property bool lanes: false
+    property var collapsed: ({})
+    readonly property int laneH: 26
+    readonly property var laneKinds: [
+        { kind: "character", label: qsTr("Characters") },
+        { kind: "place", label: qsTr("Places") },
+        { kind: "plotline", label: qsTr("Plotlines") },
+        { kind: "theme", label: qsTr("Themes") },
+        { kind: "custom", label: qsTr("Other") }
+    ]
+    // Rows in display order: {track, y, h, stripe} or, with lanes, also
+    // {lane, label, count, y, h} headers. Tracks in a collapsed lane are left out.
+    readonly property var rows: {
+        const out = [];
+        if (!tl) return out;
+        let y = 0, stripe = 0;
+        const addTrack = (t) => { out.push({ track: t, y: y, h: rowH, stripe: stripe++ % 2 }); y += rowH; };
+        if (!lanes) {
+            for (const t of tl.tracks) addTrack(t);
+            return out;
+        }
+        for (const k of laneKinds) {
+            const ts = tl.tracks.filter(t => t.kind === k.kind);
+            if (!ts.length) continue;
+            out.push({ lane: k.kind, label: k.label, count: ts.length, y: y, h: laneH });
+            y += laneH;
+            stripe = 0;
+            if (!collapsed[k.kind]) for (const t of ts) addTrack(t);
+        }
+        return out;
+    }
+    readonly property real rowsHeight: rows.length ? rows[rows.length - 1].y + rows[rows.length - 1].h : 0
+    function toggleLane(kind) { const c = Object.assign({}, collapsed); c[kind] = !c[kind]; collapsed = c; }
+    // Row index of a track, or -1 if it isn't shown (collapsed lane).
+    function trackIndex(id) { return rows.findIndex(r => r.track && r.track.id === id); }
+    function rowY(r) { return r >= 0 && r < rows.length ? rows[r].y : 0; }
+    // Move a track up/down; with lanes, past the next track of the same kind.
+    function moveTrack(t, dir) {
+        if (!lanes) { Api.call("moveTrack", t.id, dir); return; }
+        const i = tl.tracks.findIndex(x => x.id === t.id);
+        for (let j = i + dir; j >= 0 && j < tl.tracks.length; j += dir)
+            if (tl.tracks[j].kind === t.kind) { Api.call("moveTrack", t.id, j - i); return; }
+    }
     function trackOf(id) { return tl ? tl.tracks.find(t => t.id === id) : null; }
     function eventOf(id) { return tl ? tl.events.find(e => e.id === id) : null; }
     function fit() {
@@ -140,6 +183,7 @@ Rectangle {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Scheduling conflicts")
                 }
+                ToolButton { text: qsTr("Lanes"); checkable: true; checked: gv.lanes; onToggled: gv.lanes = checked; ToolTip.visible: hovered; ToolTip.text: qsTr("Group tracks into swim lanes by kind (characters, places, plotlines…)") }
                 ToolButton { text: qsTr("Chronology"); checkable: true; checked: gv.showChronology; onToggled: gv.showChronology = checked }
                 ToolButton { text: "⚙"; onClicked: settingsPopup.open(); ToolTip.visible: hovered; ToolTip.text: qsTr("Timeline units & calendar") }
             }
@@ -172,41 +216,55 @@ Rectangle {
                         y: -chart.contentY
                         width: parent.width
                         Repeater {
-                            model: gv.tl ? gv.tl.tracks : []
+                            model: gv.rows
                             delegate: Rectangle {
                                 id: th
                                 required property var modelData
                                 required property int index
+                                readonly property bool isLane: !!modelData.lane
+                                readonly property var tk: modelData.track || ({})
                                 width: gv.headerW
-                                height: gv.rowH
-                                color: index % 2 ? Theme.panel : Qt.darker(Theme.panel, Theme.dark ? 0.92 : 1.02)
-                                Rectangle { width: 4; height: parent.height; color: th.modelData.color }
+                                height: modelData.h
+                                color: isLane ? Theme.accentSoft : modelData.stripe ? Theme.panel : Qt.darker(Theme.panel, Theme.dark ? 0.92 : 1.02)
+                                // Lane header: click to collapse / expand.
                                 RowLayout {
+                                    visible: th.isLane
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    spacing: 6
+                                    Label { text: gv.collapsed[th.modelData.lane] ? "▸" : "▾"; color: Theme.subtext }
+                                    KindIcon { kind: th.modelData.lane || ""; size: 14 }
+                                    Label { text: th.modelData.label + "  (" + th.modelData.count + ")"; font.bold: true; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight }
+                                }
+                                TapHandler { enabled: th.isLane; onTapped: gv.toggleLane(th.modelData.lane) }
+                                Rectangle { visible: !th.isLane; width: 4; height: parent.height; color: th.tk.color || "transparent" }
+                                RowLayout {
+                                    visible: !th.isLane
                                     anchors.fill: parent
                                     anchors.leftMargin: 10
                                     anchors.rightMargin: 4
                                     spacing: 4
                                     KindIcon {
-                                        visible: ["character", "plotline", "place"].indexOf(th.modelData.kind) >= 0
-                                        kind: th.modelData.kind
+                                        visible: ["character", "plotline", "place"].indexOf(th.tk.kind) >= 0
+                                        kind: th.tk.kind
                                         size: 14
                                     }
                                     Label {
-                                        visible: ["character", "plotline", "place"].indexOf(th.modelData.kind) < 0
-                                        text: th.modelData.kind === "theme" ? "✦" : "▪"
+                                        visible: ["character", "plotline", "place"].indexOf(th.tk.kind) < 0
+                                        text: th.tk.kind === "theme" ? "✦" : "▪"
                                     }
                                     Label {
-                                        text: th.modelData.name
+                                        text: th.tk.name
                                         color: Theme.text
                                         elide: Text.ElideRight
                                         Layout.fillWidth: true
-                                        font.underline: !!th.modelData.linked_node && nameHover.hovered
-                                        HoverHandler { id: nameHover; cursorShape: th.modelData.linked_node ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                                        TapHandler { onTapped: if (th.modelData.linked_node) gv.openScene(th.modelData.linked_node) }
+                                        font.underline: !!th.tk.linked_node && nameHover.hovered
+                                        HoverHandler { id: nameHover; cursorShape: th.tk.linked_node ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                                        TapHandler { onTapped: if (th.tk.linked_node) gv.openScene(th.tk.linked_node) }
                                     }
-                                    ToolButton { text: "▴"; implicitWidth: 22; padding: 0; onClicked: Api.call("moveTrack", th.modelData.id, -1) }
-                                    ToolButton { text: "▾"; implicitWidth: 22; padding: 0; onClicked: Api.call("moveTrack", th.modelData.id, 1) }
-                                    ToolButton { text: "✎"; implicitWidth: 22; padding: 0; onClicked: trackDialog.openEdit(th.modelData) }
+                                    ToolButton { text: "▴"; implicitWidth: 22; padding: 0; onClicked: gv.moveTrack(th.tk, -1) }
+                                    ToolButton { text: "▾"; implicitWidth: 22; padding: 0; onClicked: gv.moveTrack(th.tk, 1) }
+                                    ToolButton { text: "✎"; implicitWidth: 22; padding: 0; onClicked: trackDialog.openEdit(th.tk) }
                                 }
                                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.border; opacity: 0.6 }
                             }
@@ -275,7 +333,7 @@ Rectangle {
                     width: parent.width - gv.headerW
                     height: parent.height - gv.rulerH
                     contentWidth: Math.max(width, gv.xOf(gv.hi))
-                    contentHeight: Math.max(height, (gv.tl ? gv.tl.tracks.length : 0) * gv.rowH)
+                    contentHeight: Math.max(height, gv.rowsHeight)
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     onWidthChanged: gv.autoFit()
@@ -294,16 +352,16 @@ Rectangle {
 
                     // Row backgrounds — double-click empty space to add an event there.
                     Repeater {
-                        model: gv.tl ? gv.tl.tracks : []
+                        model: gv.rows
                         delegate: Rectangle {
                             required property var modelData
-                            required property int index
-                            y: index * gv.rowH
+                            y: modelData.y
                             width: chart.contentWidth
-                            height: gv.rowH
-                            color: index % 2 ? Theme.base : Qt.darker(Theme.base, Theme.dark ? 0.9 : 1.025)
+                            height: modelData.h
+                            color: modelData.lane ? Qt.rgba(Theme.accentSoft.r, Theme.accentSoft.g, Theme.accentSoft.b, 0.55)
+                                : modelData.stripe ? Theme.base : Qt.darker(Theme.base, Theme.dark ? 0.9 : 1.025)
                             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.border; opacity: 0.5 }
-                            TapHandler { onDoubleTapped: (ep) => gv.newEventAt(modelData.id, gv.uOf(ep.position.x)) }
+                            TapHandler { enabled: !!modelData.track; onDoubleTapped: (ep) => gv.newEventAt(modelData.track.id, gv.uOf(ep.position.x)) }
                         }
                     }
                     // Grid lines
@@ -338,9 +396,12 @@ Rectangle {
                             id: dep
                             required property var modelData
                             readonly property real x1: gv.xOf(modelData.from.start + modelData.from.duration)
-                            readonly property real y1: gv.trackIndex(modelData.from.track) * gv.rowH + gv.rowH / 2
+                            readonly property int r1: gv.trackIndex(modelData.from.track)
+                            readonly property int r2: gv.trackIndex(modelData.to.track)
+                            visible: r1 >= 0 && r2 >= 0
+                            readonly property real y1: gv.rowY(r1) + gv.rowH / 2
                             readonly property real x2: gv.xOf(modelData.to.start)
-                            readonly property real y2: gv.trackIndex(modelData.to.track) * gv.rowH + gv.rowH / 2
+                            readonly property real y2: gv.rowY(r2) + gv.rowH / 2
                             readonly property real mid: x2 > x1 + 16 ? (x1 + x2) / 2 : x1 + 8
                             z: 1
                             preferredRendererType: Shape.CurveRenderer
@@ -379,7 +440,7 @@ Rectangle {
                             readonly property bool linkedToSelection: gv.selectedNode !== "" && ev.linked_nodes.indexOf(gv.selectedNode) >= 0
                             property bool resizing: false
                             x: gv.xOf(ev.start) - (milestone ? 9 : 0)
-                            y: modelData.row * gv.rowH + 7
+                            y: gv.rowY(modelData.row) + 7
                             z: ghost ? 2 : 3
                             width: milestone ? 18 : Math.max(6, ev.duration * gv.scale)
                             height: gv.rowH - 14
