@@ -2,3 +2,5 @@
 *.wordloom.tmp
 .DS_Store
 .qmlls.ini
+/.appimage-tools
+/*.AppImage

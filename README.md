@@ -51,6 +51,21 @@ version that supports the macOS 26 SDK.
   double-click an empty spot on a row to add an event there. Ctrl+scroll zooms around the cursor,
   and **Fit** shows the whole timeline.
 
+## Installing on Linux
+
+Every push to `main` builds an AppImage, a single file that runs on most distributions from
+Ubuntu 22.04 on. Download `Wordloom-x86_64.AppImage` from the artifacts of the latest
+[CI run](https://github.com/generalkael/wordloom/actions/workflows/ci.yml), then:
+
+```sh
+chmod +x Wordloom-x86_64.AppImage
+./Wordloom-x86_64.AppImage
+```
+
+It bundles Qt, including the PDF viewer and Wayland and X11 support. To build one yourself, run
+`packaging/linux/build-appimage.sh` (it downloads linuxdeploy into `.appimage-tools/`). The
+desktop entry, icon and AppStream metadata are in `packaging/linux/`.
+
 ## Building
 
 You need Rust (stable), Qt 6.5 or later with Qt Quick / Quick Controls 2 / Qt Shapes, and a C++
@@ -161,7 +176,7 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 - Rich-text styling (today: plain text with Markdown)
 - A relationship map of characters, and swim-lane grouping on the timeline
-- Packaged installers (AppImage/Flatpak, MSI, DMG)
+- Packaged installers: Flatpak, MSI, DMG (the Linux AppImage is done)
 
 ## License
 

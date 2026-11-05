@@ -35,3 +35,36 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: cargo build --release -p wordloom
+
+  # Linux AppImage, built on the oldest supported Ubuntu so it runs on as
+  # many distributions as possible, then smoke-tested headless.
+  appimage:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.8.*"
+          modules: qtpdf
+          cache: true
+      - run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev
+      - run: packaging/linux/build-appimage.sh
+      - name: Smoke test (screenshot tour of the sample project)
+        run: |
+          mkdir -p "$RUNNER_TEMP/sample" "$RUNNER_TEMP/shots"
+          QT_QPA_PLATFORM=offscreen APPIMAGE_EXTRACT_AND_RUN=1 timeout 180 \
+            ./Wordloom-x86_64.AppImage --sample="$RUNNER_TEMP/sample" --screenshots="$RUNNER_TEMP/shots"
+          ls "$RUNNER_TEMP/shots"
+          test "$(ls "$RUNNER_TEMP/shots" | wc -l)" -ge 15
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Wordloom-x86_64.AppImage
+          path: Wordloom-x86_64.AppImage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: appimage-screenshots
+          path: ${{ runner.temp }}/shots

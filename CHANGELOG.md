@@ -21,6 +21,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   current text or another snapshot, with paragraphs aligned and changed words highlighted.
 - The sample project includes an imported map and an earlier-draft snapshot.
 - Keyboard shortcut reference in the README.
+- **Linux AppImage**, built and smoke-tested by CI on every push to `main`
+  (`packaging/linux/build-appimage.sh`), with a desktop entry, icon and AppStream metadata.
 
 ### Fixed
 - **Save As** now copies snapshots (and imported files) to the new project instead of leaving

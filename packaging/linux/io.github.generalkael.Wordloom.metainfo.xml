@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.generalkael.Wordloom</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Wordloom</name>
+  <developer id="io.github.generalkael">
+    <name>Scott Weeks</name>
+  </developer>
+  <summary>A writing studio for novels and long-form work</summary>
+  <description>
+    <p>
+      Wordloom organises a book into a binder of chapters, scenes, characters, places and research,
+      with a corkboard, an outliner, snapshots, project-wide undo and a story-timeline Gantt chart.
+      It compiles the manuscript to EPUB, DOCX, HTML, Markdown or plain text.
+    </p>
+  </description>
+  <launchable type="desktop-id">wordloom.desktop</launchable>
+  <url type="homepage">https://github.com/generalkael/wordloom</url>
+  <provides><binary>wordloom</binary></provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-05"/>
+  </releases>
+</component>

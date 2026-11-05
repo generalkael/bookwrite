@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- A page whose lines of text are woven across warp threads. -->
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="#c0703a"/>
+  <path d="M72 44h84l36 36v124a12 12 0 0 1-12 12H72a12 12 0 0 1-12-12V56a12 12 0 0 1 12-12z" fill="#fffdf5"/>
+  <path d="M156 44v28a8 8 0 0 0 8 8h28z" fill="#f3dfcf"/>
+  <g stroke="#ecc7a8" stroke-width="4" stroke-linecap="round">
+    <path d="M88 60v140"/><path d="M110 60v140"/><path d="M132 60v140"/><path d="M154 92v108"/><path d="M176 92v108"/>
+  </g>
+  <g stroke="#7a4424" stroke-width="10" stroke-linecap="round">
+    <path d="M80 112h96"/><path d="M80 140h96"/><path d="M80 168h96"/><path d="M80 196h60"/>
+  </g>
+</svg>
