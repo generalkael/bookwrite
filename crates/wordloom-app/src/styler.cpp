@@ -1,4 +1,7 @@
-#include "styler.h"
+// Include through the same path as the generated bridge header so the
+// header is seen once.
+#include "wordloom/src/styler.h"
+#include "wordloom/src/styling.cxx.h" // spell_ok(), implemented in Rust
 
 #include <QRegularExpression>
 #include <QTextCharFormat>
@@ -6,6 +9,52 @@
 #include <QtQml/qqml.h>
 #include <algorithm>
 #include <vector>
+
+static bool isWordChar(QChar c)
+{
+    return c.isLetter() || c == QLatin1Char('\'') || c == QChar(0x2019);
+}
+
+// Red wavy underline under words the spell checker rejects. Words that look
+// like part of a web or email address are skipped.
+void MarkdownHighlighter::underlineMisspellings(const QString &text, const std::vector<char> &marker)
+{
+    const int n = int(text.size());
+    for (int i = 0; i < n;) {
+        if (!text[i].isLetter()) {
+            ++i;
+            continue;
+        }
+        int j = i;
+        while (j < n && isWordChar(text[j]) && !marker[j])
+            ++j;
+        int end = j;
+        while (end > i && !text[end - 1].isLetter()) // trailing apostrophes
+            --end;
+        const QChar before = i > 0 ? text[i - 1] : QChar();
+        const QChar after = j < n ? text[j] : QChar();
+        const bool address = before == QLatin1Char('/') || before == QLatin1Char('@') || before == QLatin1Char('.')
+            || after == QLatin1Char('@') || after == QLatin1Char(':') || after.isDigit()
+            || (after == QLatin1Char('.') && j + 1 < n && text[j + 1].isLetter());
+        if (end - i > 1 && !address) {
+            const QByteArray utf8 = text.mid(i, end - i).toUtf8();
+            if (!spell_ok(rust::Str(utf8.constData(), size_t(utf8.size())))) {
+                for (int k = i; k < end; ++k) {
+                    QTextCharFormat f = format(k);
+                    // Qt Quick draws underline colours unreliably (and not on
+                    // bold/italic runs), so misspellings get a red tint and
+                    // red text, plus the underline where it does render.
+                    f.setBackground(spellTint);
+                    f.setForeground(spellColor);
+                    f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+                    f.setUnderlineColor(spellColor);
+                    setFormat(k, 1, f);
+                }
+            }
+        }
+        i = j > i ? j : i + 1;
+    }
+}
 
 MarkdownHighlighter::MarkdownHighlighter(QTextDocument *doc)
     : QSyntaxHighlighter(doc)
@@ -43,6 +92,12 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
     QTextCharFormat mark;
     mark.setForeground(markColor);
     if (text.trimmed().isEmpty()) {
+        setCurrentBlockState(0);
+        return;
+    }
+    if (!styling) { // spell checking only
+        if (spellCheck)
+            underlineMisspellings(text, std::vector<char>(size_t(text.size()), 0));
         setCurrentBlockState(0);
         return;
     }
@@ -147,6 +202,10 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         }
         i = j;
     }
+
+    // Last, so the styling above doesn't overwrite the marks.
+    if (spellCheck)
+        underlineMisspellings(text, marker);
 }
 
 MarkdownStyler::MarkdownStyler(QObject *parent)
@@ -190,10 +249,26 @@ void MarkdownStyler::setEnabled(bool on)
     Q_EMIT enabledChanged();
 }
 
+void MarkdownStyler::setSpellCheck(bool on)
+{
+    if (m_spellCheck == on)
+        return;
+    m_spellCheck = on;
+    attach();
+    Q_EMIT spellCheckChanged();
+}
+
+void MarkdownStyler::rehighlight()
+{
+    if (m_highlighter)
+        m_highlighter->rehighlight();
+}
+
 void MarkdownStyler::attach()
 {
     QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
-    if (!m_enabled || !doc) {
+    // Styling or spell checking needs the highlighter.
+    if ((!m_enabled && !m_spellCheck) || !doc) {
         if (m_highlighter) {
             m_highlighter->setDocument(nullptr);
             delete m_highlighter;
@@ -204,6 +279,8 @@ void MarkdownStyler::attach()
         delete m_highlighter;
         m_highlighter = new MarkdownHighlighter(doc);
     }
+    m_highlighter->styling = m_enabled;
+    m_highlighter->spellCheck = m_spellCheck;
     m_highlighter->markColor = m_markColor;
     m_highlighter->quoteColor = m_quoteColor;
     m_highlighter->rehighlight();

@@ -537,6 +537,70 @@ Rectangle {
             bottomPadding: 2
             onTextChanged: if (!de.loading) saveTimer.restart()
             onActiveFocusChanged: { if (activeFocus) { ev.activeId = de.docId; ev.activeArea = area; } else de.flush(); }
+
+            // ---- right-click menu with spelling suggestions. Qt 6.9+ has a
+            // built-in context menu, which we replace with ours; older Qt has
+            // none, so a right-click handler opens it instead.
+            property bool nativeMenu: false
+            property int wordStart: 0
+            property int wordEnd: 0
+            property string word: ""
+            property bool misspelled: false
+            property var suggestions: []
+            Component.onCompleted: { try { area.ContextMenu.menu = editMenu; area.nativeMenu = true; } catch (e) {} }
+            HoverHandler { id: areaHover }
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                enabled: !area.nativeMenu
+                onTapped: (ep) => { area.prepareMenu(ep.position); editMenu.popup(); }
+            }
+            function prepareMenu(pos) {
+                const p = area.positionAt(pos.x, pos.y);
+                const t = area.text;
+                const isWord = (c) => c !== undefined && (c.toLowerCase() !== c.toUpperCase() || c === "'" || c === "’");
+                let s = p, e = p;
+                while (s > 0 && isWord(t[s - 1])) --s;
+                while (e < t.length && isWord(t[e])) ++e;
+                while (s < e && !(t[s].toLowerCase() !== t[s].toUpperCase())) ++s;   // no leading apostrophes
+                while (e > s && !(t[e - 1].toLowerCase() !== t[e - 1].toUpperCase())) --e;
+                wordStart = s; wordEnd = e;
+                word = t.substring(s, e);
+                misspelled = Theme.spellCheck && word.length > 1 && !Api.get("spellCheck", true, word);
+                suggestions = misspelled ? Api.get("spellSuggest", [], word).slice(0, 6) : [];
+            }
+            function replaceWord(w) {
+                area.remove(wordStart, wordEnd);
+                area.insert(wordStart, w);
+            }
+            Menu {
+                id: editMenu
+                onAboutToShow: if (area.nativeMenu) area.prepareMenu(areaHover.point.position)
+                Repeater {
+                    model: 6
+                    delegate: MenuItem {
+                        required property int index
+                        visible: index < area.suggestions.length
+                        height: visible ? implicitHeight : 0
+                        text: visible ? area.suggestions[index] : ""
+                        font.bold: true
+                        onTriggered: area.replaceWord(area.suggestions[index])
+                    }
+                }
+                MenuItem { visible: area.misspelled && area.suggestions.length === 0; height: visible ? implicitHeight : 0; text: qsTr("No suggestions"); enabled: false }
+                MenuItem {
+                    visible: area.misspelled
+                    height: visible ? implicitHeight : 0
+                    text: qsTr("Add “%1” to Dictionary").arg(area.word)
+                    onTriggered: { Api.call("spellAdd", area.word); Api.spellingChanged(); }
+                }
+                MenuSeparator { visible: area.misspelled; height: visible ? implicitHeight : 0 }
+                MenuItem { text: qsTr("Cut"); enabled: area.selectedText.length > 0; onTriggered: area.cut() }
+                MenuItem { text: qsTr("Copy"); enabled: area.selectedText.length > 0; onTriggered: area.copy() }
+                MenuItem { text: qsTr("Paste"); enabled: area.canPaste; onTriggered: area.paste() }
+                MenuSeparator {}
+                MenuItem { text: qsTr("Select All"); onTriggered: area.selectAll() }
+            }
+            Connections { target: Api; function onSpellingChanged() { styler.rehighlight(); } }
             Keys.onPressed: (e) => {
                 if ((e.modifiers & Qt.ControlModifier) && !(e.modifiers & (Qt.ShiftModifier | Qt.AltModifier))) {
                     if (e.key === Qt.Key_B) { ev.activeArea = area; ev.toggleEmphasis(2); e.accepted = true; }
@@ -544,8 +608,10 @@ Rectangle {
                 }
             }
             MarkdownStyler {
+                id: styler
                 document: area.textDocument
                 enabled: Theme.styledMarkdown
+                spellCheck: Theme.spellCheck
                 markColor: Theme.dark ? "#6f6d68" : "#b3afa6"
                 quoteColor: Theme.subtext
             }

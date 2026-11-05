@@ -223,6 +223,7 @@ ApplicationWindow {
             Action { text: qsTr("Show &Binder"); checkable: true; checked: win.ws ? win.ws.showBinder : true; onTriggered: win.ws.showBinder = !win.ws.showBinder }
             Action { text: qsTr("Show &Details"); shortcut: "Ctrl+Alt+I"; checkable: true; checked: win.ws ? win.ws.showInspector : true; onTriggered: win.ws.showInspector = !win.ws.showInspector }
             MenuSeparator {}
+            Action { text: qsTr("Check &Spelling"); shortcut: "F7"; checkable: true; checked: Theme.spellCheck; onTriggered: Theme.spellCheck = !Theme.spellCheck }
             Action { text: qsTr("Styled &Markdown"); checkable: true; checked: Theme.styledMarkdown; onTriggered: Theme.styledMarkdown = !Theme.styledMarkdown }
             Action { text: qsTr("Larger Text"); shortcut: StandardKey.ZoomIn; onTriggered: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
             Action { text: qsTr("Smaller Text"); shortcut: StandardKey.ZoomOut; onTriggered: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
@@ -402,7 +403,7 @@ ApplicationWindow {
         anchors.centerIn: parent
         standardButtons: Dialog.Ok
         Label {
-            text: "<h2>Wordloom</h2><p>A writing studio for long-form work:<br/>binder, corkboard, outliner, split editor,<br/>research files, snapshots, project-wide undo,<br/>compile to EPUB / DOCX / HTML / Markdown,<br/>and a story timeline Gantt.</p><p>Built with Rust and Qt " + "6</p>"
+            text: "<h2>Wordloom</h2><p>A writing studio for long-form work:<br/>binder, corkboard, outliner, split editor,<br/>research files, snapshots, project-wide undo,<br/>spell checking, a name generator,<br/>compile to EPUB / DOCX / HTML / Markdown,<br/>and a story timeline Gantt.</p><p>Built with Rust and Qt " + "6</p>"
             textFormat: Text.RichText
         }
     }

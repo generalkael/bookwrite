@@ -1,4 +1,4 @@
-// Live Markdown styling for the editor.
+// Live Markdown styling (and spell-check underlines) for the editor.
 //
 // Documents stay plain Markdown on disk; MarkdownStyler attaches a syntax
 // highlighter to a QML TextEdit's document so headings, **bold**, *italic*,
@@ -12,6 +12,7 @@
 #include <QPointer>
 #include <QQuickTextDocument>
 #include <QSyntaxHighlighter>
+#include <vector>
 
 class MarkdownHighlighter : public QSyntaxHighlighter
 {
@@ -20,9 +21,16 @@ public:
     explicit MarkdownHighlighter(QTextDocument *doc);
     QColor markColor{ 150, 150, 150 };
     QColor quoteColor{ 110, 110, 110 };
+    bool spellCheck = false;
+    bool styling = true;
+    QColor spellColor{ 190, 50, 50 };
+    QColor spellTint{ 214, 69, 69, 40 };
 
 protected:
     void highlightBlock(const QString &text) override;
+
+private:
+    void underlineMisspellings(const QString &text, const std::vector<char> &marker);
 };
 
 class MarkdownStyler : public QObject
@@ -32,6 +40,7 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(QColor markColor READ markColor WRITE setMarkColor NOTIFY markColorChanged)
     Q_PROPERTY(QColor quoteColor READ quoteColor WRITE setQuoteColor NOTIFY quoteColorChanged)
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
+    Q_PROPERTY(bool spellCheck READ spellCheck WRITE setSpellCheck NOTIFY spellCheckChanged)
 
 public:
     explicit MarkdownStyler(QObject *parent = nullptr);
@@ -44,12 +53,17 @@ public:
     void setQuoteColor(const QColor &c);
     bool enabled() const { return m_enabled; }
     void setEnabled(bool on);
+    bool spellCheck() const { return m_spellCheck; }
+    void setSpellCheck(bool on);
+    // Redraw, e.g. after a word was added to the personal dictionary.
+    Q_INVOKABLE void rehighlight();
 
 Q_SIGNALS:
     void documentChanged();
     void markColorChanged();
     void quoteColorChanged();
     void enabledChanged();
+    void spellCheckChanged();
 
 private:
     void attach();
@@ -59,6 +73,7 @@ private:
     QColor m_markColor{ 150, 150, 150 };
     QColor m_quoteColor{ 110, 110, 110 };
     bool m_enabled = true;
+    bool m_spellCheck = false;
 };
 
 // Registers MarkdownStyler as `import com.wordloom.styling` (called from main).

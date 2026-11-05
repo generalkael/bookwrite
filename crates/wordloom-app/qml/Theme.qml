@@ -35,6 +35,8 @@ QtObject {
     property real lineHeight: 1.45
     // Show Markdown styling (bold, headings, quotes…) while editing.
     property bool styledMarkdown: true
+    // Underline misspelled words in the editor.
+    property bool spellCheck: true
 
     // Remembered between runs (~/.config/Wordloom/Wordloom.conf on Linux).
     property Settings prefs: Settings {
@@ -44,6 +46,7 @@ QtObject {
         property alias editorSize: theme.editorSize
         property alias pageWidth: theme.pageWidth
         property alias styledMarkdown: theme.styledMarkdown
+        property alias spellCheck: theme.spellCheck
     }
 
     readonly property int gap: 8

@@ -23,6 +23,7 @@ pub mod recent;
 pub mod relations;
 pub mod search;
 pub mod session;
+pub mod spell;
 pub mod stats;
 pub mod storage;
 pub mod timeline;

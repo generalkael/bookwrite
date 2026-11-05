@@ -663,6 +663,21 @@ impl Session {
         storage::delete_snapshot(&self.dir, parse_id(id)?, parse_id(snap)?)
     }
 
+    /// Words in the names of characters, places and timeline tracks, for
+    /// the spell checker.
+    pub fn project_name_words(&self) -> std::collections::HashSet<String> {
+        let p = &self.project;
+        p.nodes
+            .values()
+            .filter(|n| matches!(n.kind, NodeKind::Character | NodeKind::Place))
+            .map(|n| n.title.as_str())
+            .chain(p.timeline.tracks.iter().map(|t| t.name.as_str()))
+            .flat_map(|t| t.split(|c: char| !(c.is_alphanumeric() || c == '\'' || c == '’')))
+            .filter(|w| !w.is_empty())
+            .map(|w| w.replace('’', "'"))
+            .collect()
+    }
+
     // ----- relationship map -----------------------------------------------
 
     /// Everyone on the map (characters not in the trash, plus anything else

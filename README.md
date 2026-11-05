@@ -28,6 +28,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
 | **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The Details panel lists each character's relationships. |
+| **Spell checking** | Misspelled words are marked in red as you type (View ▸ Check Spelling, F7). Right-click one for suggestions or *Add to Dictionary*. The names of your characters, places and timeline tracks are always accepted. Wordloom uses your system's Hunspell dictionary for your language (`/usr/share/hunspell`), or a built-in US English one; added words are kept in `~/.config/wordloom/dictionary.txt`. |
 | **Name generator** | Project ▸ Name Generator… (Ctrl+Shift+G) suggests character names in English, Irish & Scottish, Nordic, Slavic, Italian/Spanish/French or invented fantasy styles, feminine, masculine or either. Each name has *Add as Character*. |
 | **Research files** | Import images and PDFs (File ▸ Import File…, or drop files on the binder). They're copied into the project and shown in the editor: images with fit / zoom, PDFs page by page. Other file types open in your default app. |
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
@@ -134,6 +135,7 @@ Ctrl is ⌘ on macOS.
 | Compile / export | Ctrl+Shift+E |
 | Find in project · writing statistics | Ctrl+Shift+F · Ctrl+Shift+T |
 | Name generator | Ctrl+Shift+G |
+| Spell checking on / off | F7 |
 | Find · replace in the open document (next / previous: F3 · Shift+F3) | Ctrl+F · Ctrl+H |
 | Editor · corkboard · outliner · timeline | Ctrl+1 · Ctrl+2 · Ctrl+3 · Ctrl+4 |
 | Relationship map | Ctrl+6 |
@@ -190,6 +192,7 @@ crates/
     search.rs      search & case-insensitive replace
     relations.rs   character relationships and map positions
     names.rs       character name generator (name lists + fantasy syllables)
+    spell.rs       spell checking (spellbook + Hunspell dictionaries; dict/ holds the built-in en_US)
     diff.rs        side-by-side snapshot comparison (paragraphs, then words)
     stats.rs       word counting, targets, daily history, streaks
     history.rs     project-wide undo/redo (structure snapshots + text diffs)
@@ -219,3 +222,8 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 ## License
 
 Wordloom is released under the [MIT License](LICENSE).
+
+The built-in US English dictionary (`crates/wordloom-core/dict/`) comes from
+[SCOWL](https://wordlist.aspell.net) and is © Kevin Atkinson and others under the permissive terms
+in `crates/wordloom-core/dict/COPYRIGHT-en_US.txt`. Spell checking uses the
+[spellbook](https://crates.io/crates/spellbook) crate (MPL-2.0).

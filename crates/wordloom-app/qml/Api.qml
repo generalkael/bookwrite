@@ -11,6 +11,8 @@ QtObject {
     // A document's text was saved from one editor; others showing the same
     // document (split editor) reload it.
     signal textSaved(string id)
+    // A word was added to the personal dictionary; editors redraw.
+    signal spellingChanged()
 
     // Call a backend method. Returns the result, or `undefined` on failure
     // (and emits `failed`).

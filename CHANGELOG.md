@@ -28,6 +28,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   deleted for good. The Details panel lists a character's relationships.
 - **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
+- **Spell checking.** Misspellings are marked in red as you type (View ▸ Check Spelling, F7);
+  right-click for suggestions or *Add to Dictionary*. Character, place and track names are always
+  accepted. Uses the system's Hunspell dictionary, or a bundled US English one.
 - **Name generator** (Project ▸ Name Generator…, Ctrl+Shift+G): real-world and fantasy styles,
   by gender, with one-click *Add as Character*.
 - **Daily goal ring.** The status bar shows today's progress toward the session target as a ring

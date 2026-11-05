@@ -93,6 +93,10 @@ const READ_ONLY: &[&str] = &[
     "snapshots",
     "compareSnapshots",
     "relations",
+    "spellSuggest",
+    "spellCheck",
+    "spellAdd",
+    "spellInfo",
     "nameStyles",
     "generateNames",
     "unusedFiles",
@@ -185,6 +189,10 @@ fn undo_label(method: &str, a: &Args) -> Option<(String, Option<String>)> {
 
 impl App {
     pub fn new(recent_file: PathBuf) -> Self {
+        // The personal spelling list sits next to the recent-projects file.
+        if let Some(dir) = recent_file.parent() {
+            crate::spell::set_personal_path(dir.join("dictionary.txt"));
+        }
         Self {
             session: None,
             recent_file,
@@ -211,6 +219,13 @@ impl App {
         if let (Ok(_), Some(before), Some((label, key))) = (&result, before, undoable) {
             if let Some(s) = self.session.as_mut() {
                 s.history.record(before, &s.project, &label, key);
+            }
+        }
+        // Character and place names never count as misspellings.
+        if result.is_ok() && !READ_ONLY.contains(&method) {
+            if let Some(s) = &self.session {
+                let words = s.project_name_words();
+                crate::spell::if_loaded(|sp| sp.set_project_words(words));
             }
         }
         match result {
@@ -352,6 +367,14 @@ impl App {
             // --- snapshots ---
             "snapshots" => self.s()?.snapshots(a.str(0))?,
             "relations" => self.s()?.relations(),
+            // --- spelling (not project data) ---
+            "spellCheck" => json!(crate::spell::with(|s| s.check(a.str(0)))),
+            "spellSuggest" => json!(crate::spell::with(|s| s.suggest(a.str(0)))),
+            "spellAdd" => {
+                crate::spell::with(|s| s.add_personal(a.str(0)))?;
+                json!(true)
+            }
+            "spellInfo" => json!({ "dictionary": crate::spell::with(|s| s.source.clone()) }),
             "nameStyles" => json!(crate::names::styles()),
             "generateNames" => {
                 let seed = std::time::SystemTime::now()
