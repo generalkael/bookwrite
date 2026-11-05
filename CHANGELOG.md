@@ -28,6 +28,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   deleted for good. The Details panel lists a character's relationships.
 - **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
+- **Find & replace in a document.** Ctrl+F / Ctrl+H open a find bar in the editor with a match
+  count, next / previous, whole-word (default) and match-case options, Replace and Replace All;
+  composite folder views search every part, and Ctrl+Z undoes replacements.
 - **File ▸ Clean Up Unused Files…** deletes imported files no item, Trash item or undo step uses.
 - Keyboard shortcut reference in the README.
 - **Linux AppImage**, built and smoke-tested by CI on every push to `main`

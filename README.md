@@ -30,7 +30,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The Details panel lists each character's relationships. |
 | **Research files** | Import images and PDFs (File ▸ Import File…, or drop files on the binder). They're copied into the project and shown in the editor: images with fit / zoom, PDFs page by page. Other file types open in your default app. |
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
-| **Search & replace** | Searches titles, text, synopses, notes and keywords across the project, with snippets. Replace-all works across every document. |
+| **Search & replace** | Searches titles, text, synopses, notes and keywords across the project, with snippets. Replace-all works across every document. **In one document**: Ctrl+F opens a find bar in the editor and Ctrl+H adds replace, with next / previous (Enter, Shift+Enter, F3), a match count, *Whole words* (on by default, so “the” leaves “then” alone) and *Match case*. In a folder's composite view it searches every part; Ctrl+Z undoes replacements. |
 | **Compile** | Exports the manuscript to EPUB (with a table of contents, one file per chapter), DOCX (named styles, chapters on new pages), Markdown, print-styled HTML, or plain text, with a live preview. No Pandoc or Calibre needed. Options cover the title page, chapter headings and numbering, scene headings, and the scene separator. |
 | **Statistics & targets** | Word counts for the manuscript and the whole project, words written today, writing streak, reading time, a 30-day history chart, a manuscript target with deadline (and the words per day needed to hit it), and a daily session target. |
 | **Labels & statuses** | Editable lists with colours. |
@@ -132,6 +132,7 @@ Ctrl is ⌘ on macOS.
 | Take snapshot | Ctrl+5 |
 | Compile / export | Ctrl+Shift+E |
 | Find in project · writing statistics | Ctrl+Shift+F · Ctrl+Shift+T |
+| Find · replace in the open document (next / previous: F3 · Shift+F3) | Ctrl+F · Ctrl+H |
 | Editor · corkboard · outliner · timeline | Ctrl+1 · Ctrl+2 · Ctrl+3 · Ctrl+4 |
 | Relationship map | Ctrl+6 |
 | Split editor on / off | Ctrl+\\ |

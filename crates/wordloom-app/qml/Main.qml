@@ -186,6 +186,9 @@ ApplicationWindow {
                 enabled: win.ws !== null && Wordloom.redoText !== ""
                 onTriggered: win.ws.redo()
             }
+            MenuSeparator {}
+            Action { text: qsTr("&Find in Document…"); shortcut: StandardKey.Find; enabled: win.ws !== null; onTriggered: win.ws.findInDocument(false) }
+            Action { text: qsTr("&Replace in Document…"); shortcut: StandardKey.Replace; enabled: win.ws !== null; onTriggered: win.ws.findInDocument(true) }
         }
         Menu {
             title: qsTr("&Project")

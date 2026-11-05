@@ -139,6 +139,14 @@ Item {
     }
     function mergeNext() { if (currentId) { flush(); Api.call("mergeWithNext", currentId); } }
     function focusSearch() { binder.focusSearch(); }
+    // Find (and replace) in the open document: the split editor if you are
+    // typing there, otherwise the main editor.
+    function mainEditor() { return editorView; }
+    function findInDocument(withReplace) {
+        const inSplit = splitId !== "" && splitEditor.activeArea && splitEditor.activeArea.activeFocus;
+        if (!inSplit && viewMode !== "editor") viewMode = "editor";
+        (inSplit ? splitEditor : editorView).openFind(withReplace);
+    }
     function eventDialog() { return gantt.eventDialogRef; }
     function closePopups() { gantt.closeDialogs(); compareDialog.close(); relationsView.dialogRef.close(); }
     function relationDialogRef() { return relationsView.dialogRef; }

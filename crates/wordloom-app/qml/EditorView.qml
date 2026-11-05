@@ -95,8 +95,8 @@ Rectangle {
     }
 
     // Scroll so the caret in `a` is visible (or centred, in typewriter mode).
-    function revealCursor(a) {
-        if (!a || !a.activeFocus) return;
+    function revealCursor(a, force) {
+        if (!a || (!a.activeFocus && !force)) return;
         const f = scroller.contentItem;            // the ScrollView's Flickable
         const r = a.cursorRectangle;
         const y = a.mapToItem(f.contentItem, 0, r.y).y;
@@ -110,6 +110,106 @@ Rectangle {
             f.contentY = Math.max(0, y - margin);
         else if (y + r.height > f.contentY + f.height - margin)
             f.contentY = Math.min(maxY, y + r.height - f.height + margin);
+    }
+
+    // ---- Find & replace in this document (all parts, in composite mode).
+    property bool findOpen: false
+    property alias findText: findField.text
+    property alias replaceText: replaceField.text
+    property bool replaceOpen: false
+    property bool matchCase: false
+    // Only whole words match by default, so replacing "the" leaves "then" alone.
+    property bool wholeWords: true
+    property int matchCount: 0
+    property int matchNumber: 0          // 1-based index of the selected match, 0 if none
+    function editors() {
+        const out = [];
+        for (let i = 0; i < rep.count; ++i) { const it = rep.itemAt(i); if (it && it.editor.visible) out.push(it.editor); }
+        return out;
+    }
+    function allMatches() {
+        const q = findField.text;
+        const out = [];
+        if (!q) return out;
+        const needle = matchCase ? q : q.toLowerCase();
+        // A letter has distinct cases; Qt's JS engine lacks \p{L} in regexes.
+        const wordChar = { test: (c) => c.toLowerCase() !== c.toUpperCase() || /[0-9_'’]/.test(c) };
+        editors().forEach((a, part) => {
+            const hay = matchCase ? a.text : a.text.toLowerCase();
+            for (let i = hay.indexOf(needle); i >= 0; i = hay.indexOf(needle, i + needle.length)) {
+                if (wholeWords && ((i > 0 && wordChar.test(hay[i - 1])) || (i + needle.length < hay.length && wordChar.test(hay[i + needle.length]))))
+                    continue;
+                out.push({ part: part, start: i });
+            }
+        });
+        return out;
+    }
+    function openFind(withReplace) {
+        if (hasFile) return;
+        if (preview) preview = false;
+        findOpen = true;
+        replaceOpen = withReplace;
+        const a = activeArea;
+        if (a && a.selectedText && a.selectedText.indexOf("\u2029") < 0 && a.selectedText.indexOf("\n") < 0)
+            findField.text = a.selectedText;
+        findField.forceActiveFocus();
+        findField.selectAll();
+        findStep(0);
+    }
+    function closeFind() {
+        findOpen = false;
+        if (activeArea) activeArea.forceActiveFocus();
+    }
+    // dir 1: next match after the selection; -1: previous; 0: the match at or after the caret.
+    function findStep(dir) {
+        const ms = allMatches();
+        matchCount = ms.length;
+        if (!ms.length) { matchNumber = 0; return; }
+        const eds = editors();
+        const cur = Math.max(0, eds.indexOf(activeArea));
+        const a = eds[cur];
+        const pos = !a ? 0 : dir < 0 ? a.selectionStart : dir > 0 ? a.selectionEnd : a.selectionStart;
+        let i;
+        if (dir < 0) {
+            i = -1;
+            for (let k = ms.length - 1; k >= 0; --k) if (ms[k].part < cur || (ms[k].part === cur && ms[k].start < pos)) { i = k; break; }
+            if (i < 0) i = ms.length - 1;
+        } else {
+            i = ms.findIndex(m => m.part > cur || (m.part === cur && m.start >= pos));
+            if (i < 0) i = 0;
+        }
+        selectMatch(ms[i], eds);
+        matchNumber = i + 1;
+    }
+    function selectMatch(m, eds) {
+        const a = eds[m.part];
+        activeArea = a;
+        a.select(m.start, m.start + findField.text.length);
+        Qt.callLater(revealCursor, a, true);
+    }
+    // Replace the selected match (if the selection is one) and move on.
+    function replaceOne() {
+        const a = activeArea, q = findField.text;
+        if (a && q && a.selectionEnd - a.selectionStart === q.length
+                && (matchCase ? a.selectedText === q : a.selectedText.toLowerCase() === q.toLowerCase())) {
+            const s = a.selectionStart;
+            a.remove(s, s + q.length);
+            a.insert(s, replaceField.text);
+            a.select(s + replaceField.text.length, s + replaceField.text.length);
+        }
+        findStep(1);
+    }
+    function replaceAll() {
+        const q = findField.text;
+        if (!q) return;
+        const ms = allMatches(), eds = editors();
+        for (let k = ms.length - 1; k >= 0; --k) {
+            const a = eds[ms[k].part];
+            a.remove(ms[k].start, ms[k].start + q.length);
+            a.insert(ms[k].start, replaceField.text);
+        }
+        Api.say(qsTr("Replaced %1 occurrence(s) in this document").arg(ms.length));
+        findStep(0);
     }
 
     function collect(id, depth, out) {
@@ -224,6 +324,62 @@ Rectangle {
             }
         }
 
+        // Find / replace bar
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: findCol.implicitHeight + 10
+            visible: ev.findOpen && !ev.hasFile && !ev.focusMode
+            color: Theme.panel
+            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.border }
+            ColumnLayout {
+                id: findCol
+                anchors.fill: parent
+                anchors.margins: 5
+                anchors.leftMargin: 12
+                spacing: 4
+                RowLayout {
+                    Layout.fillWidth: true
+                    TextField {
+                        id: findField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Find in this document")
+                        selectByMouse: true
+                        onTextEdited: ev.findStep(0)
+                        Keys.onReturnPressed: (e) => ev.findStep(e.modifiers & Qt.ShiftModifier ? -1 : 1)
+                        Keys.onEnterPressed: (e) => ev.findStep(e.modifiers & Qt.ShiftModifier ? -1 : 1)
+                        Keys.onEscapePressed: ev.closeFind()
+                    }
+                    Label {
+                        color: findField.text && ev.matchCount === 0 ? Theme.danger : Theme.subtext
+                        text: !findField.text ? "" : ev.matchCount === 0 ? qsTr("No matches") : qsTr("%1 of %2").arg(ev.matchNumber).arg(ev.matchCount)
+                    }
+                    ToolButton { text: "▲"; focusPolicy: Qt.NoFocus; enabled: ev.matchCount > 0; onClicked: ev.findStep(-1); ToolTip.visible: hovered; ToolTip.text: qsTr("Previous (Shift+Enter, Shift+F3)") }
+                    ToolButton { text: "▼"; focusPolicy: Qt.NoFocus; enabled: ev.matchCount > 0; onClicked: ev.findStep(1); ToolTip.visible: hovered; ToolTip.text: qsTr("Next (Enter, F3)") }
+                    ToolButton { text: qsTr("Whole words"); checkable: true; checked: ev.wholeWords; focusPolicy: Qt.NoFocus; onToggled: { ev.wholeWords = checked; ev.findStep(0); } ToolTip.visible: hovered; ToolTip.text: qsTr("Match whole words only (so “the” doesn’t match “then”)") }
+                    ToolButton { text: "Aa"; checkable: true; checked: ev.matchCase; focusPolicy: Qt.NoFocus; onToggled: { ev.matchCase = checked; ev.findStep(0); } ToolTip.visible: hovered; ToolTip.text: qsTr("Match case") }
+                    ToolButton { text: ev.replaceOpen ? qsTr("Hide Replace") : qsTr("Replace…"); focusPolicy: Qt.NoFocus; onClicked: ev.replaceOpen = !ev.replaceOpen }
+                    ToolButton { text: "✕"; focusPolicy: Qt.NoFocus; onClicked: ev.closeFind(); ToolTip.visible: hovered; ToolTip.text: qsTr("Close (Esc)") }
+                }
+                RowLayout {
+                    visible: ev.replaceOpen
+                    Layout.fillWidth: true
+                    TextField {
+                        id: replaceField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Replace with")
+                        selectByMouse: true
+                        Keys.onReturnPressed: ev.replaceOne()
+                        Keys.onEnterPressed: ev.replaceOne()
+                        Keys.onEscapePressed: ev.closeFind()
+                    }
+                    Button { text: qsTr("Replace"); focusPolicy: Qt.NoFocus; enabled: ev.matchCount > 0; onClicked: ev.replaceOne() }
+                    Button { text: qsTr("Replace All"); focusPolicy: Qt.NoFocus; enabled: ev.matchCount > 0; onClicked: ev.replaceAll() }
+                }
+            }
+            Shortcut { sequences: ["F3"]; enabled: ev.findOpen; onActivated: ev.findStep(1) }
+            Shortcut { sequences: ["Shift+F3"]; enabled: ev.findOpen; onActivated: ev.findStep(-1) }
+        }
+
         FileViewer {
             id: fileViewer
             visible: ev.hasFile
@@ -311,6 +467,7 @@ Rectangle {
         property bool first: false
         property string saved: ""
         property bool loading: false
+        readonly property alias editor: area
         spacing: 2
 
         Component.onCompleted: load()
