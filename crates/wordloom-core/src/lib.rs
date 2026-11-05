@@ -4,7 +4,7 @@
 //! the binder tree and its metadata ([`model`]), plain-text on-disk storage
 //! with snapshots and backups ([`storage`]), manuscript compilation
 //! ([`compile`]), search & replace ([`search`]), writing statistics
-//! ([`stats`]), project-wide undo ([`history`]), and the story timeline /
+//! ([`stats`]), snapshot comparison ([`diff`]), project-wide undo ([`history`]), and the story timeline /
 //! Gantt engine ([`timeline`]).
 //!
 //! [`Session`] bundles an open project with its location and offers the
@@ -13,6 +13,7 @@
 pub mod api;
 pub mod compile;
 pub mod demo;
+pub mod diff;
 mod docx;
 mod epub;
 pub mod history;

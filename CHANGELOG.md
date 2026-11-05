@@ -17,7 +17,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
 - **Research files.** Import images and PDFs (File ▸ Import File…, Ctrl+Shift+I, or drop files on
   the binder). Images show with fit and zoom; PDFs page by page, fitted to the pane width. Other
   types open in the default app. Needs Qt PDF for the PDF viewer.
-- The sample project includes an imported map.
+- **Snapshot comparison.** *Compare…* on the Snapshots tab shows a snapshot side by side with the
+  current text or another snapshot, with paragraphs aligned and changed words highlighted.
+- The sample project includes an imported map and an earlier-draft snapshot.
 - Keyboard shortcut reference in the README.
 
 ### Fixed

@@ -154,6 +154,14 @@ pub fn create(parent: &Path) -> Result<Session> {
     let keeper = t.add_event("Tobias tends the light", tobias, 1, 3)?;
     link(t, keeper, Some(scene_ids[1]), vec![], vec![])?;
 
+    // An earlier draft of the opening, to show snapshot comparison.
+    crate::storage::take_snapshot(
+        &s.dir,
+        scene_ids[0],
+        "First draft",
+        "The ferry left her on the jetty with a bag and a letter.\n\nThe lighthouse turned above her, sweeping the water.\n\nShe wondered if anyone was expecting her.",
+    )?;
+
     s.save()?;
     Ok(s)
 }

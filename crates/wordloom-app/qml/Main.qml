@@ -64,7 +64,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -75,7 +75,7 @@ ApplicationWindow {
                 loader.grabToImage(r => r.saveToFile(file));
                 // Popups render in the window overlay, which can't be grabbed;
                 // capture the dialog's own content instead.
-                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, stats: statsDialog, settings: settingsDialog }[v];
+                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null }[v];
                 if (dlg && dlg.contentChildren.length) dlg.contentChildren[0].grabToImage(r => r.saveToFile(file.replace(".png", "-dialog.png")));
             } else if (v === undefined) {
                 stop(); Qt.quit(); return;
@@ -95,6 +95,7 @@ ApplicationWindow {
                 else if (v === "undo") { win.ws.cancelRename(); win.ws.undo(); }
                 else if (v === "split") { win.ws.openFirstScene(); win.ws.openInSplit(fileItem); }
                 else if (v === "file") win.ws.select(fileItem, "editor");
+                else if (v === "compare") { win.ws.openFirstScene(); win.ws.compareSnapshot(""); }
                 if (v === "corkboard" || v === "outliner") win.ws.select(Api.call("rootId", "manuscript"), v);
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
                 else if (v === "timeline") win.ws.viewMode = "timeline";

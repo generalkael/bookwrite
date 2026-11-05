@@ -599,6 +599,29 @@ impl Session {
         Ok(())
     }
 
+    /// Compare two versions of a document side by side. `old` and `new` are
+    /// snapshot ids; an empty id means the current text.
+    pub fn compare_snapshots(&self, id: &str, old: &str, new: &str) -> Result<Value> {
+        let nid = parse_id(id)?;
+        let snaps = storage::list_snapshots(&self.dir, nid)?;
+        let version = |sid: &str| -> Result<(String, String)> {
+            match opt_id(sid)? {
+                None => Ok(("Current text".into(), self.project.text(nid).to_string())),
+                Some(sid) => snaps
+                    .iter()
+                    .find(|s| s.id == sid)
+                    .map(|s| (s.title.clone(), s.text.clone()))
+                    .ok_or_else(|| Error::Invalid("no such snapshot".into())),
+            }
+        };
+        let (old_title, old_text) = version(old)?;
+        let (new_title, new_text) = version(new)?;
+        let mut v = json!(crate::diff::compare(&old_text, &new_text));
+        v["left_title"] = json!(old_title);
+        v["right_title"] = json!(new_title);
+        Ok(v)
+    }
+
     pub fn delete_snapshot(&self, id: &str, snap: &str) -> Result<()> {
         storage::delete_snapshot(&self.dir, parse_id(id)?, parse_id(snap)?)
     }
@@ -817,6 +840,38 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compare_snapshot_with_current() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut s = Session::create(tmp.path(), "Cmp", "").unwrap();
+        let ms = s.root_id("manuscript").unwrap();
+        let id = s.add(&ms, "", "Scene", true).unwrap();
+        s.set_text(&id, "It was a dark night.").unwrap();
+        s.take_snapshot(&id, "v1").unwrap();
+        s.set_text(&id, "It was a dark and stormy night.").unwrap();
+        s.take_snapshot(&id, "v2").unwrap();
+        let snaps = s.snapshots(&id).unwrap();
+        let v1 = snaps
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|x| x["title"] == "v1")
+            .unwrap()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let c = s.compare_snapshots(&id, &v1, "").unwrap();
+        assert_eq!(c["left_title"], "v1");
+        assert_eq!(c["right_title"], "Current text");
+        assert_eq!(c["words_added"], 2);
+        assert_eq!(c["rows"][0]["kind"], "changed");
+        let v2 = snaps[0]["id"].as_str().unwrap();
+        assert_eq!(s.compare_snapshots(&id, v2, "").unwrap()["words_added"], 0);
+        assert!(s
+            .compare_snapshots(&id, &Uuid::new_v4().to_string(), "")
+            .is_err());
+    }
 
     #[test]
     fn imported_files() {

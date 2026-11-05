@@ -16,6 +16,7 @@ Rectangle {
     property int snapIndex: -1
     signal openEvent()
     signal flushRequested()
+    signal compareRequested(string snapId)
 
     readonly property int rev: Wordloom.revision
     onRevChanged: meta = Api.get("labels", meta)
@@ -248,6 +249,7 @@ Rectangle {
                             if (Api.call("restoreSnapshot", ip.nodeId, ip.snaps[ip.snapIndex].id) !== undefined) { ip.reloadSnapshots(); Api.say(qsTr("Restored (previous text saved as a snapshot)")); }
                         }
                     }
+                    Button { text: qsTr("Compare…"); onClicked: { ip.flushRequested(); ip.compareRequested(ip.snaps[ip.snapIndex].id); } ToolTip.visible: hovered; ToolTip.text: qsTr("Side by side with the current text") }
                     Button { text: qsTr("Delete"); onClicked: { Api.call("deleteSnapshot", ip.nodeId, ip.snaps[ip.snapIndex].id); ip.reloadSnapshots(); } }
                 }
                 ScrollView {

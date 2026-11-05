@@ -22,7 +22,7 @@ version that supports the macOS 26 SDK.
 | **Inspector** | Synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
 | **Research files** | Import images and PDFs (File ▸ Import File…, or drop files on the binder). They're copied into the project and shown in the editor: images with fit / zoom, PDFs page by page. Other file types open in your default app. |
-| **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. |
+| **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
 | **Search & replace** | Searches titles, text, synopses, notes and keywords across the project, with snippets. Replace-all works across every document. |
 | **Compile** | Exports the manuscript to EPUB (with a table of contents, one file per chapter), DOCX (named styles, chapters on new pages), Markdown, print-styled HTML, or plain text, with a live preview. No Pandoc or Calibre needed. Options cover the title page, chapter headings and numbering, scene headings, and the scene separator. |
 | **Statistics & targets** | Word counts for the manuscript and the whole project, words written today, writing streak, reading time, a 30-day history chart, a manuscript target with deadline (and the words per day needed to hit it), and a daily session target. |
@@ -74,8 +74,9 @@ open in your default app instead.
 **macOS:** `brew install qt` (or use the Qt installer), then `macdeployqt` to bundle the libraries.
 
 To try it out, click **Explore the Sample** on the start screen. It creates a short sample novel
-in `~/Documents/Wordloom` with chapters, characters, labels, an imported map in Research, and a
-timeline that includes dependencies and a deliberate conflict.
+in `~/Documents/Wordloom` with chapters, characters, labels, an imported map in Research, a
+snapshot of an earlier draft to compare, and a timeline that includes dependencies and a
+deliberate conflict.
 
 ## Keyboard shortcuts
 
@@ -137,6 +138,7 @@ crates/
     docx.rs        Word document
     zip.rs         minimal zip writer for EPUB and DOCX
     search.rs      search & case-insensitive replace
+    diff.rs        side-by-side snapshot comparison (paragraphs, then words)
     stats.rs       word counting, targets, daily history, streaks
     history.rs     project-wide undo/redo (structure snapshots + text diffs)
     session.rs     an open project + its JSON-shaped API
@@ -158,7 +160,6 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 ## Roadmap
 
 - Rich-text styling (today: plain text with Markdown)
-- Side-by-side comparison of snapshots
 - A relationship map of characters, and swim-lane grouping on the timeline
 - Packaged installers (AppImage/Flatpak, MSI, DMG)
 

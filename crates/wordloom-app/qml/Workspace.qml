@@ -130,7 +130,15 @@ Item {
     function mergeNext() { if (currentId) { flush(); Api.call("mergeWithNext", currentId); } }
     function focusSearch() { binder.focusSearch(); }
     function eventDialog() { return gantt.eventDialogRef; }
-    function closePopups() { gantt.closeDialogs(); }
+    function closePopups() { gantt.closeDialogs(); compareDialog.close(); }
+    // Compare a snapshot of the current document with its text now (the
+    // first snapshot if `snapId` is empty).
+    function compareSnapshot(snapId) {
+        if (!currentId) return;
+        flush();
+        compareDialog.openFor(currentId, snapId);
+    }
+    function compareDialogRef() { return compareDialog; }
     function editAnEvent() { viewMode = "timeline"; gantt.editFirstEvent(); }
     function searchFor(q) { binder.searchText = q; }
 
@@ -303,6 +311,7 @@ Item {
                 node: ws.current
                 onOpenEvent: () => ws.viewMode = "timeline"
                 onFlushRequested: ws.flush()
+                onCompareRequested: (snapId) => ws.compareSnapshot(snapId)
             }
         }
 
@@ -360,4 +369,10 @@ Item {
         onClicked: ws.focusMode = false
     }
     Shortcut { sequence: "Escape"; enabled: ws.focusMode; onActivated: ws.focusMode = false }
+
+    CompareDialog {
+        id: compareDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+    }
 }
