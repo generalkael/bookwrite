@@ -117,9 +117,9 @@ Rectangle {
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
                 spacing: 4
-                ToolButton { text: qsTr("＋ Track"); onClicked: trackDialog.openNew() }
-                ToolButton { text: qsTr("＋ Event"); onClicked: gv.newEventAt("") }
-                ToolButton { text: qsTr("＋ Marker"); onClicked: markerDialog.open() }
+                ToolButton { text: qsTr("+ Track"); onClicked: trackDialog.openNew() }
+                ToolButton { text: qsTr("+ Event"); onClicked: gv.newEventAt("") }
+                ToolButton { text: qsTr("+ Marker"); onClicked: markerDialog.open() }
                 ToolButton {
                     text: qsTr("⟳ Sync Cast")
                     onClicked: { const n = Api.call("syncTracks"); if (n !== undefined) Api.say(n ? qsTr("Added %1 track(s) from Characters and Places").arg(n) : qsTr("Tracks already match your Characters and Places")); }
@@ -497,7 +497,7 @@ Rectangle {
                     RowLayout {
                         Layout.alignment: Qt.AlignHCenter
                         Button { text: qsTr("Create Tracks from Characters & Places"); highlighted: true; onClicked: { const n = Api.call("syncTracks"); if (n === 0) trackDialog.openNew(); } }
-                        Button { text: qsTr("＋ Track"); onClicked: trackDialog.openNew() }
+                        Button { text: qsTr("+ Track"); onClicked: trackDialog.openNew() }
                     }
                 }
             }

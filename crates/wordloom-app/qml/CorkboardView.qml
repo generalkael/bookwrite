@@ -59,7 +59,7 @@ Rectangle {
                 Label { text: qsTr("Card size"); color: Theme.dark ? Theme.subtext : "#3b2b17" }
                 Slider { from: 170; to: 360; value: cb.cardWidth; onMoved: cb.cardWidth = value; Layout.preferredWidth: 120 }
                 Button {
-                    text: qsTr("＋ Card")
+                    text: qsTr("+ Card")
                     enabled: cb.containerId !== ""
                     onClicked: { const id = Api.call("add", cb.containerId, "", "", true); if (id) cb.selectRequested(id); }
                 }
@@ -176,7 +176,7 @@ Rectangle {
     Label {
         anchors.centerIn: parent
         visible: cb.cards.length === 0
-        text: cb.containerId ? qsTr("No cards here yet — add one with ＋ Card.") : qsTr("Select a folder to see its cards.")
+        text: cb.containerId ? qsTr("No cards here yet — add one with + Card.") : qsTr("Select a folder to see its cards.")
         color: Theme.dark ? Theme.subtext : "#3b2b17"
     }
 }

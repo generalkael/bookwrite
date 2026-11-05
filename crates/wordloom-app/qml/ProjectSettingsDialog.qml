@@ -50,7 +50,7 @@ Dialog {
                     ToolButton { text: "✕"; onClicked: Api.call("removeLabel", modelData.id) }
                 }
             }
-            Button { text: qsTr("＋ Label"); onClicked: Api.call("upsertLabel", "", qsTr("New Label"), "#888888") }
+            Button { text: qsTr("+ Label"); onClicked: Api.call("upsertLabel", "", qsTr("New Label"), "#888888") }
 
             Label { text: qsTr("Statuses"); font.bold: true; Layout.topMargin: 10 }
             Repeater {
@@ -62,7 +62,7 @@ Dialog {
                     ToolButton { text: "✕"; onClicked: Api.call("removeStatus", modelData.id) }
                 }
             }
-            Button { text: qsTr("＋ Status"); onClicked: Api.call("upsertStatus", "", qsTr("New Status")) }
+            Button { text: qsTr("+ Status"); onClicked: Api.call("upsertStatus", "", qsTr("New Status")) }
         }
     }
 }

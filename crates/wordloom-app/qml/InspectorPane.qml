@@ -167,7 +167,7 @@ Rectangle {
                         visible: ip.node && !ip.node.is_root
                         Layout.fillWidth: true
                         TextField { id: newKey; Layout.fillWidth: true; placeholderText: qsTr("New field name") }
-                        Button { text: "＋"; enabled: newKey.text.trim().length > 0; onClicked: { ip.set("field:" + newKey.text.trim(), "—"); newKey.text = ""; } }
+                        Button { text: "+"; enabled: newKey.text.trim().length > 0; onClicked: { ip.set("field:" + newKey.text.trim(), "—"); newKey.text = ""; } }
                     }
 
                     Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border; Layout.topMargin: 6 }
@@ -285,7 +285,7 @@ Rectangle {
                 Label { visible: ip.node && ip.node.events.length === 0; text: qsTr("Not on the timeline yet."); color: Theme.subtext; Layout.leftMargin: 8 }
                 Button {
                     Layout.margins: 8
-                    text: qsTr("＋ Add to Timeline")
+                    text: qsTr("+ Add to Timeline")
                     enabled: ip.node && !ip.node.is_root
                     onClicked: {
                         let tl = Api.call("timeline");

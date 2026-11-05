@@ -33,5 +33,6 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
 ### Changed
 - Binder, corkboard, outliner, editor and timeline icons are bundled SVGs instead of emoji, so they
   look the same everywhere. Emoji showed as empty boxes where the system's emoji font couldn't be
-  drawn, including in the AppImage.
+  drawn, including in the AppImage. Toolbar "＋" and "⎙" symbols became a plain "+" and text for the
+  same reason.
 - CI builds Linux only for now; Windows and macOS builds are paused.

@@ -174,8 +174,8 @@ Item {
             RowLayout {
                 anchors.fill: parent
                 spacing: 4
-                ToolButton { text: "＋ " + qsTr("Document"); onClicked: ws.addItem("text"); ToolTip.visible: hovered; ToolTip.text: qsTr("New document (Ctrl+N)") }
-                ToolButton { text: "＋ " + qsTr("Folder"); onClicked: ws.addItem("folder") }
+                ToolButton { text: "+ " + qsTr("Document"); onClicked: ws.addItem("text"); ToolTip.visible: hovered; ToolTip.text: qsTr("New document (Ctrl+N)") }
+                ToolButton { text: "+ " + qsTr("Folder"); onClicked: ws.addItem("folder") }
                 ToolSeparator {}
                 ToolButton {
                     text: "↶"; font.pixelSize: 18; enabled: Wordloom.undoText !== ""; onClicked: ws.undo()
@@ -203,7 +203,7 @@ Item {
                 }
                 ToolSeparator {}
                 ToolButton { text: qsTr("◎ Focus"); onClicked: ws.focusMode = true; ToolTip.visible: hovered; ToolTip.text: qsTr("Distraction-free writing (F11, Esc to leave)") }
-                ToolButton { text: qsTr("⎙ Snapshot"); enabled: ws.currentId !== ""; onClicked: ws.snapshot() }
+                ToolButton { text: qsTr("Snapshot"); enabled: ws.currentId !== ""; onClicked: ws.snapshot() }
                 ToolButton {
                     text: qsTr("◫ Split"); checkable: true; checked: ws.splitId !== ""; onClicked: ws.toggleSplit()
                     ToolTip.visible: hovered; ToolTip.text: qsTr("Keep this document open beside the main view (Ctrl+\\)")
