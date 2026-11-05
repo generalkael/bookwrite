@@ -45,7 +45,10 @@ Rectangle {
             // Book style: no indent after a heading or scene break (Qt's rich
             // text has no "h2 + p" selector, so mark those paragraphs).
             .replace(/(<\/h[2-6]>\s*|<p class='sep'[^>]*>[^<]*<\/p>\s*)<p>/g, "$1<p style='text-indent:0px'>");
-        empty = body.replace(/<[^>]*>/g, "").trim() === "";
+        stats = Api.get("stats", null);
+        // Headings alone (a new project's "Chapter 1") aren't anything to read.
+        empty = body.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/g, "").replace(/<[^>]*>/g, "").replace(/\s+/g, "") === ""
+            || (wholeBook && stats && stats.manuscript_words === 0);
         const ink = Theme.ink, sub = Theme.subtext;
         html = "<style>"
             + "body{color:" + ink + ";}"
@@ -58,7 +61,6 @@ Rectangle {
             + ".title{text-align:center;margin-top:60px;margin-bottom:40px;}"
             + ".title h1{font-size:xx-large;} .author{text-indent:0;font-size:large;color:" + sub + ";}"
             + "</style>" + body;
-        stats = Api.get("stats", null);
     }
 
     ColumnLayout {
@@ -153,9 +155,13 @@ Rectangle {
     }
 
     Label {
-        anchors.centerIn: parent
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 60
         visible: rv.empty
-        text: qsTr("Nothing to read yet: write something in the Manuscript.")
+        text: qsTr("Nothing to read yet: write something in the Manuscript, then come back.")
         color: Theme.subtext
+        padding: 10
+        background: Rectangle { color: Theme.panel; radius: 4; border.color: Theme.border }
     }
 }

@@ -121,6 +121,8 @@ Window {
         }
     }
 
+    Shortcut { sequence: "Escape"; onActivated: hw.close() }
+
     // Painted background (also makes screenshots of the window faithful).
     Rectangle { anchors.fill: parent; color: Theme.window }
 

@@ -29,7 +29,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
 - **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
 - **Reading mode** (❦ Read, Ctrl+7): the manuscript or the selected chapter as a read-only book
-  page, from the same compile step as export, with its own text size and column width.
+  page, from the same compile step as export, with its own text size and column width. A new
+  project shows a hint instead of an empty page.
 - **Word-target progress in the binder.** Documents and folders with a word target show a small
   progress bar (green when reached) with the count on hover.
 - **Writing sprints** (Ctrl+Shift+R): timed sessions with an optional word goal, a status-bar
@@ -59,7 +60,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
 
 ### Fixed
 - **Word Count History in a forced theme.** Its date boxes and menus followed the system colours,
-  so with Dark forced on a light desktop they were light with unreadable light text.
+  so with Dark forced on a light desktop they were light with unreadable light text. Esc now
+  closes the window.
 - **Preferences are remembered.** Light/dark, editor font size, page width, styled Markdown,
   panel visibility, timeline lanes and window size used to reset on every start. The app also
   shuts QML down properly on exit so the last change is saved.
