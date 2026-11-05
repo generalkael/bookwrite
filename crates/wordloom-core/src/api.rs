@@ -53,6 +53,13 @@ impl Args<'_> {
             _ => 0,
         }
     }
+    fn float(&self, i: usize) -> f64 {
+        match self.0.get(i) {
+            Some(Value::Number(n)) => n.as_f64().unwrap_or(0.0),
+            Some(Value::String(s)) => s.trim().parse().unwrap_or(0.0),
+            _ => 0.0,
+        }
+    }
     fn bool(&self, i: usize) -> bool {
         match self.0.get(i) {
             Some(Value::Bool(b)) => *b,
@@ -85,6 +92,7 @@ const READ_ONLY: &[&str] = &[
     "compile",
     "snapshots",
     "compareSnapshots",
+    "relations",
     "timeline",
     "recent",
     "rootId",
@@ -128,6 +136,18 @@ fn undo_label(method: &str, a: &Args) -> Option<(String, Option<String>)> {
         "setMeta" => "Project Details",
         "add" => "Add Item",
         "importFile" => "Import File",
+        "addRelation" => "Add Relationship",
+        "updateRelation" => {
+            return Some((
+                "Edit Relationship".into(),
+                Some(format!("rel:{}", a.str(0))),
+            ));
+        }
+        "reverseRelation" => "Reverse Relationship",
+        "removeRelation" => "Delete Relationship",
+        "placeOnMap" => {
+            return Some(("Move on Map".into(), Some(format!("map:{}", a.str(0)))));
+        }
         "move" | "dropOn" | "shift" => "Move",
         "indent" => "Indent",
         "outdent" => "Outdent",
@@ -327,6 +347,12 @@ impl App {
             }
             // --- snapshots ---
             "snapshots" => self.s()?.snapshots(a.str(0))?,
+            "relations" => self.s()?.relations(),
+            "addRelation" => json!(self.s()?.add_relation(a.str(0), a.str(1), a.str(2))?),
+            "updateRelation" => unit(self.s()?.update_relation(a.str(0), a.str(1), a.str(2)))?,
+            "reverseRelation" => unit(self.s()?.reverse_relation(a.str(0)))?,
+            "removeRelation" => unit(self.s()?.remove_relation(a.str(0)))?,
+            "placeOnMap" => unit(self.s()?.place_on_map(a.str(0), a.float(1), a.float(2)))?,
             "compareSnapshots" => self.s()?.compare_snapshots(a.str(0), a.str(1), a.str(2))?,
             "takeSnapshot" => unit(self.s()?.take_snapshot(a.str(0), a.str(1)))?,
             "restoreSnapshot" => unit(self.s()?.restore_snapshot(a.str(0), a.str(1)))?,
@@ -435,6 +461,50 @@ mod tests {
         assert!(app.call("bogus", "").json.contains("unknown method"));
         ok(&app.call("close", ""));
         assert_eq!(ok(&app.call("recent", ""))[0]["title"], "Book");
+    }
+
+    #[test]
+    fn relationships_through_the_api() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut app = App::new(tmp.path().join("recent.json"));
+        let url = url::Url::from_file_path(tmp.path()).unwrap().to_string();
+        ok(&app.call("newProject", &json!([url, "Book", "Me"]).to_string()));
+        let chars = ok(&app.call("rootId", r#"["characters"]"#));
+        let a = ok(&app.call("add", &json!([chars, "", "Ana", true]).to_string()));
+        let b = ok(&app.call("add", &json!([chars, "", "Ben", true]).to_string()));
+        let rel = ok(&app.call("addRelation", &json!([a, b, "rivals"]).to_string()));
+        let map = ok(&app.call("relations", ""));
+        assert_eq!(map["people"].as_array().unwrap().len(), 2);
+        assert_eq!(map["links"][0]["label"], "rivals");
+        assert_eq!(map["people"][0]["x"], Value::Null);
+        // Dragging a card many times is one undo step.
+        ok(&app.call("placeOnMap", &json!([a, 10, 20]).to_string()));
+        ok(&app.call("placeOnMap", &json!([a, 30.5, 40]).to_string()));
+        let info = ok(&app.call("nodeInfo", &json!([b]).to_string()));
+        assert_eq!(info["relations"][0]["other_title"], "Ana");
+        assert_eq!(info["relations"][0]["outgoing"], false);
+        assert_eq!(ok(&app.call("undo", "")), "Move on Map");
+        assert_eq!(
+            ok(&app.call("relations", ""))["people"][0]["x"],
+            Value::Null
+        );
+        assert_eq!(ok(&app.call("undo", "")), "Add Relationship");
+        assert!(ok(&app.call("relations", ""))["links"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+        assert_eq!(ok(&app.call("redo", "")), "Add Relationship");
+        // Deleting a character for good drops its relationships.
+        ok(&app.call("trash", &json!([a]).to_string()));
+        assert!(ok(&app.call("relations", ""))["links"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+        ok(&app.call("emptyTrash", ""));
+        assert!(app
+            .call("updateRelation", &json!([rel, "x", ""]).to_string())
+            .error
+            .is_some());
     }
 
     #[test]

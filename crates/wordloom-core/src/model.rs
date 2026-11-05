@@ -217,6 +217,9 @@ pub struct Project {
     pub statuses: Vec<Status>,
     #[serde(default)]
     pub timeline: Timeline,
+    /// Character relationships and their map layout.
+    #[serde(default)]
+    pub relations: crate::relations::Relations,
     #[serde(default)]
     pub stats: WritingStats,
     #[serde(skip)]
@@ -256,6 +259,7 @@ impl Project {
             labels: Vec::new(),
             statuses: Vec::new(),
             timeline: Timeline::default(),
+            relations: Default::default(),
             stats: WritingStats::default(),
             contents: HashMap::new(),
         };
@@ -513,6 +517,7 @@ impl Project {
             self.nodes.remove(id);
             self.contents.remove(id);
             self.timeline.forget_node(*id);
+            self.relations.forget_node(*id);
         }
         self.touch();
         removed

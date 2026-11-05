@@ -15,6 +15,7 @@ Rectangle {
     property var snaps: []
     property int snapIndex: -1
     signal openEvent()
+    signal openRelations()
     signal flushRequested()
     signal compareRequested(string snapId)
 
@@ -168,6 +169,37 @@ Rectangle {
                         Layout.fillWidth: true
                         TextField { id: newKey; Layout.fillWidth: true; placeholderText: qsTr("New field name") }
                         Button { text: "+"; enabled: newKey.text.trim().length > 0; onClicked: { ip.set("field:" + newKey.text.trim(), "—"); newKey.text = ""; } }
+                    }
+
+                    // Relationships (from the relationship map)
+                    RowLayout {
+                        visible: ip.node !== null && (ip.node.kind === "character" || ip.node.relations.length > 0)
+                        Layout.fillWidth: true
+                        Layout.topMargin: 6
+                        Label { text: qsTr("Relationships"); font.bold: true; color: Theme.text; Layout.fillWidth: true }
+                        ToolButton { text: qsTr("Map…"); onClicked: ip.openRelations(); ToolTip.visible: hovered; ToolTip.text: qsTr("Open the relationship map (Ctrl+6)") }
+                    }
+                    Repeater {
+                        model: ip.node ? ip.node.relations : []
+                        delegate: Label {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            color: Theme.text
+                            // Read in the label's direction: "→ distrusts Tobias Wren" (this
+                            // character is the subject) or "← Ilse Varga · older sister of".
+                            text: modelData.outgoing
+                                ? "→ " + (modelData.label || qsTr("related to")) + " " + modelData.other_title
+                                : "← " + modelData.other_title + " · " + (modelData.label || qsTr("related to"))
+                        }
+                    }
+                    Label {
+                        visible: ip.node !== null && ip.node.kind === "character" && ip.node.relations.length === 0
+                        text: qsTr("None yet. Connect characters on the relationship map.")
+                        color: Theme.subtext
+                        font.pixelSize: 11
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
                     }
 
                     Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border; Layout.topMargin: 6 }

@@ -154,6 +154,25 @@ pub fn create(parent: &Path) -> Result<Session> {
     let keeper = t.add_event("Tobias tends the light", tobias, 1, 3)?;
     link(t, keeper, Some(scene_ids[1]), vec![], vec![])?;
 
+    // Relationships for the map.
+    let cast: Vec<_> = s.project.nodes[&s.project.root(RootRole::Characters)]
+        .children
+        .clone();
+    if let [mara, tobias, ilse] = cast[..] {
+        let r = &mut s.project.relations;
+        let a = r.add(mara, tobias, "distrusts")?;
+        r.update(
+            a,
+            "distrusts",
+            "He knows what the letter means and won't say.",
+        )?;
+        r.add(tobias, ilse, "shares a secret with")?;
+        r.add(ilse, mara, "older sister of")?;
+        r.place(mara, 120.0, 220.0);
+        r.place(tobias, 420.0, 90.0);
+        r.place(ilse, 460.0, 330.0);
+    }
+
     // An earlier draft of the opening, to show snapshot comparison.
     crate::storage::take_snapshot(
         &s.dir,

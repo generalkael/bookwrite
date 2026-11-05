@@ -167,6 +167,20 @@ impl Session {
             "modified": n.modified,
             "breadcrumbs": crumbs,
             "events": events,
+            "relations": p
+                .relations
+                .for_node(id)
+                .map(|r| {
+                    let other = if r.from == id { r.to } else { r.from };
+                    json!({
+                        "id": r.id,
+                        "other": other,
+                        "other_title": p.nodes.get(&other).map(|n| n.title.as_str()).unwrap_or(""),
+                        "label": r.label,
+                        "outgoing": r.from == id,
+                    })
+                })
+                .collect::<Vec<_>>(),
         }))
     }
 
@@ -624,6 +638,90 @@ impl Session {
 
     pub fn delete_snapshot(&self, id: &str, snap: &str) -> Result<()> {
         storage::delete_snapshot(&self.dir, parse_id(id)?, parse_id(snap)?)
+    }
+
+    // ----- relationship map -----------------------------------------------
+
+    /// Everyone on the map (characters not in the trash, plus anything else
+    /// that has a relationship) and the relationships between them.
+    pub fn relations(&self) -> Value {
+        let p = &self.project;
+        let r = &p.relations;
+        let in_trash = |id: &NodeId| {
+            p.section_of(*id)
+                .map(|s| s == RootRole::Trash)
+                .unwrap_or(true)
+        };
+        let linked: std::collections::HashSet<NodeId> =
+            r.links.iter().flat_map(|l| [l.from, l.to]).collect();
+        let people: Vec<Value> = p
+            .subtree(p.root(RootRole::Characters))
+            .into_iter()
+            .filter(|id| p.nodes[id].kind == NodeKind::Character)
+            .chain(linked.iter().copied().filter(|id| {
+                p.nodes
+                    .get(id)
+                    .is_some_and(|n| n.kind != NodeKind::Character)
+            }))
+            .filter(|id| !in_trash(id))
+            .map(|id| {
+                let n = &p.nodes[&id];
+                let pos = r.positions.get(&id);
+                json!({
+                    "id": id,
+                    "title": n.title,
+                    "kind": n.kind,
+                    "synopsis": n.synopsis,
+                    "x": pos.map(|q| q[0]),
+                    "y": pos.map(|q| q[1]),
+                })
+            })
+            .collect();
+        let shown: std::collections::HashSet<String> = people
+            .iter()
+            .filter_map(|v| v["id"].as_str().map(String::from))
+            .collect();
+        let links: Vec<&crate::relations::Relationship> = r
+            .links
+            .iter()
+            .filter(|l| shown.contains(&l.from.to_string()) && shown.contains(&l.to.to_string()))
+            .collect();
+        json!({ "people": people, "links": links })
+    }
+
+    pub fn add_relation(&mut self, from: &str, to: &str, label: &str) -> Result<String> {
+        let (from, to) = (parse_id(from)?, parse_id(to)?);
+        self.project.node(from)?;
+        self.project.node(to)?;
+        let id = self.project.relations.add(from, to, label)?;
+        self.changed();
+        Ok(id.to_string())
+    }
+
+    pub fn update_relation(&mut self, id: &str, label: &str, notes: &str) -> Result<()> {
+        self.project.relations.update(parse_id(id)?, label, notes)?;
+        self.changed();
+        Ok(())
+    }
+
+    pub fn reverse_relation(&mut self, id: &str) -> Result<()> {
+        self.project.relations.reverse(parse_id(id)?)?;
+        self.changed();
+        Ok(())
+    }
+
+    pub fn remove_relation(&mut self, id: &str) -> Result<()> {
+        self.project.relations.remove(parse_id(id)?);
+        self.changed();
+        Ok(())
+    }
+
+    pub fn place_on_map(&mut self, id: &str, x: f64, y: f64) -> Result<()> {
+        let id = parse_id(id)?;
+        self.project.node(id)?;
+        self.project.relations.place(id, x, y);
+        self.changed();
+        Ok(())
     }
 
     // ----- timeline -------------------------------------------------------

@@ -21,6 +21,7 @@ version that supports the macOS 26 SDK.
 | **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place. |
 | **Inspector** | Synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
+| **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The inspector lists each character's relationships. |
 | **Research files** | Import images and PDFs (File ▸ Import File…, or drop files on the binder). They're copied into the project and shown in the editor: images with fit / zoom, PDFs page by page. Other file types open in your default app. |
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
 | **Search & replace** | Searches titles, text, synopses, notes and keywords across the project, with snippets. Replace-all works across every document. |
@@ -104,8 +105,8 @@ open in your default app instead.
 
 To try it out, click **Explore the Sample** on the start screen. It creates a short sample novel
 in `~/Documents/Wordloom` with chapters, characters, labels, an imported map in Research, a
-snapshot of an earlier draft to compare, and a timeline that includes dependencies and a
-deliberate conflict.
+snapshot of an earlier draft to compare, a relationship map, and a timeline that includes
+dependencies and a deliberate conflict.
 
 ## Keyboard shortcuts
 
@@ -122,6 +123,7 @@ Ctrl is ⌘ on macOS.
 | Compile / export | Ctrl+Shift+E |
 | Find in project · writing statistics | Ctrl+Shift+F · Ctrl+Shift+T |
 | Editor · corkboard · outliner · timeline | Ctrl+1 · Ctrl+2 · Ctrl+3 · Ctrl+4 |
+| Relationship map | Ctrl+6 |
 | Split editor on / off | Ctrl+\\ |
 | Focus mode (leave with Esc) | F11 |
 | Show / hide inspector | Ctrl+Alt+I |
@@ -138,7 +140,7 @@ works with git, Dropbox and diff tools, and you can still read it without Wordlo
 
 ```
 Title.wordloom/
-  project.json          binder tree, metadata, labels, statuses, timeline, stats
+  project.json          binder tree, metadata, labels, statuses, timeline, relationships, stats
   content/<uuid>.md     one Markdown file per document that has text
   snapshots/<uuid>.json saved versions of a document
   files/<uuid>.<ext>    imported research files (images, PDFs, …), copied in unchanged
@@ -167,6 +169,7 @@ crates/
     docx.rs        Word document
     zip.rs         minimal zip writer for EPUB and DOCX
     search.rs      search & case-insensitive replace
+    relations.rs   character relationships and map positions
     diff.rs        side-by-side snapshot comparison (paragraphs, then words)
     stats.rs       word counting, targets, daily history, streaks
     history.rs     project-wide undo/redo (structure snapshots + text diffs)
@@ -189,7 +192,6 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 ## Roadmap
 
 - Rich-text styling (today: plain text with Markdown)
-- A relationship map of characters
 - Packaged installers for Windows (MSI) and macOS (DMG); the Linux AppImage and Flatpak are done
 - Flathub submission (needs vendored crates instead of downloading them during the build)
 

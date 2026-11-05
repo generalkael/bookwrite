@@ -155,6 +155,7 @@ fn structure(p: &Project) -> Project {
         labels: p.labels.clone(),
         statuses: p.statuses.clone(),
         timeline: p.timeline.clone(),
+        relations: p.relations.clone(),
         stats: p.stats.clone(),
         contents: HashMap::new(),
     }
@@ -171,6 +172,7 @@ fn fingerprint(p: &Project) -> Vec<u8> {
         &p.labels,
         &p.statuses,
         &p.timeline,
+        &p.relations,
         (
             p.stats.manuscript_target,
             p.stats.session_target,

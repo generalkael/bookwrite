@@ -12,7 +12,7 @@ Item {
 
     property string currentId: ""
     property var current: null          // nodeInfo of currentId
-    property string viewMode: "editor"  // editor | corkboard | outliner | timeline
+    property string viewMode: "editor"  // editor | corkboard | outliner | timeline | relations
     property bool focusMode: false
     property bool showBinder: true
     property bool showInspector: true
@@ -130,7 +130,8 @@ Item {
     function mergeNext() { if (currentId) { flush(); Api.call("mergeWithNext", currentId); } }
     function focusSearch() { binder.focusSearch(); }
     function eventDialog() { return gantt.eventDialogRef; }
-    function closePopups() { gantt.closeDialogs(); compareDialog.close(); }
+    function closePopups() { gantt.closeDialogs(); compareDialog.close(); relationsView.dialogRef.close(); }
+    function relationDialogRef() { return relationsView.dialogRef; }
     // Compare a snapshot of the current document with its text now (the
     // first snapshot if `snapId` is empty).
     function compareSnapshot(snapId) {
@@ -192,7 +193,8 @@ Item {
                         { mode: "editor", label: qsTr("✎ Editor") },
                         { mode: "corkboard", label: qsTr("▦ Corkboard") },
                         { mode: "outliner", label: qsTr("☰ Outliner") },
-                        { mode: "timeline", label: qsTr("▤ Timeline") }
+                        { mode: "timeline", label: qsTr("▤ Timeline") },
+                        { mode: "relations", label: qsTr("◇ Relations") }
                     ]
                     delegate: ToolButton {
                         required property var modelData
@@ -259,7 +261,7 @@ Item {
                 StackLayout {
                     SplitView.fillWidth: true
                     SplitView.minimumWidth: 300
-                    currentIndex: ws.focusMode ? 0 : ["editor", "corkboard", "outliner", "timeline"].indexOf(ws.viewMode)
+                    currentIndex: ws.focusMode ? 0 : ["editor", "corkboard", "outliner", "timeline", "relations"].indexOf(ws.viewMode)
 
                     EditorView {
                         id: editorView
@@ -287,6 +289,13 @@ Item {
                         selectedNode: ws.currentId
                         onOpenScene: (id) => ws.select(id, "editor")
                     }
+                    RelationsView {
+                        id: relationsView
+                        active: ws.viewMode === "relations"
+                        selectedNode: ws.currentId
+                        onOpenRequested: (id) => ws.select(id, "editor")
+                        onSelectRequested: (id) => ws.select(id, "relations")
+                    }
                 }
 
                 EditorView {
@@ -313,6 +322,7 @@ Item {
                 onOpenEvent: () => ws.viewMode = "timeline"
                 onFlushRequested: ws.flush()
                 onCompareRequested: (snapId) => ws.compareSnapshot(snapId)
+                onOpenRelations: ws.viewMode = "relations"
             }
         }
 

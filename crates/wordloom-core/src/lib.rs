@@ -19,6 +19,7 @@ mod epub;
 pub mod history;
 pub mod model;
 pub mod recent;
+pub mod relations;
 pub mod search;
 pub mod session;
 pub mod stats;

@@ -64,7 +64,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -75,7 +75,7 @@ ApplicationWindow {
                 loader.grabToImage(r => r.saveToFile(file));
                 // Popups render in the window overlay, which can't be grabbed;
                 // capture the dialog's own content instead.
-                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null }[v];
+                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null }[v];
                 if (dlg && dlg.contentChildren.length) dlg.contentChildren[0].grabToImage(r => r.saveToFile(file.replace(".png", "-dialog.png")));
             } else if (v === undefined) {
                 stop(); Qt.quit(); return;
@@ -96,6 +96,8 @@ ApplicationWindow {
                 else if (v === "split") { win.ws.openFirstScene(); win.ws.openInSplit(fileItem); }
                 else if (v === "file") win.ws.select(fileItem, "editor");
                 else if (v === "compare") { win.ws.openFirstScene(); win.ws.compareSnapshot(""); }
+                else if (v === "relations") { win.ws.select(Api.get("children", [{ id: "" }], Api.call("rootId", "characters"))[0].id, "relations"); }
+                else if (v === "relation") { win.ws.viewMode = "relations"; const m = Api.get("relations", null); if (m && m.links.length) win.ws.relationDialogRef().openEdit(m.links[0]); }
                 if (v === "corkboard" || v === "outliner") win.ws.select(Api.call("rootId", "manuscript"), v);
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
                 else if (v === "timeline") win.ws.showLanes(false);
@@ -196,6 +198,7 @@ ApplicationWindow {
             Action { text: qsTr("&Corkboard"); shortcut: "Ctrl+2"; onTriggered: win.ws.viewMode = "corkboard" }
             Action { text: qsTr("&Outliner"); shortcut: "Ctrl+3"; onTriggered: win.ws.viewMode = "outliner" }
             Action { text: qsTr("&Timeline (Gantt)"); shortcut: "Ctrl+4"; onTriggered: win.ws.viewMode = "timeline" }
+            Action { text: qsTr("&Relationship Map"); shortcut: "Ctrl+6"; onTriggered: win.ws.viewMode = "relations" }
             MenuSeparator {}
             Action { text: qsTr("&Split Editor"); shortcut: "Ctrl+\\"; checkable: true; checked: win.ws ? win.ws.splitId !== "" : false; onTriggered: win.ws.toggleSplit() }
             Action { text: qsTr("&Focus Mode"); shortcut: "F11"; checkable: true; checked: win.ws ? win.ws.focusMode : false; onTriggered: win.ws.focusMode = !win.ws.focusMode }
