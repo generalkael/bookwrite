@@ -32,7 +32,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   (`packaging/linux/build-appimage.sh`), with a desktop entry, icon and AppStream metadata.
 - **Flatpak** (`packaging/flatpak/`), on the KDE 6.11 runtime, built and smoke-tested by CI. The
   app reports its desktop file name (`io.github.generalkael.Wordloom`), so Wayland docks show the
-  right icon.
+  right icon. The build is offline with vendored crates (`cargo-sources.json`, generated from
+  `Cargo.lock`), as Flathub requires, and the AppStream metadata has screenshots.
 
 ### Fixed
 - **Save As** now copies snapshots (and imported files) to the new project instead of leaving

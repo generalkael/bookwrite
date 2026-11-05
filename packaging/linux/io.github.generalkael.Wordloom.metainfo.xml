@@ -14,11 +14,46 @@
       with a corkboard, an outliner, snapshots, project-wide undo and a story-timeline Gantt chart.
       It compiles the manuscript to EPUB, DOCX, HTML, Markdown or plain text.
     </p>
+    <ul>
+      <li>Binder, corkboard, outliner and a split editor with styled Markdown</li>
+      <li>Story timeline with dependencies, conflict detection and swim lanes</li>
+      <li>Character relationship map and character / place sheets</li>
+      <li>Research files: images and PDFs inside the project</li>
+      <li>Plain-text project format that works with git and backup tools</li>
+    </ul>
   </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>The editor, with styled Markdown and the binder and inspector</caption>
+      <image>https://raw.githubusercontent.com/generalkael/wordloom/main/docs/screenshots/editor.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The story timeline, grouped into swim lanes</caption>
+      <image>https://raw.githubusercontent.com/generalkael/wordloom/main/docs/screenshots/timeline.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The character relationship map</caption>
+      <image>https://raw.githubusercontent.com/generalkael/wordloom/main/docs/screenshots/relations.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Index cards on the corkboard</caption>
+      <image>https://raw.githubusercontent.com/generalkael/wordloom/main/docs/screenshots/corkboard.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The split editor beside an imported research map</caption>
+      <image>https://raw.githubusercontent.com/generalkael/wordloom/main/docs/screenshots/split.png</image>
+    </screenshot>
+  </screenshots>
+  <url type="bugtracker">https://github.com/generalkael/wordloom/issues</url>
+  <url type="vcs-browser">https://github.com/generalkael/wordloom</url>
   <launchable type="desktop-id">io.github.generalkael.Wordloom.desktop</launchable>
   <url type="homepage">https://github.com/generalkael/wordloom</url>
   <provides><binary>wordloom</binary></provides>
   <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#f3dfcf</color>
+    <color type="primary" scheme_preference="dark">#4a3626</color>
+  </branding>
   <releases>
     <release version="0.1.0" date="2026-11-05"/>
   </releases>

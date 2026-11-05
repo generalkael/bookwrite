@@ -3,8 +3,9 @@
 #   flatpak-builder --user --install --install-deps-from=flathub --force-clean \
 #       build-dir packaging/flatpak/io.github.generalkael.Wordloom.yml
 #
-# The build downloads crates from crates.io (build-args below), which suits a
-# self-distributed bundle; a Flathub submission would vendor them instead.
+# The build is offline, as Flathub requires: every crate is a source listed
+# in cargo-sources.json (regenerate it with cargo-sources.py after changing
+# Cargo.lock; CI fails if it is stale).
 id: io.github.generalkael.Wordloom
 runtime: org.kde.Platform
 runtime-version: '6.11'
@@ -24,15 +25,13 @@ finish-args:
   - --filesystem=home
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
-  build-args:
-    - --share=network
   env:
     CARGO_HOME: /run/build/wordloom/cargo
 modules:
   - name: wordloom
     buildsystem: simple
     build-commands:
-      - cargo build --release --locked -p wordloom
+      - cargo --offline build --release --locked -p wordloom
       - install -Dm755 target/release/wordloom /app/bin/wordloom
       - install -Dm644 packaging/linux/io.github.generalkael.Wordloom.desktop -t /app/share/applications
       - install -Dm644 packaging/linux/io.github.generalkael.Wordloom.svg -t /app/share/icons/hicolor/scalable/apps
@@ -44,3 +43,5 @@ modules:
           - target
           - .appimage-tools
           - .flatpak-builder
+          - build-dir
+      - cargo-sources.json

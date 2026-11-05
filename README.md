@@ -10,6 +10,12 @@ Rust both support those platforms. CI currently builds Linux only: Windows CI is
 until the Linux version is complete (it passed when last enabled), and macOS CI waits on a Qt
 version that supports the macOS 26 SDK.
 
+![Wordloom's editor with styled Markdown, the binder and the inspector](docs/screenshots/editor.png)
+
+More screenshots: [timeline](docs/screenshots/timeline.png) ·
+[relationship map](docs/screenshots/relations.png) · [corkboard](docs/screenshots/corkboard.png) ·
+[split editor](docs/screenshots/split.png).
+
 ## Features
 
 | Area | What you get |
@@ -80,6 +86,10 @@ To build them yourself, run `packaging/linux/build-appimage.sh` (it downloads li
 `flatpak-builder --user --install --install-deps-from=flathub --force-clean build-dir packaging/flatpak/io.github.generalkael.Wordloom.yml`.
 The desktop entry, icon and AppStream metadata are in `packaging/linux/` and use the app ID
 `io.github.generalkael.Wordloom`.
+
+The Flatpak build is offline, as Flathub requires: every crate is listed with its checksum in
+`packaging/flatpak/cargo-sources.json`. After changing `Cargo.lock`, regenerate it with
+`packaging/flatpak/cargo-sources.py`; CI fails if it is out of date.
 
 ## Building
 
@@ -194,7 +204,8 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 ## Roadmap
 
 - Packaged installers for Windows (MSI) and macOS (DMG); the Linux AppImage and Flatpak are done
-- Flathub submission (needs vendored crates instead of downloading them during the build)
+- Flathub submission: the manifest and metadata are ready; what's left is opening the submission
+  pull request on flathub/flathub
 
 ## License
 
