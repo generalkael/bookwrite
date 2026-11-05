@@ -76,6 +76,7 @@ impl Session {
         }
         self.project.meta.title = title.to_string();
         storage::save(&self.project, &dir)?;
+        storage::copy_assets(&self.dir, &dir)?;
         self.dir = dir;
         self.dirty = false;
         Ok(())
@@ -157,6 +158,7 @@ impl Session {
             "include_in_compile": n.include_in_compile,
             "target_words": n.target_words,
             "fields": n.fields,
+            "file": n.file.as_ref().map(|f| self.file_info(f)),
             "words": p.own_words(id),
             "total_words": p.total_words(id),
             "chars": stats::count_chars(p.text(id)),
@@ -166,6 +168,46 @@ impl Session {
             "breadcrumbs": crumbs,
             "events": events,
         }))
+    }
+
+    /// Where an imported file lives, and how the UI should show it.
+    fn file_info(&self, name: &str) -> Value {
+        let path = self.dir.join(storage::FILES_DIR).join(name);
+        let ext = Path::new(name)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+        let kind = match ext {
+            "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg" => "image",
+            "pdf" => "pdf",
+            _ => "other",
+        };
+        json!({
+            "url": url::Url::from_file_path(&path).map(String::from).unwrap_or_default(),
+            "kind": kind,
+            "exists": path.is_file(),
+        })
+    }
+
+    /// Import a file as a research item under `parent` (default: the
+    /// Research section), titled after the file.
+    pub fn import_file(&mut self, parent: &str, src: &Path) -> Result<String> {
+        let parent = match opt_id(parent)? {
+            Some(id) => id,
+            None => self.project.root(RootRole::Research),
+        };
+        self.project.node(parent)?;
+        let name = storage::import_file(&self.dir, src)?;
+        let title = src
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Imported file");
+        let id = self
+            .project
+            .add_node(parent, None, NodeKind::Research, title)?;
+        self.project.node_mut(id)?.file = Some(name);
+        self.changed();
+        Ok(id.to_string())
     }
 
     /// Children of `id` as index cards (corkboard / outliner).
@@ -775,6 +817,36 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn imported_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("Map of the Island.PNG");
+        std::fs::write(&src, b"not really a png").unwrap();
+        let mut s = Session::create(tmp.path(), "Isle", "").unwrap();
+        assert!(s.import_file("", &tmp.path().join("missing.png")).is_err());
+
+        let id = s.import_file("", &src).unwrap();
+        let info = s.node_info(&id).unwrap();
+        assert_eq!(info["title"], "Map of the Island");
+        assert_eq!(info["kind"], "research");
+        assert_eq!(info["section"], "research");
+        assert_eq!(info["file"]["kind"], "image");
+        assert_eq!(info["file"]["exists"], true);
+        let url = info["file"]["url"].as_str().unwrap();
+        assert!(url.starts_with("file://") && url.ends_with(".png"));
+
+        // The reference survives a reload, and Save As takes the file along.
+        s.save().unwrap();
+        let mut s = Session::open(&s.dir).unwrap();
+        assert_eq!(s.node_info(&id).unwrap()["file"]["exists"], true);
+        let other = tmp.path().join("elsewhere");
+        std::fs::create_dir(&other).unwrap();
+        s.save_as(&other, "Isle 2").unwrap();
+        let info = s.node_info(&id).unwrap();
+        assert!(info["file"]["url"].as_str().unwrap().contains("elsewhere"));
+        assert_eq!(info["file"]["exists"], true);
+    }
 
     #[test]
     fn end_to_end() {

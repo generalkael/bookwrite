@@ -4,7 +4,9 @@ import QtQuick.Layouts
 import com.wordloom.app
 
 // The main three-pane layout: binder | view | inspector, plus toolbar and
-// status bar. Owns the current selection and view mode.
+// status bar. Owns the current selection and view mode, and the optional
+// split editor: a second editor beside the main view that keeps showing one
+// document while the binder drives the main view.
 Item {
     id: ws
 
@@ -15,15 +17,20 @@ Item {
     property bool showBinder: true
     property bool showInspector: true
     property var stats: null
+    property string splitId: ""         // document in the split editor; "" = no split
+    property var splitNode: null
 
     readonly property int rev: Wordloom.revision
     onRevChanged: refresh()
     onCurrentIdChanged: refresh()
+    onSplitIdChanged: refresh()
 
     function refresh() {
         // The selected item can vanish (undo, empty trash); drop it quietly.
         if (currentId !== "" && !Api.get("exists", false, currentId)) { currentId = ""; return; }
         current = currentId !== "" ? (Api.get("nodeInfo", null, currentId)) : null;
+        if (splitId !== "" && !Api.get("exists", false, splitId)) splitId = "";
+        splitNode = splitId !== "" ? Api.get("nodeInfo", null, splitId) : null;
         stats = Api.get("stats", null);
     }
 
@@ -36,7 +43,39 @@ Item {
             viewMode = "corkboard";
     }
 
-    function flush() { if (editorView) editorView.flush(); }
+    function flush() {
+        if (editorView) editorView.flush();
+        if (splitEditor) splitEditor.flush();
+    }
+
+    // Split editor. Opening it shows the current document on the right, so
+    // it stays in view while you pick something else in the binder.
+    function toggleSplit() {
+        flush();
+        splitId = splitId !== "" ? "" : (currentId !== "" ? currentId : "");
+        if (splitId === "") Api.say(qsTr("Select a document to split the editor"));
+    }
+    function openInSplit(id) { flush(); splitId = id; }
+    function swapSplit() {
+        if (splitId === "") return;
+        flush();
+        const other = currentId;
+        select(splitId, "editor");
+        splitId = other !== "" ? other : splitId;
+    }
+
+    // Import files (images, PDFs, …) as research items. Into the selected
+    // folder if it is in Research, otherwise into the Research section.
+    function importFiles(urls) {
+        flush();
+        const inResearch = current && current.section === "research" && (current.is_root || current.kind === "folder");
+        let last = "";
+        for (const u of urls) {
+            const id = Api.call("importFile", inResearch ? currentId : "", u.toString());
+            if (id) last = id;
+        }
+        if (last) select(last, "editor");
+    }
 
     // Close an in-progress binder rename without committing it.
     function cancelRename() { binder.renamingId = ""; }
@@ -107,13 +146,13 @@ Item {
         }
     }
 
-    Component.onCompleted: {
-        // Open the first scene of the manuscript.
+    function openFirstScene() {
         const ms = Api.call("rootId", "manuscript");
         let kids = Api.get("children", [], ms);
         while (kids.length && kids[0].kind === "folder" && kids[0].child_count > 0) kids = Api.get("children", [], kids[0].id);
         if (kids.length) select(kids[0].id, "editor");
     }
+    Component.onCompleted: openFirstScene()
 
     ColumnLayout {
         anchors.fill: parent
@@ -157,6 +196,10 @@ Item {
                 ToolSeparator {}
                 ToolButton { text: qsTr("◎ Focus"); onClicked: ws.focusMode = true; ToolTip.visible: hovered; ToolTip.text: qsTr("Distraction-free writing (F11, Esc to leave)") }
                 ToolButton { text: qsTr("⎙ Snapshot"); enabled: ws.currentId !== ""; onClicked: ws.snapshot() }
+                ToolButton {
+                    text: qsTr("◫ Split"); checkable: true; checked: ws.splitId !== ""; onClicked: ws.toggleSplit()
+                    ToolTip.visible: hovered; ToolTip.text: qsTr("Keep this document open beside the main view (Ctrl+\\)")
+                }
                 Item { Layout.fillWidth: true }
                 Label {
                     visible: ws.current !== null
@@ -190,38 +233,64 @@ Item {
                 currentId: ws.currentId
                 onSelected: (id) => ws.select(id)
                 onActivated: (id) => ws.select(id, "editor")
+                onOpenInSplit: (id) => ws.openInSplit(id)
+                onFilesDropped: (urls) => ws.importFiles(urls)
             }
 
-            StackLayout {
+            SplitView {
                 SplitView.fillWidth: true
                 SplitView.minimumWidth: 300
-                currentIndex: ws.focusMode ? 0 : ["editor", "corkboard", "outliner", "timeline"].indexOf(ws.viewMode)
+                orientation: Qt.Horizontal
+                handle: Rectangle {
+                    implicitWidth: 5
+                    color: SplitHandle.hovered || SplitHandle.pressed ? Theme.accent : Theme.border
+                    opacity: SplitHandle.hovered || SplitHandle.pressed ? 0.6 : 1
+                }
+
+                StackLayout {
+                    SplitView.fillWidth: true
+                    SplitView.minimumWidth: 300
+                    currentIndex: ws.focusMode ? 0 : ["editor", "corkboard", "outliner", "timeline"].indexOf(ws.viewMode)
+
+                    EditorView {
+                        id: editorView
+                        nodeId: ws.currentId
+                        node: ws.current
+                        focusMode: ws.focusMode
+                        onOpenRequested: (id) => ws.select(id, "editor")
+                    }
+                    CorkboardView {
+                        nodeId: ws.currentId
+                        node: ws.current
+                        active: ws.viewMode === "corkboard"
+                        onOpenRequested: (id) => ws.select(id, "editor")
+                        onSelectRequested: (id) => ws.select(id, "corkboard")
+                    }
+                    OutlinerView {
+                        nodeId: ws.currentId
+                        node: ws.current
+                        active: ws.viewMode === "outliner"
+                        onOpenRequested: (id) => ws.select(id, "editor")
+                    }
+                    GanttView {
+                        id: gantt
+                        active: ws.viewMode === "timeline"
+                        selectedNode: ws.currentId
+                        onOpenScene: (id) => ws.select(id, "editor")
+                    }
+                }
 
                 EditorView {
-                    id: editorView
-                    nodeId: ws.currentId
-                    node: ws.current
-                    focusMode: ws.focusMode
-                    onOpenRequested: (id) => ws.select(id, "editor")
-                }
-                CorkboardView {
-                    nodeId: ws.currentId
-                    node: ws.current
-                    active: ws.viewMode === "corkboard"
-                    onOpenRequested: (id) => ws.select(id, "editor")
-                    onSelectRequested: (id) => ws.select(id, "corkboard")
-                }
-                OutlinerView {
-                    nodeId: ws.currentId
-                    node: ws.current
-                    active: ws.viewMode === "outliner"
-                    onOpenRequested: (id) => ws.select(id, "editor")
-                }
-                GanttView {
-                    id: gantt
-                    active: ws.viewMode === "timeline"
-                    selectedNode: ws.currentId
-                    onOpenScene: (id) => ws.select(id, "editor")
+                    id: splitEditor
+                    visible: ws.splitId !== "" && !ws.focusMode
+                    SplitView.preferredWidth: 480
+                    SplitView.minimumWidth: 300
+                    secondary: true
+                    nodeId: ws.splitId
+                    node: ws.splitNode
+                    onOpenRequested: (id) => ws.openInSplit(id)
+                    onSwapRequested: ws.swapSplit()
+                    onCloseRequested: { splitEditor.flush(); ws.splitId = ""; }
                 }
             }
 

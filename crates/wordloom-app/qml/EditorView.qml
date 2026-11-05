@@ -6,6 +6,10 @@ import com.wordloom.app
 // The writing surface. A single document is edited on its own; selecting a
 // folder shows all of its documents stitched together as one continuous,
 // editable manuscript ("composite" mode), each piece saving independently.
+// An item with an imported file (image, PDF) shows the file instead.
+//
+// Workspace can show a second EditorView beside the first (split editor);
+// that one is `secondary` and offers swap / close buttons.
 Rectangle {
     id: ev
     color: focusMode ? (Theme.dark ? "#141517" : "#e9e5dc") : Theme.window
@@ -18,7 +22,11 @@ Rectangle {
     property var docs: []          // [{id, title, depth, folder}]
     property string activeId: ""
     property int activeCursor: 0
+    property bool secondary: false
+    readonly property bool hasFile: node !== null && !!node.file
     signal openRequested(string id)
+    signal swapRequested()
+    signal closeRequested()
 
     readonly property int rev: Wordloom.revision
     onRevChanged: rebuild(false)
@@ -37,7 +45,7 @@ Rectangle {
     }
 
     function rebuild(force) {
-        if (!node) { docs = []; return; }
+        if (!node || node.file) { docs = []; return; }
         const out = [{ id: node.id, title: node.title, depth: 0, folder: node.kind === "folder" }];
         if (node.child_count > 0) collect(node.id, 1, out);
         const sig = out.map(d => d.id + d.title).join("|");
@@ -68,16 +76,29 @@ Rectangle {
                 anchors.rightMargin: 8
                 Label { text: ev.node ? Theme.kindIcon(ev.node.kind, ev.node.role) + "  " + ev.node.title : ""; font.bold: true; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
                 Label { visible: ev.docs.length > 1; text: qsTr("Composite · %1 parts").arg(ev.docs.length); color: Theme.subtext }
-                ToolButton { text: qsTr("Preview"); checkable: true; checked: ev.preview; onToggled: { ev.flush(); ev.preview = checked; } ToolTip.visible: hovered; ToolTip.text: qsTr("Render Markdown formatting") }
-                ToolButton { text: qsTr("Typewriter"); checkable: true; checked: ev.typewriter; onToggled: ev.typewriter = checked; ToolTip.visible: hovered; ToolTip.text: qsTr("Keep the current line centred") }
-                ToolButton { text: "A−"; onClicked: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
-                ToolButton { text: "A+"; onClicked: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
-                ToolButton { text: "⇔"; onClicked: Theme.pageWidth = Theme.pageWidth >= 1100 ? 560 : Theme.pageWidth + 180; ToolTip.visible: hovered; ToolTip.text: qsTr("Page width") }
+                ToolButton { visible: ev.hasFile; text: qsTr("Open in Default App"); onClicked: fileViewer.openExternally() }
+                ToolButton { visible: !ev.hasFile; text: qsTr("Preview"); checkable: true; checked: ev.preview; onToggled: { ev.flush(); ev.preview = checked; } ToolTip.visible: hovered; ToolTip.text: qsTr("Render Markdown formatting") }
+                ToolButton { visible: !ev.hasFile; text: qsTr("Typewriter"); checkable: true; checked: ev.typewriter; onToggled: ev.typewriter = checked; ToolTip.visible: hovered; ToolTip.text: qsTr("Keep the current line centred") }
+                ToolButton { visible: !ev.hasFile; text: "A−"; onClicked: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
+                ToolButton { visible: !ev.hasFile; text: "A+"; onClicked: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
+                ToolButton { visible: !ev.hasFile; text: "⇔"; onClicked: Theme.pageWidth = Theme.pageWidth >= 1100 ? 560 : Theme.pageWidth + 180; ToolTip.visible: hovered; ToolTip.text: qsTr("Page width") }
+                ToolSeparator { visible: ev.secondary }
+                ToolButton { visible: ev.secondary; text: "⇄"; onClicked: ev.swapRequested(); ToolTip.visible: hovered; ToolTip.text: qsTr("Swap with the main editor") }
+                ToolButton { visible: ev.secondary; text: "✕"; onClicked: ev.closeRequested(); ToolTip.visible: hovered; ToolTip.text: qsTr("Close split (Ctrl+\\)") }
             }
+        }
+
+        FileViewer {
+            id: fileViewer
+            visible: ev.hasFile
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            file: ev.hasFile ? ev.node.file : null
         }
 
         ScrollView {
             id: scroller
+            visible: !ev.hasFile
             Layout.fillWidth: true
             Layout.fillHeight: true
             // Don't let content size feed back into the layout (binding loop).
@@ -163,7 +184,12 @@ Rectangle {
             if (!loading && area.text !== saved) {
                 Api.call("setText", docId, area.text);
                 saved = area.text;
+                Api.textSaved(docId);
             }
+        }
+        Connections {
+            target: Api
+            function onTextSaved(id) { if (id === de.docId) de.syncFromStore(); }
         }
         // Pick up external changes (snapshot restore, replace-all) unless the
         // user is mid-edit here.

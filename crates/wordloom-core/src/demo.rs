@@ -103,6 +103,15 @@ pub fn create(parent: &Path) -> Result<Session> {
         "Fresnel lenses; clockwork rotation wound every few hours; logbook kept nightly.".into(),
     )?;
 
+    // An imported image, to show off the file viewer.
+    let files = s.dir.join(crate::storage::FILES_DIR);
+    std::fs::create_dir_all(&files)?;
+    std::fs::write(files.join("skerry-map.svg"), MAP_SVG)?;
+    let map = p.add_node(research, None, NodeKind::Research, "Map of the Skerry")?;
+    p.node_mut(map)?.file = Some("skerry-map.svg".into());
+    p.node_mut(map)?.synopsis =
+        "Sketch map: the light, the jetty, and where the Alba struck.".into();
+
     // Timeline: tracks from the cast, plus a plotline.
     s.sync_tracks();
     s.project.timeline.calendar_start = chrono::NaiveDate::from_ymd_opt(1893, 10, 2);
@@ -148,6 +157,27 @@ pub fn create(parent: &Path) -> Result<Session> {
     s.save()?;
     Ok(s)
 }
+
+const MAP_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="560" viewBox="0 0 800 560">
+<rect width="800" height="560" fill="#cfdde3"/>
+<g fill="none" stroke="#9fb8c2" stroke-width="1.5">
+<path d="M0 470 Q200 440 400 480 T800 460"/><path d="M0 100 Q220 70 420 110 T800 90"/>
+</g>
+<path d="M250 170 C320 110 470 120 540 170 C610 220 600 330 520 380 C450 425 330 420 270 360 C210 300 200 220 250 170 Z" fill="#e8dfc6" stroke="#7a6a4f" stroke-width="3"/>
+<path d="M300 250 C340 220 420 230 450 270" fill="none" stroke="#b5a37c" stroke-width="2" stroke-dasharray="6 5"/>
+<circle cx="470" cy="200" r="14" fill="#b8462e" stroke="#4a2a1d" stroke-width="3"/>
+<path d="M470 200 L640 120 L640 160 Z" fill="#f4d35e" opacity="0.6"/>
+<rect x="268" y="330" width="60" height="10" fill="#7a6a4f" transform="rotate(-20 298 335)"/>
+<path d="M660 360 l14 -14 m0 14 l-14 -14" stroke="#4a2a1d" stroke-width="4"/>
+<g font-family="Georgia, serif" fill="#3b3224">
+<text x="400" y="60" font-size="30" text-anchor="middle">The Skerry</text>
+<text x="492" y="232" font-size="18">Skerry Light</text>
+<text x="210" y="380" font-size="18">jetty</text>
+<text x="667" y="398" font-size="18" font-style="italic" text-anchor="middle">wreck of the Alba</text>
+<text x="400" y="530" font-size="14" text-anchor="middle" font-style="italic">sketched from the keeper's log, 1893</text>
+</g>
+</svg>
+"##;
 
 #[cfg(test)]
 mod tests {

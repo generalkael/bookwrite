@@ -7,6 +7,7 @@
 //!   project.json          binder, metadata, labels, timeline, stats
 //!   content/<uuid>.md     one Markdown file per document with text
 //!   snapshots/<uuid>.json saved versions of a document
+//!   files/<uuid>.<ext>    imported research files (images, PDFs, …)
 //!   backups/              rolling copies of project.json
 //! ```
 //!
@@ -68,6 +69,49 @@ fn write_atomic(path: &Path, data: &[u8]) -> Result<()> {
     ));
     fs::write(&tmp, data)?;
     fs::rename(&tmp, path)?;
+    Ok(())
+}
+
+pub const FILES_DIR: &str = "files";
+
+/// Copy `src` into the bundle's `files/` directory under a fresh name and
+/// return that name. Imported files are never deleted by Wordloom, so undo,
+/// duplicates and backups can always refer back to them.
+pub fn import_file(dir: &Path, src: &Path) -> Result<String> {
+    if !src.is_file() {
+        return Err(Error::Invalid(format!("{} is not a file", src.display())));
+    }
+    let ext = src
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+        .filter(|e| !e.is_empty() && e.chars().all(|c| c.is_ascii_alphanumeric()));
+    let name = match ext {
+        Some(e) => format!("{}.{e}", Uuid::new_v4()),
+        None => Uuid::new_v4().to_string(),
+    };
+    let files = dir.join(FILES_DIR);
+    fs::create_dir_all(&files)?;
+    fs::copy(src, files.join(&name))?;
+    Ok(name)
+}
+
+/// Copy imported files and snapshots to a new bundle (Save As).
+pub fn copy_assets(from: &Path, to: &Path) -> Result<()> {
+    for sub in [FILES_DIR, "snapshots"] {
+        let src = from.join(sub);
+        if !src.is_dir() {
+            continue;
+        }
+        let dst = to.join(sub);
+        fs::create_dir_all(&dst)?;
+        for entry in fs::read_dir(&src)? {
+            let entry = entry?;
+            if entry.file_type()?.is_file() {
+                fs::copy(entry.path(), dst.join(entry.file_name()))?;
+            }
+        }
+    }
     Ok(())
 }
 

@@ -6,6 +6,8 @@ const QML: &[&str] = &[
     "qml/Workspace.qml",
     "qml/BinderPane.qml",
     "qml/EditorView.qml",
+    "qml/FileViewer.qml",
+    "qml/PdfViewer.qml",
     "qml/CorkboardView.qml",
     "qml/OutlinerView.qml",
     "qml/InspectorPane.qml",

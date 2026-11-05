@@ -8,6 +8,9 @@ QtObject {
 
     signal failed(string method, string message)
     signal notice(string message)
+    // A document's text was saved from one editor; others showing the same
+    // document (split editor) reload it.
+    signal textSaved(string id)
 
     // Call a backend method. Returns the result, or `undefined` on failure
     // (and emits `failed`).

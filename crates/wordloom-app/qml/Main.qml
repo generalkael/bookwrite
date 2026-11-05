@@ -64,7 +64,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "event", "search", "compile", "stats", "settings", "add", "undo", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -83,12 +83,18 @@ ApplicationWindow {
                 compileDialog.close(); statsDialog.close(); settingsDialog.close(); win.ws.closePopups();
                 win.ws.searchFor(v === "search" ? "lighthouse" : "");
                 win.ws.focusMode = v === "focus";
+                if (v !== "split") win.ws.splitId = "";
+                // The last research item: an imported file in the sample.
+                const research = Api.get("children", [], Api.call("rootId", "research"));
+                const fileItem = research.length ? research[research.length - 1].id : "";
                 if (v === "event") win.ws.editAnEvent();
                 else if (v === "compile") compileDialog.open();
                 else if (v === "stats") statsDialog.open();
                 else if (v === "settings") settingsDialog.open();
                 else if (v === "add") { win.ws.viewMode = "editor"; win.ws.addInSection("characters"); }
                 else if (v === "undo") { win.ws.cancelRename(); win.ws.undo(); }
+                else if (v === "split") { win.ws.openFirstScene(); win.ws.openInSplit(fileItem); }
+                else if (v === "file") win.ws.select(fileItem, "editor");
                 if (v === "corkboard" || v === "outliner") win.ws.select(Api.call("rootId", "manuscript"), v);
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
                 else if (v === "timeline") win.ws.viewMode = "timeline";
@@ -137,6 +143,7 @@ ApplicationWindow {
             MenuSeparator {}
             Action { text: qsTr("&Save"); shortcut: StandardKey.Save; enabled: Wordloom.projectOpen; onTriggered: win.saveNow() }
             Action { text: qsTr("Save &As…"); enabled: Wordloom.projectOpen; onTriggered: saveAsDialog.open() }
+            Action { text: qsTr("&Import File…"); shortcut: "Ctrl+Shift+I"; enabled: win.ws !== null; onTriggered: importDialog.open() }
             Action { text: qsTr("Take &Snapshot"); shortcut: "Ctrl+5"; enabled: win.ws !== null; onTriggered: win.ws.snapshot() }
             MenuSeparator {}
             Action { text: qsTr("&Compile / Export…"); shortcut: "Ctrl+Shift+E"; enabled: Wordloom.projectOpen; onTriggered: compileDialog.open() }
@@ -186,6 +193,7 @@ ApplicationWindow {
             Action { text: qsTr("&Outliner"); shortcut: "Ctrl+3"; onTriggered: win.ws.viewMode = "outliner" }
             Action { text: qsTr("&Timeline (Gantt)"); shortcut: "Ctrl+4"; onTriggered: win.ws.viewMode = "timeline" }
             MenuSeparator {}
+            Action { text: qsTr("&Split Editor"); shortcut: "Ctrl+\\"; checkable: true; checked: win.ws ? win.ws.splitId !== "" : false; onTriggered: win.ws.toggleSplit() }
             Action { text: qsTr("&Focus Mode"); shortcut: "F11"; checkable: true; checked: win.ws ? win.ws.focusMode : false; onTriggered: win.ws.focusMode = !win.ws.focusMode }
             Action { text: qsTr("Show &Binder"); checkable: true; checked: win.ws ? win.ws.showBinder : true; onTriggered: win.ws.showBinder = !win.ws.showBinder }
             Action { text: qsTr("Show &Inspector"); shortcut: "Ctrl+Alt+I"; checkable: true; checked: win.ws ? win.ws.showInspector : true; onTriggered: win.ws.showInspector = !win.ws.showInspector }
@@ -317,6 +325,13 @@ ApplicationWindow {
     FolderDialog { id: saveAsFolder; onAccepted: saveAsDialog.folder = selectedFolder }
 
     CompileDialog { id: compileDialog; anchors.centerIn: parent }
+    FileDialog {
+        id: importDialog
+        title: qsTr("Import into Research")
+        fileMode: FileDialog.OpenFiles
+        nameFilters: [qsTr("Images and PDFs (*.png *.jpg *.jpeg *.gif *.webp *.bmp *.svg *.pdf)"), qsTr("All files (*)")]
+        onAccepted: if (win.ws) win.ws.importFiles(selectedFiles)
+    }
     StatsDialog { id: statsDialog; anchors.centerIn: parent }
     ProjectSettingsDialog { id: settingsDialog; anchors.centerIn: parent }
 

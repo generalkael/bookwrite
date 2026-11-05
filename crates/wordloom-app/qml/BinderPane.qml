@@ -17,6 +17,8 @@ Rectangle {
     property string dropPos: ""
     signal selected(string id)
     signal activated(string id)
+    signal openInSplit(string id)
+    signal filesDropped(var urls)
 
     readonly property int rev: Wordloom.revision
     onRevChanged: reload()
@@ -197,6 +199,8 @@ Rectangle {
                     MenuItem { text: qsTr("New Document"); onTriggered: { const id = Api.call("add", row.modelData.id, "", "", row.isRoot || row.modelData.kind === "folder"); if (id) { pane.selected(id); pane.startRename(id); } } }
                     MenuItem { text: qsTr("New Folder"); onTriggered: { const id = Api.call("add", row.modelData.id, "folder", "", row.isRoot); if (id) { pane.selected(id); pane.startRename(id); } } }
                     MenuSeparator {}
+                    MenuItem { text: qsTr("Open in Split Editor"); enabled: !row.isRoot; onTriggered: pane.openInSplit(row.modelData.id) }
+                    MenuSeparator {}
                     MenuItem { text: qsTr("Rename"); enabled: !row.isRoot; onTriggered: pane.startRename(row.modelData.id) }
                     MenuItem { text: qsTr("Duplicate"); enabled: !row.isRoot; onTriggered: Api.call("duplicate", row.modelData.id) }
                     MenuItem { text: qsTr("Move Up"); enabled: !row.isRoot; onTriggered: Api.call("shift", row.modelData.id, -1) }
@@ -219,6 +223,20 @@ Rectangle {
                     MenuItem { text: qsTr("Empty Trash"); visible: row.modelData.role === "trash"; height: visible ? implicitHeight : 0; onTriggered: Api.call("emptyTrash") }
                 }
             }
+        }
+    }
+
+    // Files dragged in from the desktop are imported as research items.
+    DropArea {
+        anchors.fill: parent
+        onEntered: (drag) => drag.accepted = drag.hasUrls
+        onDropped: (drop) => { if (drop.hasUrls) { pane.filesDropped(drop.urls); drop.accept(Qt.CopyAction); } }
+        Rectangle {
+            anchors.fill: parent
+            visible: parent.containsDrag
+            color: "transparent"
+            border.color: Theme.accent
+            border.width: 2
         }
     }
 

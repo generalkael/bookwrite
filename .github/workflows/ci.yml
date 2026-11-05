@@ -26,6 +26,7 @@ jobs:
       - uses: jurplel/install-qt-action@v4
         with:
           version: "6.8.*"
+          modules: qtpdf
           cache: true
       - name: Linux packages
         if: runner.os == 'Linux'

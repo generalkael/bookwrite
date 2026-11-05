@@ -126,6 +126,7 @@ fn undo_label(method: &str, a: &Args) -> Option<(String, Option<String>)> {
         }
         "setMeta" => "Project Details",
         "add" => "Add Item",
+        "importFile" => "Import File",
         "move" | "dropOn" | "shift" => "Move",
         "indent" => "Indent",
         "outdent" => "Outdent",
@@ -318,6 +319,7 @@ impl App {
                 json!(true)
             }
             "compile" => json!(self.s()?.compile(&a.json(0))?),
+            "importFile" => json!(self.s()?.import_file(a.str(0), &to_path(a.str(1)))?),
             "export" => {
                 let p = self.s()?.export(&to_path(a.str(0)), &a.json(1))?;
                 json!(p)
@@ -431,6 +433,27 @@ mod tests {
         assert!(app.call("bogus", "").json.contains("unknown method"));
         ok(&app.call("close", ""));
         assert_eq!(ok(&app.call("recent", ""))[0]["title"], "Book");
+    }
+
+    #[test]
+    fn import_file_is_undoable() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut app = App::new(tmp.path().join("recent.json"));
+        let url = url::Url::from_file_path(tmp.path()).unwrap().to_string();
+        ok(&app.call("newProject", &json!([url, "Book", "Me"]).to_string()));
+        let src = tmp.path().join("scan.pdf");
+        std::fs::write(&src, b"%PDF-1.4").unwrap();
+        let src_url = url::Url::from_file_path(&src).unwrap().to_string();
+        let r = app.call("importFile", &json!(["", src_url]).to_string());
+        assert!(r.mutated);
+        let id = ok(&r);
+        let info = ok(&app.call("nodeInfo", &json!([id]).to_string()));
+        assert_eq!(info["file"]["kind"], "pdf");
+        assert_eq!(ok(&app.call("undo", "")), "Import File");
+        assert_eq!(ok(&app.call("exists", &json!([id]).to_string())), false);
+        assert_eq!(ok(&app.call("redo", "")), "Import File");
+        let info = ok(&app.call("nodeInfo", &json!([id]).to_string()));
+        assert_eq!(info["file"]["exists"], true);
     }
 
     #[test]

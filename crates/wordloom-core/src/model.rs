@@ -142,6 +142,10 @@ pub struct Node {
     pub fields: BTreeMap<String, String>,
     #[serde(default = "yes")]
     pub expanded: bool,
+    /// An imported file (image, PDF, …) this item shows, as a name inside
+    /// the bundle's `files/` directory.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
     pub created: DateTime<Utc>,
     pub modified: DateTime<Utc>,
 }
@@ -169,6 +173,7 @@ impl Node {
             target_words: None,
             fields: BTreeMap::new(),
             expanded: true,
+            file: None,
             created: now,
             modified: now,
         }
