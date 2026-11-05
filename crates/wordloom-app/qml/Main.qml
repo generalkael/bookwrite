@@ -252,7 +252,7 @@ ApplicationWindow {
     }
     Component {
         id: workspaceComp
-        Workspace {}
+        Workspace { onStatsRequested: statsDialog.open() }
     }
 
     // ---- toast / error banner ----

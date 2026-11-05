@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Shapes
 import QtCore
 import com.wordloom.app
 
@@ -20,6 +21,23 @@ Item {
     property var stats: null
     property string splitId: ""         // document in the split editor; "" = no split
     property var splitNode: null
+    signal statsRequested()
+
+    // Today's words against the daily goal (0..1, or -1 without a goal).
+    readonly property real goalProgress: stats && stats.session_target ? Math.min(1, Math.max(0, stats.words_today) / stats.session_target) : -1
+    property bool goalCelebrated: false
+    property bool goalPrimed: false
+    onGoalProgressChanged: {
+        // The first value comes from opening the project: no fanfare for a
+        // goal that was already met.
+        if (!goalPrimed) { goalPrimed = true; goalCelebrated = goalProgress >= 1; return; }
+        if (goalProgress >= 1 && !goalCelebrated) {
+            goalCelebrated = true;
+            Api.say(qsTr("Daily goal reached: %1 words today").arg(Api.fmtNumber(stats.words_today)));
+        } else if (goalProgress >= 0 && goalProgress < 1) {
+            goalCelebrated = false;
+        }
+    }
 
     readonly property int rev: Wordloom.revision
     onRevChanged: refresh()
@@ -382,6 +400,30 @@ Item {
                 Label {
                     color: Theme.subtext
                     text: ws.stats ? qsTr("Manuscript: %1 words").arg(Api.fmtNumber(ws.stats.manuscript_words)) : ""
+                }
+                // Daily goal ring: fills as you write today; click to set the goal.
+                Item {
+                    id: goalRing
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                    readonly property real p: ws.goalProgress
+                    Shape {
+                        anchors.fill: parent
+                        preferredRendererType: Shape.CurveRenderer
+                        ShapePath {
+                            strokeColor: Theme.border; strokeWidth: 3; fillColor: "transparent"; capStyle: ShapePath.RoundCap
+                            PathAngleArc { centerX: 8; centerY: 8; radiusX: 6; radiusY: 6; startAngle: 0; sweepAngle: 360 }
+                        }
+                        ShapePath {
+                            strokeColor: goalRing.p >= 1 ? Theme.ok : Theme.accent; strokeWidth: 3; fillColor: "transparent"; capStyle: ShapePath.RoundCap
+                            PathAngleArc { centerX: 8; centerY: 8; radiusX: 6; radiusY: 6; startAngle: -90; sweepAngle: Math.max(0, goalRing.p) * 360 }
+                        }
+                    }
+                    HoverHandler { id: ringHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: ws.statsRequested() }
+                    ToolTip.visible: ringHover.hovered
+                    ToolTip.text: ws.goalProgress < 0 ? qsTr("Set a daily word goal")
+                        : qsTr("%1% of today's goal").arg(Math.round(ws.goalProgress * 100))
                 }
                 Label {
                     color: ws.stats && ws.stats.session_target && ws.stats.words_today >= ws.stats.session_target ? Theme.ok : Theme.subtext
