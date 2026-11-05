@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import QtCore
 
 // Colours and metrics shared by every view. Follows the system light/dark
 // scheme; the user can force one with `forced`.
@@ -34,6 +35,16 @@ QtObject {
     property real lineHeight: 1.45
     // Show Markdown styling (bold, headings, quotes…) while editing.
     property bool styledMarkdown: true
+
+    // Remembered between runs (~/.config/Wordloom/Wordloom.conf on Linux).
+    property Settings prefs: Settings {
+        category: "appearance"
+        property alias theme: theme.forced
+        property alias editorFont: theme.editorFont
+        property alias editorSize: theme.editorSize
+        property alias pageWidth: theme.pageWidth
+        property alias styledMarkdown: theme.styledMarkdown
+    }
 
     readonly property int gap: 8
     readonly property int radius: 5

@@ -162,6 +162,11 @@ Imported files are never deleted, even when their item is trashed and the trash 
 duplicates and backups can always find them. To reclaim space, delete files in `files/` that no
 item in `project.json` refers to. **Save As** copies `files/` and `snapshots/` to the new project.
 
+Your preferences (light/dark, editor font size, page width, styled Markdown, which panels are
+shown, timeline lanes and the window size) are remembered between runs in
+`~/.config/Wordloom/Wordloom.conf` (in the Flatpak, under `~/.var/app/io.github.generalkael.Wordloom/`).
+They are per user, not stored in projects.
+
 Every write goes to a temporary file that is then renamed into place, so a crash can't leave a
 file half-written. Wordloom autosaves every 15 seconds while there are unsaved changes, and
 saves again when it closes.

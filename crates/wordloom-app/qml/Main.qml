@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
+import QtCore
 import com.wordloom.app
 
 ApplicationWindow {
@@ -10,6 +11,13 @@ ApplicationWindow {
     height: 880
     minimumWidth: 900
     minimumHeight: 560
+
+    // Window size is remembered between runs.
+    Settings {
+        category: "window"
+        property alias width: win.width
+        property alias height: win.height
+    }
     visible: true
     color: Theme.window
     title: (Wordloom.projectOpen ? Wordloom.title + (Wordloom.dirty ? " •" : "") + " — " : "") + "Wordloom"

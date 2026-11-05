@@ -36,6 +36,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   `Cargo.lock`), as Flathub requires, and the AppStream metadata has screenshots.
 
 ### Fixed
+- **Preferences are remembered.** Light/dark, editor font size, page width, styled Markdown,
+  panel visibility, timeline lanes and window size used to reset on every start. The app also
+  shuts QML down properly on exit so the last change is saved.
 - **Narrow windows.** The editor header no longer overflows (less-used buttons fold into a ⋯
   menu), the split editor opens at half the space and fits beside the Details panel in a 1000 px
   window, and narrow pages use smaller margins.

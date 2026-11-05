@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Shapes
+import QtCore
 import com.wordloom.app
 
 // Story timeline as a Gantt chart. Rows are tracks (characters, plotlines,
@@ -50,6 +51,7 @@ Rectangle {
     }
     // Swim lanes: group tracks by kind under collapsible headers.
     property bool lanes: false
+    Settings { category: "timeline"; property alias lanes: gv.lanes }
     property var collapsed: ({})
     readonly property int laneH: 26
     readonly property var laneKinds: [

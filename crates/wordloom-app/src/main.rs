@@ -10,8 +10,15 @@ fn main() {
     if let Some(mut app) = app.as_mut() {
         app.as_mut()
             .set_application_name(&QString::from("Wordloom"));
-        app.as_mut()
-            .set_organization_name(&QString::from("Wordloom"));
+        // The screenshot tour changes window size and view options; keep those
+        // out of the user's saved preferences.
+        let tour = std::env::args().any(|a| a.starts_with("--screenshots="));
+        let org = if tour {
+            "Wordloom-screenshots"
+        } else {
+            "Wordloom"
+        };
+        app.as_mut().set_organization_name(&QString::from(org));
         app.as_mut()
             .set_application_version(&QString::from(env!("CARGO_PKG_VERSION")));
     }
@@ -29,7 +36,10 @@ fn main() {
     if let Some(engine) = engine.as_mut() {
         engine.load(&QUrl::from("qrc:/qt/qml/com/wordloom/app/qml/Main.qml"));
     }
-    if let Some(app) = app.as_mut() {
-        std::process::exit(app.exec());
-    }
+    let code = app.as_mut().map(|app| app.exec()).unwrap_or(1);
+    // Tear down QML before exiting so objects such as Settings (saved
+    // preferences) get to write their final state; process::exit skips drops.
+    drop(engine);
+    drop(app);
+    std::process::exit(code);
 }

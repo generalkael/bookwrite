@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtCore
 import com.wordloom.app
 
 // The main three-pane layout: binder | view | Details panel, plus toolbar and
@@ -172,6 +173,13 @@ Item {
         if (kids.length) select(kids[0].id, "editor");
     }
     Component.onCompleted: openFirstScene()
+
+    // Panel visibility is remembered between runs.
+    Settings {
+        category: "layout"
+        property alias showBinder: ws.showBinder
+        property alias showDetails: ws.showInspector
+    }
 
     ColumnLayout {
         anchors.fill: parent
