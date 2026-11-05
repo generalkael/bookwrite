@@ -579,6 +579,27 @@ impl Session {
         json!(self.project.stats.summary(&self.project, today))
     }
 
+    /// Save a finished sprint: `minutes` written, net `words`, optional goal.
+    pub fn record_sprint(&mut self, minutes: f64, words: i64, goal: i64) -> Result<()> {
+        if !(minutes > 0.0 && minutes.is_finite()) {
+            return Err(Error::Invalid("a sprint needs a positive length".into()));
+        }
+        let started =
+            chrono::Utc::now() - chrono::Duration::milliseconds((minutes * 60_000.0) as i64);
+        self.project.stats.add_sprint(crate::stats::Sprint {
+            started,
+            minutes,
+            words,
+            goal: (goal > 0).then_some(goal as u32),
+        });
+        self.changed();
+        Ok(())
+    }
+
+    pub fn sprints(&self) -> Value {
+        json!(self.project.stats.sprint_summary(10))
+    }
+
     /// Record today's manuscript and project word totals for the history.
     fn note_totals(&mut self) {
         let today = Local::now().date_naive();

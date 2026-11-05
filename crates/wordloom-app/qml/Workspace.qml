@@ -22,6 +22,7 @@ Item {
     property string splitId: ""         // document in the split editor; "" = no split
     property var splitNode: null
     signal historyRequested()
+    property var sprint: null           // SprintDialog (from Main)
 
     // Today's words against the daily goal (0..1, or -1 without a goal).
     readonly property real goalProgress: stats && stats.session_target ? Math.min(1, Math.max(0, stats.words_today) / stats.session_target) : -1
@@ -401,7 +402,16 @@ Item {
                     color: Theme.subtext
                     text: ws.stats ? qsTr("Manuscript: %1 words").arg(Api.fmtNumber(ws.stats.manuscript_words)) : ""
                 }
-                // Daily goal ring: fills as you write today; click to set the goal.
+                // Running sprint: countdown and words so far; click to open.
+                Label {
+                    visible: ws.sprint !== null && ws.sprint.running
+                    text: ws.sprint ? "⏱ " + ws.sprint.clock + (ws.sprint.paused ? " " + qsTr("(paused)") : "") + "  ·  " + qsTr("%1 words").arg(Api.fmtNumber(ws.sprint.words)) : ""
+                    color: Theme.accent
+                    font.bold: true
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: ws.sprint.open() }
+                }
+                // Daily goal ring: fills as you write today; click for the history.
                 Item {
                     id: goalRing
                     Layout.preferredWidth: 16

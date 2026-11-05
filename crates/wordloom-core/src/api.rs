@@ -90,6 +90,7 @@ const READ_ONLY: &[&str] = &[
     "search",
     "stats",
     "statsHistory",
+    "sprints",
     "compile",
     "snapshots",
     "compareSnapshots",
@@ -354,6 +355,8 @@ impl App {
             "search" => self.s()?.search(a.str(0)),
             "replaceAll" => self.s()?.replace_all(a.str(0), a.str(1)),
             "stats" => self.s()?.stats(None),
+            "sprints" => self.s()?.sprints(),
+            "recordSprint" => unit(self.s()?.record_sprint(a.float(0), a.int(1), a.int(2)))?,
             "statsHistory" => self.s()?.stats_history(a.str(0), a.str(1), a.str(2)),
             "setTargets" => {
                 self.s()?

@@ -28,6 +28,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   deleted for good. The Details panel lists a character's relationships.
 - **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
+- **Writing sprints** (Ctrl+Shift+R): timed sessions with an optional word goal, a status-bar
+  countdown with a live word count, pause / finish / cancel, and a saved history with bests.
 - **Word count history.** The project now also records its manuscript and project word totals for
   each day. A Word Count History window (click the goal ring, or Ctrl+Shift+H) charts words written
   or running totals by day, week, month or year, with Daily / Weekly / Monthly / 90 days / Yearly /

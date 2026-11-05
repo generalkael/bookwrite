@@ -45,6 +45,33 @@ pub struct WritingStats {
     /// [manuscript words, project words].
     #[serde(default)]
     pub totals: BTreeMap<NaiveDate, [u64; 2]>,
+    /// Finished writing sprints, oldest first.
+    #[serde(default)]
+    pub sprints: Vec<Sprint>,
+}
+
+/// A timed writing session.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Sprint {
+    pub started: chrono::DateTime<chrono::Utc>,
+    /// Minutes actually written (a sprint can be ended early).
+    pub minutes: f64,
+    /// Net manuscript words written during the sprint.
+    pub words: i64,
+    #[serde(default)]
+    pub goal: Option<u32>,
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct SprintSummary {
+    /// Most recent first.
+    pub recent: Vec<Sprint>,
+    pub count: usize,
+    pub total_words: i64,
+    pub total_minutes: f64,
+    pub best_words: Option<i64>,
+    /// Best words per minute over sprints of at least five minutes.
+    pub best_pace: Option<f64>,
 }
 
 /// How [`WritingStats::range_history`] groups days.
@@ -161,6 +188,28 @@ impl WritingStats {
     pub fn record_on(&mut self, day: NaiveDate, delta: i64) {
         if delta != 0 {
             *self.daily.entry(day).or_insert(0) += delta;
+        }
+    }
+
+    pub fn add_sprint(&mut self, sprint: Sprint) {
+        self.sprints.push(sprint);
+    }
+
+    pub fn sprint_summary(&self, recent: usize) -> SprintSummary {
+        let s = &self.sprints;
+        SprintSummary {
+            recent: s.iter().rev().take(recent).cloned().collect(),
+            count: s.len(),
+            total_words: s.iter().map(|x| x.words).sum(),
+            total_minutes: s.iter().map(|x| x.minutes).sum(),
+            best_words: s.iter().map(|x| x.words).max(),
+            best_pace: s
+                .iter()
+                .filter(|x| x.minutes >= 5.0)
+                .map(|x| x.words as f64 / x.minutes)
+                .fold(None, |best: Option<f64>, p| {
+                    Some(best.map_or(p, |b| b.max(p)))
+                }),
         }
     }
 
@@ -303,6 +352,29 @@ mod tests {
         assert_eq!(count_words("don't stop — well-known"), 3);
         assert_eq!(count_words("# Heading\n\n* item *two*"), 3);
         assert_eq!(count_words("Ünïcödé façade 42"), 3);
+    }
+
+    #[test]
+    fn sprints() {
+        let mut s = WritingStats::default();
+        assert_eq!(s.sprint_summary(5).best_words, None);
+        let at = chrono::Utc::now();
+        for (m, w) in [(15.0, 300), (2.0, 80), (25.0, 450)] {
+            s.add_sprint(Sprint {
+                started: at,
+                minutes: m,
+                words: w,
+                goal: Some(400),
+            });
+        }
+        let sum = s.sprint_summary(2);
+        assert_eq!(sum.count, 3);
+        assert_eq!(sum.recent.len(), 2);
+        assert_eq!(sum.recent[0].words, 450);
+        assert_eq!(sum.total_words, 830);
+        assert_eq!(sum.best_words, Some(450));
+        // The 2-minute burst (40 wpm) is too short to count as best pace.
+        assert_eq!(sum.best_pace, Some(20.0));
     }
 
     #[test]

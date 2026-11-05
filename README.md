@@ -29,6 +29,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
 | **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The Details panel lists each character's relationships. |
 | **Spell checking** | Misspelled words are marked in red as you type (View ▸ Check Spelling, F7). Right-click one for suggestions or *Add to Dictionary*. The names of your characters, places and timeline tracks are always accepted. Wordloom uses your system's Hunspell dictionary for your language (`/usr/share/hunspell`), or a built-in US English one; added words are kept in `~/.config/wordloom/dictionary.txt`. |
+| **Writing sprints** | Project ▸ Writing Sprint… (Ctrl+Shift+R): pick a length (5–60 minutes or your own) and an optional word goal, and write. The status bar counts down and shows words written so far; pause, finish early or cancel from the sprint window. Finished sprints are kept in the project, with your totals, best sprint and best pace. |
 | **Name generator** | Project ▸ Name Generator… (Ctrl+Shift+G) suggests character names in English, Irish & Scottish, Nordic, Slavic, Italian/Spanish/French or invented fantasy styles, feminine, masculine or either. Each name has *Add as Character*. |
 | **Research files** | Import images and PDFs (File ▸ Import File…, or drop files on the binder). They're copied into the project and shown in the editor: images with fit / zoom, PDFs page by page. Other file types open in your default app. |
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
@@ -136,6 +137,7 @@ Ctrl is ⌘ on macOS.
 | Find in project · writing statistics | Ctrl+Shift+F · Ctrl+Shift+T |
 | Name generator | Ctrl+Shift+G |
 | Word count history | Ctrl+Shift+H |
+| Writing sprint | Ctrl+Shift+R |
 | Spell checking on / off | F7 |
 | Find · replace in the open document (next / previous: F3 · Shift+F3) | Ctrl+F · Ctrl+H |
 | Editor · corkboard · outliner · timeline | Ctrl+1 · Ctrl+2 · Ctrl+3 · Ctrl+4 |
@@ -158,7 +160,7 @@ works with git, Dropbox and diff tools, and you can still read it without Wordlo
 ```
 Title.wordloom/
   project.json          binder tree, metadata, labels, statuses, timeline, relationships, stats
-                        (incl. words written per day and daily word totals)
+                        (incl. words written per day, daily word totals and sprints)
   content/<uuid>.md     one Markdown file per document that has text
   snapshots/<uuid>.json saved versions of a document
   files/<uuid>.<ext>    imported research files (images, PDFs, …), copied in unchanged
