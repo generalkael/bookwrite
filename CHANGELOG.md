@@ -28,6 +28,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   deleted for good. The Details panel lists a character's relationships.
 - **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
+- **Name generator** (Project ▸ Name Generator…, Ctrl+Shift+G): real-world and fantasy styles,
+  by gender, with one-click *Add as Character*.
 - **Daily goal ring.** The status bar shows today's progress toward the session target as a ring
   that turns green (with a one-time notice) at the goal; clicking it opens Writing Statistics.
 - **Find & replace in a document.** Ctrl+F / Ctrl+H open a find bar in the editor with a match

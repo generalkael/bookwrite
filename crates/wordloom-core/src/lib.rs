@@ -18,6 +18,7 @@ mod docx;
 mod epub;
 pub mod history;
 pub mod model;
+pub mod names;
 pub mod recent;
 pub mod relations;
 pub mod search;

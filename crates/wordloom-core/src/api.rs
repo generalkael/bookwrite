@@ -93,6 +93,8 @@ const READ_ONLY: &[&str] = &[
     "snapshots",
     "compareSnapshots",
     "relations",
+    "nameStyles",
+    "generateNames",
     "unusedFiles",
     "removeUnusedFiles",
     "timeline",
@@ -350,6 +352,20 @@ impl App {
             // --- snapshots ---
             "snapshots" => self.s()?.snapshots(a.str(0))?,
             "relations" => self.s()?.relations(),
+            "nameStyles" => json!(crate::names::styles()),
+            "generateNames" => {
+                let seed = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos() as u64)
+                    .unwrap_or(1);
+                let count = a.int(2).clamp(1, 100) as usize;
+                json!(crate::names::generate(
+                    a.str(0),
+                    crate::names::Gender::parse(a.str(1)),
+                    count,
+                    seed
+                ))
+            }
             "unusedFiles" => self.s()?.unused_files(false)?,
             "removeUnusedFiles" => self.s()?.unused_files(true)?,
             "addRelation" => json!(self.s()?.add_relation(a.str(0), a.str(1), a.str(2))?),
