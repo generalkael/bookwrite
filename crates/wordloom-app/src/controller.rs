@@ -60,7 +60,11 @@ impl Default for WordloomRust {
         let tour = std::env::args().any(|a| a.starts_with("--screenshots="));
         let recent_file = dirs::config_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join(if tour { "wordloom-screenshots" } else { "wordloom" })
+            .join(if tour {
+                "wordloom-screenshots"
+            } else {
+                "wordloom"
+            })
             .join("recent.json");
         Self {
             app: App::new(recent_file),
