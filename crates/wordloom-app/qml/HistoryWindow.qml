@@ -15,6 +15,24 @@ Window {
     minimumWidth: 640
     minimumHeight: 440
     color: Theme.window
+    // A separate window doesn't inherit the main window's palette; without
+    // this, controls follow the system colours even when the app is forced
+    // light or dark (light boxes with light text).
+    palette.window: Theme.window
+    palette.base: Theme.base
+    palette.alternateBase: Theme.panel
+    palette.text: Theme.text
+    palette.windowText: Theme.text
+    palette.buttonText: Theme.text
+    palette.button: Theme.panel
+    palette.highlight: Theme.accent
+    palette.highlightedText: "white"
+    palette.placeholderText: Theme.subtext
+    palette.mid: Theme.border
+    palette.dark: Theme.border
+    palette.light: Theme.base
+    palette.toolTipBase: Theme.base
+    palette.toolTipText: Theme.text
 
     property var hist: null
     property var target: null           // daily session target, if any

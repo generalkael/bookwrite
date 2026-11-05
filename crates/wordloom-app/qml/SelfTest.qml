@@ -94,6 +94,8 @@ Item {
             check(history.hist !== null && history.hist.buckets.length === 30, "the Daily preset shows 30 days");
             history.applyPreset(1);
             check(history.hist.bucket === "week", "Weekly groups by week");
+            check(Qt.colorEqual(history.palette.base, Theme.base) && Qt.colorEqual(history.palette.text, Theme.text),
+                  "the window's controls use the app theme, not the system colours");
             history.close();
         }],
         ["sprint", () => {

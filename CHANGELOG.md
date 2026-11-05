@@ -58,6 +58,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   `Cargo.lock`), as Flathub requires, and the AppStream metadata has screenshots.
 
 ### Fixed
+- **Word Count History in a forced theme.** Its date boxes and menus followed the system colours,
+  so with Dark forced on a light desktop they were light with unreadable light text.
 - **Preferences are remembered.** Light/dark, editor font size, page width, styled Markdown,
   panel visibility, timeline lanes and window size used to reset on every start. The app also
   shuts QML down properly on exit so the last change is saved.
