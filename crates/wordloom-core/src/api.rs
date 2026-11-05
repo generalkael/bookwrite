@@ -106,6 +106,7 @@ const READ_ONLY: &[&str] = &[
     "timeline",
     "recent",
     "log",
+    "touchLock",
     "rootId",
     "isOpen",
     "export",
@@ -258,6 +259,13 @@ impl App {
         Ok(match m {
             // --- lifecycle ---
             "recent" => json!(recent::load(&self.recent_file)),
+            // Keep this project's lock fresh while it's open (UI timer).
+            "touchLock" => {
+                if let Some(s) = &self.session {
+                    crate::storage::write_lock(&s.dir)?;
+                }
+                json!(true)
+            }
             // Developer aid: print a line (the --selftest report).
             "log" => {
                 eprintln!("{}", a.str(0));

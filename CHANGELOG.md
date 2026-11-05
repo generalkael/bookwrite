@@ -88,8 +88,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   drawn, including in the AppImage. Toolbar "＋" and "⎙" symbols became a plain "+" and text for the
   same reason.
 - **Warning when a project is already open elsewhere.** A lock file marks an open project; opening it
-  a second time (another window, or another computer sharing the folder) asks first. Locks left by
-  a crash are ignored.
+  a second time (another window, another Flatpak instance, or another computer sharing the folder)
+  asks first. The lock is refreshed every two minutes while open; locks left by a crash are ignored.
 - **Restore a damaged project.** If `project.json` can't be read, Wordloom says so plainly and offers
   to restore the newest working backup, keeping the damaged file and recovering documents written
   since the backup into a *Recovered after restore* folder.

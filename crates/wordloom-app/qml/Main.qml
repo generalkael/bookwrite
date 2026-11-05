@@ -138,6 +138,15 @@ ApplicationWindow {
         }
     }
 
+    // Refresh the "project is open" lock, so other Wordlooms (another
+    // computer, or another Flatpak instance) can tell it's still in use.
+    Timer {
+        interval: 120000
+        repeat: true
+        running: Wordloom.projectOpen
+        onTriggered: Api.call("touchLock")
+    }
+
     // Autosave a couple of seconds after the user pauses, and periodically.
     Timer {
         interval: 15000

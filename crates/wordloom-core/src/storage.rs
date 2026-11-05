@@ -77,7 +77,8 @@ pub const FILES_DIR: &str = "files";
 /// Marks a project as open, so a second Wordloom (another window, or
 /// another computer sharing the folder) can warn before both write to it.
 pub const LOCK_FILE: &str = ".wordloom.lock";
-/// A lock not refreshed for this long (by saving) is treated as stale.
+/// A lock not refreshed for this long is treated as stale. The app
+/// refreshes it every couple of minutes while the project is open.
 const LOCK_STALE_SECS: i64 = 10 * 60;
 
 #[derive(Serialize, Deserialize)]
@@ -85,6 +86,15 @@ struct LockInfo {
     pid: u32,
     host: String,
     at: DateTime<Utc>,
+    /// Written from a sandbox (Flatpak), whose process ids mean nothing
+    /// outside it.
+    #[serde(default)]
+    sandboxed: bool,
+}
+
+/// Inside a Flatpak, each instance has its own process-id namespace.
+fn sandboxed() -> bool {
+    Path::new("/.flatpak-info").exists()
 }
 
 fn host_name() -> String {
@@ -102,12 +112,15 @@ fn host_name() -> String {
 pub fn lock_holder(dir: &Path) -> Option<String> {
     let info: LockInfo = serde_json::from_slice(&fs::read(dir.join(LOCK_FILE)).ok()?).ok()?;
     let here = host_name();
-    if info.host == here && info.pid == std::process::id() {
+    if info.host == here && info.pid == std::process::id() && info.sandboxed == sandboxed() {
         return None;
     }
     let age = (Utc::now() - info.at).num_seconds();
     let proc_dir = Path::new("/proc");
-    let alive = if info.host == here && proc_dir.is_dir() {
+    // Process ids can only be checked between two unsandboxed processes on
+    // the same computer; otherwise go by how recently the lock was refreshed.
+    let pid_check = info.host == here && !info.sandboxed && !sandboxed() && proc_dir.is_dir();
+    let alive = if pid_check {
         // Same computer: is that process still running Wordloom?
         fs::read(proc_dir.join(info.pid.to_string()).join("cmdline"))
             .map(|c| {
@@ -139,6 +152,7 @@ pub fn write_lock(dir: &Path) -> Result<()> {
         pid: std::process::id(),
         host: host_name(),
         at: Utc::now(),
+        sandboxed: sandboxed(),
     };
     write_atomic(&dir.join(LOCK_FILE), &serde_json::to_vec(&info)?)
 }
@@ -149,7 +163,10 @@ pub fn remove_lock(dir: &Path) {
     if let Ok(info) = fs::read(&path)
         .and_then(|b| serde_json::from_slice::<LockInfo>(&b).map_err(std::io::Error::other))
     {
-        if info.pid == std::process::id() && info.host == host_name() {
+        if info.pid == std::process::id()
+            && info.host == host_name()
+            && info.sandboxed == sandboxed()
+        {
             let _ = fs::remove_file(path);
         }
     }
@@ -456,6 +473,7 @@ mod tests {
                 pid: 1,
                 host: host.into(),
                 at: Utc::now() - chrono::Duration::minutes(mins),
+                sandboxed: false,
             };
             fs::write(dir.join(LOCK_FILE), serde_json::to_vec(&info).unwrap()).unwrap();
         };
@@ -468,8 +486,24 @@ mod tests {
             pid: u32::MAX - 7,
             host: host_name(),
             at: Utc::now(),
+            sandboxed: false,
         };
         fs::write(dir.join(LOCK_FILE), serde_json::to_vec(&info).unwrap()).unwrap();
+        assert_eq!(lock_holder(dir), None);
+        // A sandboxed instance on this computer: its pid can't be checked,
+        // so a fresh lock counts and an old one doesn't.
+        let flatpak = |mins: i64| {
+            let info = LockInfo {
+                pid: 2,
+                host: host_name(),
+                at: Utc::now() - chrono::Duration::minutes(mins),
+                sandboxed: true,
+            };
+            fs::write(dir.join(LOCK_FILE), serde_json::to_vec(&info).unwrap()).unwrap();
+        };
+        flatpak(1);
+        assert!(lock_holder(dir).unwrap().contains("this computer"));
+        flatpak(30);
         assert_eq!(lock_holder(dir), None);
         // remove_lock only removes ours.
         remove_lock(dir);
