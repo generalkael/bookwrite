@@ -93,13 +93,13 @@ Window {
     readonly property real lowest: lineMode ? 0 : Math.min(0, ...values.filter(v => v !== null))
     readonly property real minV: lowest < 0 ? -4 * niceCeil(Math.max(1, -lowest / 4)) : 0
     readonly property real maxV: 4 * niceCeil(Math.max(1, Math.max(1, ...values.filter(v => v !== null), showGoal ? target : 0) / 4))
-    function bucketLabel(b, long) {
+    function bucketLabel(b, full) {
         const d = parseIso(b.start), loc = Qt.locale();
         switch (hist.bucket) {
         case "year": return String(d.getFullYear());
-        case "month": return d.toLocaleDateString(loc, long ? "MMMM yyyy" : "MMM yy");
-        case "week": return long ? qsTr("Week of %1").arg(d.toLocaleDateString(loc, "d MMM yyyy")) : d.toLocaleDateString(loc, "d MMM");
-        default: return d.toLocaleDateString(loc, long ? "ddd d MMM yyyy" : "d MMM");
+        case "month": return d.toLocaleDateString(loc, full ? "MMMM yyyy" : "MMM yy");
+        case "week": return full ? qsTr("Week of %1").arg(d.toLocaleDateString(loc, "d MMM yyyy")) : d.toLocaleDateString(loc, "d MMM");
+        default: return d.toLocaleDateString(loc, full ? "ddd d MMM yyyy" : "d MMM");
         }
     }
 
