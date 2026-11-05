@@ -45,6 +45,12 @@ pub enum Error {
     NoSuchNode(NodeId),
     #[error("{0}")]
     Invalid(String),
+    /// project.json can't be read; `backup` is the newest backup, if any.
+    #[error("{reason}")]
+    Damaged {
+        reason: String,
+        backup: Option<std::path::PathBuf>,
+    },
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

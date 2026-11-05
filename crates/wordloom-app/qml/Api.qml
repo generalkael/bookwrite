@@ -8,6 +8,9 @@ QtObject {
 
     signal failed(string method, string message)
     signal notice(string message)
+    // Kind of the last failure ("damaged" when project.json can't be read
+    // but a backup exists), so the UI can offer a fix.
+    property string lastErrorKind: ""
     // A document's text was saved from one editor; others showing the same
     // document (split editor) reload it.
     signal textSaved(string id)
@@ -26,6 +29,7 @@ QtObject {
             return undefined;
         }
         if (!r.ok) {
+            api.lastErrorKind = r.kind || "";
             api.failed(method, r.error);
             return undefined;
         }

@@ -44,7 +44,8 @@ ApplicationWindow {
     function openProject() { openDialog.open(); }
     function openPath(path) {
         if (Wordloom.projectOpen) Api.call("close");
-        Api.call("openProject", path);
+        if (Api.call("openProject", path) === undefined && Api.lastErrorKind === "damaged")
+            restoreDialog.offer(path);
     }
     function saveNow() {
         if (!Wordloom.projectOpen) return;
@@ -406,6 +407,31 @@ ApplicationWindow {
         nameFilters: [qsTr("Images and PDFs (*.png *.jpg *.jpeg *.gif *.webp *.bmp *.svg *.pdf)"), qsTr("All files (*)")]
         onAccepted: if (win.ws) win.ws.importFiles(selectedFiles)
     }
+    // Offered when project.json is damaged and a backup exists.
+    Dialog {
+        id: restoreDialog
+        title: qsTr("Project file damaged")
+        modal: true
+        anchors.centerIn: parent
+        width: 480
+        property string path: ""
+        function offer(p) { path = p; open(); }
+        Label {
+            width: parent.width
+            wrapMode: Text.Wrap
+            text: qsTr("This project's project.json can't be read: it may have been cut short or edited by hand. Wordloom can restore it from the newest backup that still opens, which may be up to ten minutes old.\n\nYour writing is kept in separate files. Documents written since that backup are put in a \u201cRecovered after restore\u201d folder, and the damaged file is kept beside the project as project.json.damaged-\u2026 for safety.")
+        }
+        footer: DialogButtonBox {
+            Button { text: qsTr("Cancel"); DialogButtonBox.buttonRole: DialogButtonBox.RejectRole }
+            Button { text: qsTr("Restore from Backup"); highlighted: true; DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole }
+        }
+        onAccepted: {
+            const m = Api.call("restoreBackup", path);
+            if (m !== undefined) Api.say(qsTr("Restored from %1").arg(String(m.restored_from).split("/").pop())
+                + (m.recovered ? qsTr("; %1 newer document(s) are in “Recovered after restore”").arg(m.recovered) : ""));
+        }
+    }
+
     StatsDialog {
         id: statsDialog
         anchors.centerIn: parent

@@ -177,6 +177,11 @@ shown, timeline lanes and the window size) are remembered between runs in
 `~/.config/Wordloom/Wordloom.conf` (in the Flatpak, under `~/.var/app/io.github.generalkael.Wordloom/`).
 They are per user, not stored in projects.
 
+If `project.json` is ever damaged (cut short, or a bad hand edit), opening the project offers
+**Restore from Backup**: Wordloom puts the newest backup that loads in its place, keeps the damaged
+file as `project.json.damaged-<time>`, and gives documents written since that backup a binder entry
+again in a *Recovered after restore* folder, so no text is lost.
+
 Every write goes to a temporary file that is then renamed into place, so a crash can't leave a
 file half-written. Wordloom autosaves every 15 seconds while there are unsaved changes, and
 saves again when it closes.

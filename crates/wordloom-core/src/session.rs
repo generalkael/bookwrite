@@ -69,6 +69,64 @@ impl Session {
         Ok(())
     }
 
+    /// Give a binder entry back to text files the project doesn't list,
+    /// e.g. documents written after the backup that was just restored
+    /// (otherwise the next save would delete them). They go in a
+    /// "Recovered after restore" folder at the end of the Manuscript.
+    /// Returns how many were recovered.
+    pub fn adopt_orphan_texts(&mut self) -> Result<usize> {
+        let content = self.dir.join("content");
+        let Ok(entries) = std::fs::read_dir(&content) else {
+            return Ok(0);
+        };
+        let mut orphans: Vec<(String, String)> = Vec::new();
+        for e in entries.filter_map(|e| e.ok()) {
+            let path = e.path();
+            let id = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .and_then(|s| Uuid::parse_str(s).ok());
+            if path.extension().is_some_and(|x| x == "md")
+                && id.is_some_and(|id| !self.project.nodes.contains_key(&id))
+            {
+                if let Ok(text) = std::fs::read_to_string(&path) {
+                    if !text.trim().is_empty() {
+                        let title: String = text
+                            .split_whitespace()
+                            .take(6)
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                            .trim_matches(|c: char| !c.is_alphanumeric())
+                            .to_string();
+                        orphans.push((
+                            if title.is_empty() {
+                                "Recovered".into()
+                            } else {
+                                title
+                            },
+                            text,
+                        ));
+                        let _ = std::fs::remove_file(&path); // re-saved under the new id
+                    }
+                }
+            }
+        }
+        if orphans.is_empty() {
+            return Ok(0);
+        }
+        let ms = self.project.root(RootRole::Manuscript);
+        let folder =
+            self.project
+                .add_node(ms, None, NodeKind::Folder, "Recovered after restore")?;
+        for (title, text) in &orphans {
+            let id = self.project.add_node(folder, None, NodeKind::Text, title)?;
+            self.project.set_text(id, text.clone())?;
+        }
+        self.changed();
+        self.save()?;
+        Ok(orphans.len())
+    }
+
     /// Save a copy to a new bundle location and continue working there.
     pub fn save_as(&mut self, parent: &Path, title: &str) -> Result<()> {
         let dir = storage::new_bundle_path(parent, title);

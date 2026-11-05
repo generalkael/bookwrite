@@ -284,6 +284,17 @@ impl App {
                 let s = Session::open(&to_path(a.str(0)))?;
                 self.opened(s)?
             }
+            // After "openProject" failed with a damaged project.json.
+            "restoreBackup" => {
+                let path = to_path(a.str(0));
+                let used = crate::storage::restore_newest_backup(&path)?;
+                let mut s = Session::open(&path)?;
+                let recovered = s.adopt_orphan_texts()?;
+                let mut meta = self.opened(s)?;
+                meta["restored_from"] = json!(used);
+                meta["recovered"] = json!(recovered);
+                meta
+            }
             "save" => {
                 self.s()?.save()?;
                 json!(true)
@@ -470,8 +481,16 @@ fn unit(r: Result<()>) -> Result<Value> {
 }
 
 fn err_reply(e: &Error) -> Reply {
+    // "kind" lets the UI offer a fix (e.g. restoring a damaged project).
+    let kind = match e {
+        Error::Damaged {
+            backup: Some(_), ..
+        } => "damaged",
+        Error::Damaged { .. } => "damaged_no_backup",
+        _ => "",
+    };
     Reply {
-        json: json!({"ok": false, "error": e.to_string()}).to_string(),
+        json: json!({"ok": false, "error": e.to_string(), "kind": kind}).to_string(),
         mutated: false,
         error: Some(e.to_string()),
     }
@@ -597,6 +616,52 @@ mod tests {
             ok(&app.call("nodeInfo", &json!([id]).to_string()))["file"]["exists"],
             true
         );
+    }
+
+    #[test]
+    fn damaged_project_restores_from_backup() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut app = App::new(tmp.path().join("recent.json"));
+        let url = url::Url::from_file_path(tmp.path()).unwrap().to_string();
+        ok(&app.call("newProject", &json!([url, "Book", "Me"]).to_string()));
+        // A save makes a backup of the previous project.json.
+        let ms = ok(&app.call("rootId", r#"["manuscript"]"#));
+        ok(&app.call("add", &json!([ms, "text", "Kept", true]).to_string()));
+        ok(&app.call("save", ""));
+        // Written after the backup: only its text file knows about it.
+        let late = ok(&app.call("add", &json!([ms, "text", "Late", true]).to_string()));
+        ok(&app.call(
+            "setText",
+            &json!([late, "The storm came late that night."]).to_string(),
+        ));
+        ok(&app.call("save", ""));
+        ok(&app.call("close", ""));
+        let dir = tmp.path().join("Book.wordloom");
+        std::fs::write(dir.join("project.json"), b"{ not json").unwrap();
+
+        let path = url::Url::from_file_path(&dir).unwrap().to_string();
+        let r = app.call("openProject", &json!([path]).to_string());
+        let v: Value = serde_json::from_str(&r.json).unwrap();
+        assert_eq!(v["kind"], "damaged");
+        assert!(v["error"].as_str().unwrap().contains("damaged"));
+
+        let meta = ok(&app.call("restoreBackup", &json!([path]).to_string()));
+        assert!(meta["restored_from"].as_str().unwrap().contains("backups"));
+        assert_eq!(ok(&app.call("meta", ""))["title"], "Book");
+        // The document written after the backup is recovered, not lost.
+        assert_eq!(meta["recovered"], 1); // "Kept" never had text
+        let found = ok(&app.call("search", &json!(["storm came late"]).to_string()));
+        assert!(!found.as_array().unwrap().is_empty());
+        // The damaged file is kept.
+        let kept = std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .any(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with("project.json.damaged-")
+            });
+        assert!(kept);
     }
 
     #[test]

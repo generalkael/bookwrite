@@ -87,6 +87,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   look the same everywhere. Emoji showed as empty boxes where the system's emoji font couldn't be
   drawn, including in the AppImage. Toolbar "＋" and "⎙" symbols became a plain "+" and text for the
   same reason.
+- **Restore a damaged project.** If `project.json` can't be read, Wordloom says so plainly and offers
+  to restore the newest working backup, keeping the damaged file and recovering documents written
+  since the backup into a *Recovered after restore* folder.
 - `wordloom --sample=DIR --selftest` runs UI regression checks (editor scrolling and sizing,
   binder selection, formatting, find & replace, spelling, view order, history window, sprints);
   CI runs it on every push.

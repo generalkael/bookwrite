@@ -214,7 +214,62 @@ pub fn load(path: &Path) -> Result<Project> {
     if !pf.is_file() {
         return Err(Error::NotAProject(dir));
     }
-    let mut project: Project = serde_json::from_slice(&fs::read(&pf)?)?;
+    load_file(&dir, &pf).map_err(|e| match e {
+        Error::Json(_) | Error::Invalid(_) | Error::NoSuchNode(_)
+            if !e.to_string().contains("newer Wordloom") =>
+        {
+            let backup = backups_newest_first(&dir).into_iter().next();
+            Error::Damaged {
+                reason: format!(
+                    "project.json in {} is damaged ({e}).{}",
+                    dir.display(),
+                    if backup.is_some() {
+                        " Wordloom can restore it from the newest backup."
+                    } else {
+                        " There is no backup to restore from."
+                    }
+                ),
+                backup,
+            }
+        }
+        e => e,
+    })
+}
+
+/// Backups in `backups/`, newest first.
+pub fn backups_newest_first(dir: &Path) -> Vec<PathBuf> {
+    let mut all: Vec<PathBuf> = fs::read_dir(dir.join("backups"))
+        .map(|rd| {
+            rd.filter_map(|e| e.ok().map(|e| e.path()))
+                .filter(|p| p.extension().is_some_and(|e| e == "json"))
+                .collect()
+        })
+        .unwrap_or_default();
+    all.sort();
+    all.reverse();
+    all
+}
+
+/// Replace a damaged project.json with the newest backup that loads. The
+/// damaged file is kept beside it as `project.json.damaged-<time>`. Returns
+/// the backup used.
+pub fn restore_newest_backup(path: &Path) -> Result<PathBuf> {
+    let dir = bundle_dir(path);
+    let pf = dir.join(PROJECT_FILE);
+    let good = backups_newest_first(&dir)
+        .into_iter()
+        .find(|b| load_file(&dir, b).is_ok())
+        .ok_or_else(|| Error::Invalid("no usable backup was found".into()))?;
+    if pf.exists() {
+        let stamp = Utc::now().format("%Y%m%dT%H%M%S");
+        fs::rename(&pf, dir.join(format!("{PROJECT_FILE}.damaged-{stamp}")))?;
+    }
+    fs::copy(&good, &pf)?;
+    Ok(good)
+}
+
+fn load_file(dir: &Path, pf: &Path) -> Result<Project> {
+    let mut project: Project = serde_json::from_slice(&fs::read(pf)?)?;
     if project.format_version > FORMAT_VERSION {
         return Err(Error::Invalid(format!(
             "this project was made by a newer Wordloom (format {})",
@@ -223,7 +278,7 @@ pub fn load(path: &Path) -> Result<Project> {
     }
     let ids: Vec<NodeId> = project.nodes.keys().copied().collect();
     for id in ids {
-        if let Ok(text) = fs::read_to_string(content_path(&dir, id)) {
+        if let Ok(text) = fs::read_to_string(content_path(dir, id)) {
             project.contents.insert(id, text);
         }
     }
