@@ -56,16 +56,20 @@ ApplicationWindow {
         Api.call("close");
     }
 
-    // Command line: `wordloom [PROJECT] [--screenshots=DIR]`.
+    // Command line: `wordloom [PROJECT] [--sample=DIR] [--screenshots=DIR] [--selftest]`.
     Component.onCompleted: {
         const args = Qt.application.arguments.slice(1);
         for (const a of args) {
             if (a.startsWith("--screenshots=")) shotTour.dir = a.substring(14);
+            else if (a === "--selftest") selfTest.pending = true;
             else if (a.startsWith("--sample=")) Api.call("newDemoProject", a.substring(9));
             else if (!a.startsWith("-")) win.openPath(a);
         }
         if (shotTour.dir) shotTour.start();
+        if (selfTest.pending) Qt.callLater(selfTest.start);
     }
+
+    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog }
 
     // Developer aid: visit every view, save a PNG of each, then quit.
     Timer {

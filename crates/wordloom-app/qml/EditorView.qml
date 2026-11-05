@@ -112,6 +112,17 @@ Rectangle {
             f.contentY = Math.min(maxY, y + r.height - f.height + margin);
     }
 
+    // ---- hooks for `--selftest` ----
+    function firstArea() { const e = editors(); return e.length ? e[0] : null; }
+    function testInfo() {
+        const f = scroller.contentItem, a = activeArea;
+        return {
+            contentY: f.contentY, viewH: f.height, pageW: page.width, paneW: scroller.width,
+            caretY: a ? a.mapToItem(f.contentItem, 0, a.cursorRectangle.y).y : -1,
+            caretH: a ? a.cursorRectangle.height : 0
+        };
+    }
+
     // ---- Find & replace in this document (all parts, in composite mode).
     property bool findOpen: false
     property alias findText: findField.text

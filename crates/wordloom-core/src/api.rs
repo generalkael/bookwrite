@@ -105,6 +105,7 @@ const READ_ONLY: &[&str] = &[
     "removeUnusedFiles",
     "timeline",
     "recent",
+    "log",
     "rootId",
     "isOpen",
     "export",
@@ -257,6 +258,11 @@ impl App {
         Ok(match m {
             // --- lifecycle ---
             "recent" => json!(recent::load(&self.recent_file)),
+            // Developer aid: print a line (the --selftest report).
+            "log" => {
+                eprintln!("{}", a.str(0));
+                json!(true)
+            }
             "isOpen" => json!(self.session.is_some()),
             "newProject" => {
                 let s = Session::create(&to_path(a.str(0)), a.str(1), a.str(2))?;

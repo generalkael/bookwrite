@@ -42,6 +42,10 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: cargo build --release -p wordloom
+      - name: UI self-test (drives the real UI, offscreen)
+        run: |
+          mkdir -p "$RUNNER_TEMP/selftest"
+          QT_QPA_PLATFORM=offscreen timeout 180 ./target/release/wordloom --sample="$RUNNER_TEMP/selftest" --selftest
 
   # Linux AppImage, built on the oldest supported Ubuntu so it runs on as
   # many distributions as possible, then smoke-tested headless.

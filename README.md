@@ -218,6 +218,12 @@ a Rust method, one line in `api.rs`, and some QML.
 Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog in turn, saves a
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
+`wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
+(editor scrolling and sizing, binder selection, formatting, find & replace, spelling, view order,
+the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
+on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
+their own preferences and recent-projects list.
+
 ## Roadmap
 
 - Packaged installers for Windows (MSI) and macOS (DMG); the Linux AppImage and Flatpak are done
