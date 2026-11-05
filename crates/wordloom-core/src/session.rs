@@ -203,6 +203,29 @@ impl Session {
         })
     }
 
+    /// Imported files nothing refers to: not the project (trash included)
+    /// and not any undo / redo step. `delete` removes them; either way the
+    /// result is `{count, bytes}`.
+    pub fn unused_files(&self, delete: bool) -> Result<Value> {
+        let keep: std::collections::HashSet<&str> = self
+            .project
+            .nodes
+            .values()
+            .filter_map(|n| n.file.as_deref())
+            .chain(self.history.referenced_files())
+            .collect();
+        let unused = storage::unused_files(&self.dir, &keep)?;
+        if delete {
+            for (name, _) in &unused {
+                std::fs::remove_file(self.dir.join(storage::FILES_DIR).join(name))?;
+            }
+        }
+        Ok(json!({
+            "count": unused.len(),
+            "bytes": unused.iter().map(|(_, b)| b).sum::<u64>(),
+        }))
+    }
+
     /// Import a file as a research item under `parent` (default: the
     /// Research section), titled after the file.
     pub fn import_file(&mut self, parent: &str, src: &Path) -> Result<String> {

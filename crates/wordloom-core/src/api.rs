@@ -93,6 +93,8 @@ const READ_ONLY: &[&str] = &[
     "snapshots",
     "compareSnapshots",
     "relations",
+    "unusedFiles",
+    "removeUnusedFiles",
     "timeline",
     "recent",
     "rootId",
@@ -348,6 +350,8 @@ impl App {
             // --- snapshots ---
             "snapshots" => self.s()?.snapshots(a.str(0))?,
             "relations" => self.s()?.relations(),
+            "unusedFiles" => self.s()?.unused_files(false)?,
+            "removeUnusedFiles" => self.s()?.unused_files(true)?,
             "addRelation" => json!(self.s()?.add_relation(a.str(0), a.str(1), a.str(2))?),
             "updateRelation" => unit(self.s()?.update_relation(a.str(0), a.str(1), a.str(2)))?,
             "reverseRelation" => unit(self.s()?.reverse_relation(a.str(0)))?,
@@ -505,6 +509,44 @@ mod tests {
             .call("updateRelation", &json!([rel, "x", ""]).to_string())
             .error
             .is_some());
+    }
+
+    #[test]
+    fn unused_files_respect_trash_and_undo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut app = App::new(tmp.path().join("recent.json"));
+        let url = url::Url::from_file_path(tmp.path()).unwrap().to_string();
+        ok(&app.call("newProject", &json!([url, "Book", "Me"]).to_string()));
+        let src = tmp.path().join("a.png");
+        std::fs::write(&src, b"12345").unwrap();
+        let src = url::Url::from_file_path(&src).unwrap().to_string();
+        let id = ok(&app.call("importFile", &json!(["", src]).to_string()));
+        let none = json!({"count": 0, "bytes": 0});
+        assert_eq!(ok(&app.call("unusedFiles", "")), none);
+        // In the trash, or emptied but undoable: still kept.
+        ok(&app.call("trash", &json!([id]).to_string()));
+        assert_eq!(ok(&app.call("unusedFiles", "")), none);
+        ok(&app.call("emptyTrash", ""));
+        assert_eq!(ok(&app.call("unusedFiles", "")), none);
+        // A file nothing refers to, e.g. left by an older version.
+        let dir = tmp.path().join("Book.wordloom/files");
+        std::fs::write(dir.join("stray.pdf"), b"abc").unwrap();
+        assert_eq!(
+            ok(&app.call("unusedFiles", "")),
+            json!({"count": 1, "bytes": 3})
+        );
+        assert!(!app.call("unusedFiles", "").mutated);
+        assert_eq!(
+            ok(&app.call("removeUnusedFiles", "")),
+            json!({"count": 1, "bytes": 3})
+        );
+        assert!(!dir.join("stray.pdf").exists());
+        // Undo still brings the imported item back with its file.
+        assert_eq!(ok(&app.call("undo", "")), "Empty Trash");
+        assert_eq!(
+            ok(&app.call("nodeInfo", &json!([id]).to_string()))["file"]["exists"],
+            true
+        );
     }
 
     #[test]

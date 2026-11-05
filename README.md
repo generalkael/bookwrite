@@ -158,9 +158,9 @@ Title.wordloom/
   backups/              rolling copies of project.json (one per 10 minutes, last 20 kept)
 ```
 
-Imported files are never deleted, even when their item is trashed and the trash emptied, so undo,
-duplicates and backups can always find them. To reclaim space, delete files in `files/` that no
-item in `project.json` refers to. **Save As** copies `files/` and `snapshots/` to the new project.
+Imported files are not deleted when their item is trashed or the trash is emptied, so undo and
+duplicates can always find them. To reclaim space, use **File ▸ Clean Up Unused Files…**: it
+deletes only files that no item (in the Trash or not) and no undo or redo step refers to. **Save As** copies `files/` and `snapshots/` to the new project.
 
 Your preferences (light/dark, editor font size, page width, styled Markdown, which panels are
 shown, timeline lanes and the window size) are remembered between runs in

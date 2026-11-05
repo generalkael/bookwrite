@@ -162,6 +162,7 @@ ApplicationWindow {
             Action { text: qsTr("&Save"); shortcut: StandardKey.Save; enabled: Wordloom.projectOpen; onTriggered: win.saveNow() }
             Action { text: qsTr("Save &As…"); enabled: Wordloom.projectOpen; onTriggered: saveAsDialog.open() }
             Action { text: qsTr("&Import File…"); shortcut: "Ctrl+Shift+I"; enabled: win.ws !== null; onTriggered: importDialog.open() }
+            Action { text: qsTr("Clean Up &Unused Files…"); enabled: win.ws !== null; onTriggered: cleanupDialog.check() }
             Action { text: qsTr("Take &Snapshot"); shortcut: "Ctrl+5"; enabled: win.ws !== null; onTriggered: win.ws.snapshot() }
             MenuSeparator {}
             Action { text: qsTr("&Compile / Export…"); shortcut: "Ctrl+Shift+E"; enabled: Wordloom.projectOpen; onTriggered: compileDialog.open() }
@@ -345,6 +346,39 @@ ApplicationWindow {
     FolderDialog { id: saveAsFolder; onAccepted: saveAsDialog.folder = selectedFolder }
 
     CompileDialog { id: compileDialog; anchors.centerIn: parent }
+
+    // Delete imported files that no item (trash and undo history included)
+    // refers to any more.
+    Dialog {
+        id: cleanupDialog
+        title: qsTr("Clean Up Unused Files")
+        modal: true
+        anchors.centerIn: parent
+        width: 440
+        property var found: ({ count: 0, bytes: 0 })
+        function size(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB"; }
+        function check() {
+            const r = Api.call("unusedFiles");
+            if (r === undefined) return;
+            if (r.count === 0) { Api.say(qsTr("No unused files: every imported file is still in use")); return; }
+            found = r;
+            open();
+        }
+        Label {
+            width: parent.width
+            wrapMode: Text.Wrap
+            text: qsTr("%1 imported file(s), %2 in total, are no longer used by any item, including items in the Trash and anything Undo could bring back.\n\nDelete them from the project's files folder? Older copies of project.json in backups/ may still mention them.")
+                .arg(cleanupDialog.found.count).arg(cleanupDialog.size(cleanupDialog.found.bytes))
+        }
+        footer: DialogButtonBox {
+            Button { text: qsTr("Cancel"); DialogButtonBox.buttonRole: DialogButtonBox.RejectRole }
+            Button { text: qsTr("Delete Files"); highlighted: true; DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole }
+        }
+        onAccepted: {
+            const r = Api.call("removeUnusedFiles");
+            if (r !== undefined) Api.say(qsTr("Deleted %1 unused file(s), %2").arg(r.count).arg(size(r.bytes)));
+        }
+    }
     FileDialog {
         id: importDialog
         title: qsTr("Import into Research")

@@ -96,6 +96,30 @@ pub fn import_file(dir: &Path, src: &Path) -> Result<String> {
     Ok(name)
 }
 
+/// Files in `files/` whose names aren't in `keep`, with their sizes.
+pub fn unused_files(
+    dir: &Path,
+    keep: &std::collections::HashSet<&str>,
+) -> Result<Vec<(String, u64)>> {
+    let files = dir.join(FILES_DIR);
+    if !files.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut out = Vec::new();
+    for entry in fs::read_dir(&files)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !keep.contains(name.as_str()) {
+            out.push((name, entry.metadata()?.len()));
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
 /// Copy imported files and snapshots to a new bundle (Save As).
 pub fn copy_assets(from: &Path, to: &Path) -> Result<()> {
     for sub in [FILES_DIR, "snapshots"] {

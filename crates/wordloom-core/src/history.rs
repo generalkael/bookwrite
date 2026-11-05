@@ -139,6 +139,15 @@ impl History {
         self.redo.last().map(|s| s.label.as_str())
     }
 
+    /// Imported file names that some undo or redo step could bring back.
+    pub fn referenced_files(&self) -> impl Iterator<Item = &str> {
+        self.undo
+            .iter()
+            .chain(&self.redo)
+            .flat_map(|s| s.state.nodes.values())
+            .filter_map(|n| n.file.as_deref())
+    }
+
     pub fn clear(&mut self) {
         self.undo.clear();
         self.redo.clear();
