@@ -6,7 +6,8 @@ snapshots, compile) without copying it, and adds a **story-timeline Gantt chart*
 characters, events and plotlines in time.
 
 It runs on Linux today. The code is written to build unchanged on Windows and macOS, since Qt and
-Rust both support those platforms; CI builds all three.
+Rust both support those platforms. CI builds Linux and Windows; macOS CI is paused until it
+moves to a Qt version that supports the macOS 26 SDK.
 
 ## Features
 
