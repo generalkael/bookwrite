@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = ["crates/wordloom-core", "crates/wordloom-app"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Weeks"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", default-features = false, features = ["serde", "clock", "std"] }
+thiserror = "2"
+
+[profile.release]
+lto = "thin"

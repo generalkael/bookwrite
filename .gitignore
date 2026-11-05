@@ -1,0 +1,4 @@
+/target
+*.wordloom.tmp
+.DS_Store
+.qmlls.ini

@@ -1,0 +1,17 @@
+[package]
+name = "wordloom-core"
+description = "Project model, storage, compile and timeline engine for Wordloom"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+url = "2"
+
+[dev-dependencies]
+tempfile = "3"

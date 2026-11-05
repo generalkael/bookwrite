@@ -1,0 +1,235 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import com.wordloom.app
+
+// The writing surface. A single document is edited on its own; selecting a
+// folder shows all of its documents stitched together as one continuous,
+// editable manuscript ("composite" mode), each piece saving independently.
+Rectangle {
+    id: ev
+    color: focusMode ? (Theme.dark ? "#141517" : "#e9e5dc") : Theme.window
+
+    property string nodeId: ""
+    property var node: null
+    property bool focusMode: false
+    property bool typewriter: false
+    property bool preview: false
+    property var docs: []          // [{id, title, depth, folder}]
+    property string activeId: ""
+    property int activeCursor: 0
+    signal openRequested(string id)
+
+    readonly property int rev: Wordloom.revision
+    onRevChanged: rebuild(false)
+    onNodeIdChanged: rebuild(true)
+
+    function flush() {
+        for (let i = 0; i < rep.count; ++i) { const it = rep.itemAt(i); if (it) it.flush(); }
+    }
+
+    function collect(id, depth, out) {
+        const kids = Api.get("children", [], id);
+        for (const k of kids) {
+            out.push({ id: k.id, title: k.title, depth: depth, folder: k.kind === "folder" });
+            if (k.child_count > 0) collect(k.id, depth + 1, out);
+        }
+    }
+
+    function rebuild(force) {
+        if (!node) { docs = []; return; }
+        const out = [{ id: node.id, title: node.title, depth: 0, folder: node.kind === "folder" }];
+        if (node.child_count > 0) collect(node.id, 1, out);
+        const sig = out.map(d => d.id + d.title).join("|");
+        const old = docs.map(d => d.id + d.title).join("|");
+        if (force || sig !== old) {
+            flush();
+            docs = out;
+            if (force) scroller.contentItem.contentY = 0;
+        } else {
+            for (let i = 0; i < rep.count; ++i) { const it = rep.itemAt(i); if (it) it.syncFromStore(); }
+        }
+        if (docs.length) activeId = activeId && docs.some(d => d.id === activeId) ? activeId : docs[docs.length > 1 && docs[0].folder ? 1 : 0].id;
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        // Editor header
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 34
+            visible: !ev.focusMode && ev.node !== null
+            color: Theme.window
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 8
+                Label { text: ev.node ? Theme.kindIcon(ev.node.kind, ev.node.role) + "  " + ev.node.title : ""; font.bold: true; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
+                Label { visible: ev.docs.length > 1; text: qsTr("Composite · %1 parts").arg(ev.docs.length); color: Theme.subtext }
+                ToolButton { text: qsTr("Preview"); checkable: true; checked: ev.preview; onToggled: { ev.flush(); ev.preview = checked; } ToolTip.visible: hovered; ToolTip.text: qsTr("Render Markdown formatting") }
+                ToolButton { text: qsTr("Typewriter"); checkable: true; checked: ev.typewriter; onToggled: ev.typewriter = checked; ToolTip.visible: hovered; ToolTip.text: qsTr("Keep the current line centred") }
+                ToolButton { text: "A−"; onClicked: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
+                ToolButton { text: "A+"; onClicked: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
+                ToolButton { text: "⇔"; onClicked: Theme.pageWidth = Theme.pageWidth >= 1100 ? 560 : Theme.pageWidth + 180; ToolTip.visible: hovered; ToolTip.text: qsTr("Page width") }
+            }
+        }
+
+        ScrollView {
+            id: scroller
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            // Don't let content size feed back into the layout (binding loop).
+            Layout.preferredHeight: 100
+            Layout.preferredWidth: 100
+            clip: true
+            contentWidth: scroller.width - 14
+            contentHeight: page.height + 48
+
+            Item {
+                width: scroller.width - 14
+                height: page.height + 48
+
+                Rectangle {
+                    id: page
+                    width: Math.min(Theme.pageWidth + 96, parent.width - 24)
+                    height: Math.max(col.height + 96, 640)
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 24
+                    color: Theme.paper
+                    border.color: Theme.border
+                    radius: 3
+                    visible: ev.node !== null
+
+                    Column {
+                        id: col
+                        x: 48
+                        y: 48
+                        width: page.width - 96
+                        spacing: 6
+
+                        Repeater {
+                            id: rep
+                            model: ev.docs
+                            delegate: DocEditor {
+                                required property var modelData
+                                required property int index
+                                width: col.width
+                                docId: modelData.id
+                                docTitle: modelData.title
+                                depth: modelData.depth
+                                isFolder: modelData.folder
+                                composite: ev.docs.length > 1
+                                first: index === 0
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Label {
+        anchors.centerIn: parent
+        visible: ev.node === null
+        text: qsTr("Select a document in the binder, or press Ctrl+N to create one.")
+        color: Theme.subtext
+    }
+
+    component DocEditor: ColumnLayout {
+        id: de
+        property string docId
+        property string docTitle
+        property int depth: 0
+        property bool isFolder: false
+        property bool composite: false
+        property bool first: false
+        property string saved: ""
+        property bool loading: false
+        spacing: 2
+
+        Component.onCompleted: load()
+        onDocIdChanged: load()
+
+        function load() {
+            loading = true;
+            saved = Api.get("text", "", docId);
+            area.text = saved;
+            loading = false;
+        }
+        function flush() {
+            saveTimer.stop();
+            if (!loading && area.text !== saved) {
+                Api.call("setText", docId, area.text);
+                saved = area.text;
+            }
+        }
+        // Pick up external changes (snapshot restore, replace-all) unless the
+        // user is mid-edit here.
+        function syncFromStore() {
+            if (area.activeFocus || saveTimer.running) return;
+            const t = Api.get("text", "", docId);
+            if (t !== saved) { loading = true; saved = t; area.text = t; loading = false; }
+        }
+
+        // Section heading between parts in composite mode.
+        RowLayout {
+            visible: de.composite
+            Layout.fillWidth: true
+            Layout.topMargin: de.first ? 0 : 18
+            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border; visible: !de.first }
+            Label {
+                text: de.docTitle
+                color: de.isFolder ? Theme.accent : Theme.subtext
+                font.pixelSize: de.isFolder ? 13 : 11
+                font.bold: de.isFolder
+                font.capitalization: Font.AllUppercase
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: ev.openRequested(de.docId) }
+            }
+            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
+        }
+
+        TextArea {
+            id: area
+            visible: !ev.preview && !(de.composite && de.isFolder && text.length === 0 && !activeFocus)
+            Layout.fillWidth: true
+            wrapMode: TextEdit.Wrap
+            textFormat: TextEdit.PlainText
+            selectByMouse: true
+            persistentSelection: true
+            font.family: Theme.editorFont
+            font.pixelSize: Theme.editorSize
+            color: Theme.ink
+            selectionColor: Theme.selection
+            selectedTextColor: Theme.ink
+            placeholderText: de.composite ? "" : qsTr("Begin writing…")
+            background: null
+            leftPadding: 0
+            rightPadding: 0
+            topPadding: 2
+            bottomPadding: 2
+            onTextChanged: if (!de.loading) saveTimer.restart()
+            onActiveFocusChanged: { if (activeFocus) ev.activeId = de.docId; else de.flush(); }
+            onCursorPositionChanged: {
+                if (activeFocus) ev.activeCursor = cursorPosition;
+                if (ev.typewriter && activeFocus) {
+                    const p = area.mapToItem(scroller.contentItem.contentItem, 0, cursorRectangle.y);
+                    scroller.contentItem.contentY = Math.max(0, p.y - scroller.height / 2);
+                }
+            }
+        }
+        Text {
+            visible: ev.preview
+            Layout.fillWidth: true
+            text: area.text
+            textFormat: Text.MarkdownText
+            wrapMode: Text.Wrap
+            font.family: Theme.editorFont
+            font.pixelSize: Theme.editorSize
+            color: Theme.ink
+            lineHeight: Theme.lineHeight
+        }
+        Timer { id: saveTimer; interval: 800; onTriggered: de.flush() }
+    }
+}
