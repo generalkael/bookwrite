@@ -4,6 +4,7 @@ description = "Project model, storage, compile and timeline engine for Wordloom"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
+license.workspace = true
 
 [dependencies]
 serde.workspace = true

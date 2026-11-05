@@ -4,6 +4,7 @@ description = "Wordloom — a writing studio for novelists, with a story timelin
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
+license.workspace = true
 
 [[bin]]
 name = "wordloom"

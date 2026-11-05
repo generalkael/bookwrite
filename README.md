@@ -124,3 +124,7 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 - Split editor (two documents at once), and an image/PDF viewer for research files
 - A relationship map of characters, and swim-lane grouping on the timeline
 - Packaged installers (AppImage/Flatpak, MSI, DMG)
+
+## License
+
+Wordloom is released under the [MIT License](LICENSE).

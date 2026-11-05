@@ -6,6 +6,7 @@ members = ["crates/wordloom-core", "crates/wordloom-app"]
 version = "0.1.0"
 edition = "2021"
 authors = ["Scott Weeks"]
+license = "MIT"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
