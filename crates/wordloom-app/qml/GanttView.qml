@@ -186,8 +186,14 @@ Rectangle {
                                     anchors.leftMargin: 10
                                     anchors.rightMargin: 4
                                     spacing: 4
+                                    KindIcon {
+                                        visible: ["character", "plotline", "place"].indexOf(th.modelData.kind) >= 0
+                                        kind: th.modelData.kind
+                                        size: 14
+                                    }
                                     Label {
-                                        text: ({ character: "👤", plotline: "🧵", place: "📍", theme: "✦", custom: "▪" })[th.modelData.kind] || "▪"
+                                        visible: ["character", "plotline", "place"].indexOf(th.modelData.kind) < 0
+                                        text: th.modelData.kind === "theme" ? "✦" : "▪"
                                     }
                                     Label {
                                         text: th.modelData.name

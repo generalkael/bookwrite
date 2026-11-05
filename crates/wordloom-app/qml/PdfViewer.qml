@@ -14,7 +14,7 @@ PdfMultiPageView {
     document: PdfDocument {
         id: doc
         source: view.source
-        onStatusChanged: if (status === PdfDocument.Ready) Qt.callLater(view.refit)
+        onStatusChanged: if (doc.status === PdfDocument.Ready) Qt.callLater(view.refit)
     }
     onWidthChanged: Qt.callLater(refit)
     onSourceChanged: autoFit = true

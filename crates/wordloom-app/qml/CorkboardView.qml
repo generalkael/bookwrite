@@ -112,7 +112,7 @@ Rectangle {
                         spacing: 2
                         RowLayout {
                             Layout.fillWidth: true
-                            Label { text: Theme.kindIcon(cell.modelData.kind, null); font.pixelSize: 12 }
+                            KindIcon { kind: cell.modelData.kind; size: 14 }
                             TextField {
                                 id: titleEdit
                                 Layout.fillWidth: true

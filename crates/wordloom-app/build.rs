@@ -19,6 +19,7 @@ const QML: &[&str] = &[
     "qml/StatsDialog.qml",
     "qml/ProjectSettingsDialog.qml",
     "qml/SearchPane.qml",
+    "qml/KindIcon.qml",
 ];
 
 /// `pragma Singleton` QML files.
@@ -33,7 +34,16 @@ fn main() {
         println!("cargo:rerun-if-changed={f}");
     }
 
+    // Item icons (SVG), served next to the QML at qrc:/qt/qml/com/wordloom/app/qml/icons/.
+    let icons: Vec<String> = std::fs::read_dir("qml/icons")
+        .expect("qml/icons")
+        .filter_map(|e| e.ok()?.path().to_str().map(String::from))
+        .filter(|p| p.ends_with(".svg"))
+        .collect();
+    println!("cargo:rerun-if-changed=qml/icons");
+
     CxxQtBuilder::new_qml_module(QmlModule::new("com.wordloom.app").qml_files(files))
+        .qrc_resources(icons)
         .qt_module("Quick")
         .qt_module("QuickControls2")
         .files(["src/controller.rs"])

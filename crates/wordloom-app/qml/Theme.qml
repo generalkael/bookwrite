@@ -35,20 +35,12 @@ QtObject {
     readonly property int gap: 8
     readonly property int radius: 5
 
+    // URL of the bundled SVG icon for an item kind or section root (see
+    // KindIcon). Timeline track kinds (plotline, …) work too.
     function kindIcon(kind, role) {
-        if (role === "manuscript") return "📚";
-        if (role === "characters") return "👥";
-        if (role === "places") return "🗺";
-        if (role === "research") return "🔬";
-        if (role === "notes") return "🗒";
-        if (role === "trash") return "🗑";
-        switch (kind) {
-        case "folder": return "📁";
-        case "character": return "👤";
-        case "place": return "📍";
-        case "research": return "📎";
-        case "note": return "📝";
-        default: return "📄";
-        }
+        const roles = ["manuscript", "characters", "places", "research", "notes", "trash"];
+        const kinds = { folder: "folder", character: "character", place: "place", research: "attachment", note: "note", plotline: "plotline" };
+        const name = roles.indexOf(role) >= 0 ? role : (kinds[kind] || "text");
+        return Qt.resolvedUrl("icons/" + name + ".svg");
     }
 }

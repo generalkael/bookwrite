@@ -74,7 +74,8 @@ Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: 12
                 anchors.rightMargin: 8
-                Label { text: ev.node ? Theme.kindIcon(ev.node.kind, ev.node.role) + "  " + ev.node.title : ""; font.bold: true; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
+                KindIcon { visible: ev.node !== null; kind: ev.node ? ev.node.kind : ""; role: ev.node ? (ev.node.role || "") : "" }
+                Label { text: ev.node ? ev.node.title : ""; font.bold: true; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
                 Label { visible: ev.docs.length > 1; text: qsTr("Composite · %1 parts").arg(ev.docs.length); color: Theme.subtext }
                 ToolButton { visible: ev.hasFile; text: qsTr("Open in Default App"); onClicked: fileViewer.openExternally() }
                 ToolButton { visible: !ev.hasFile; text: qsTr("Preview"); checkable: true; checked: ev.preview; onToggled: { ev.flush(); ev.preview = checked; } ToolTip.visible: hovered; ToolTip.text: qsTr("Render Markdown formatting") }

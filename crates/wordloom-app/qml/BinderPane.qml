@@ -42,7 +42,7 @@ Rectangle {
             id: searchField
             Layout.fillWidth: true
             Layout.margins: 6
-            placeholderText: qsTr("🔍 Search project…")
+            placeholderText: qsTr("Search project…")
             selectByMouse: true
             Keys.onEscapePressed: { text = ""; list.forceActiveFocus(); }
         }
@@ -129,7 +129,7 @@ Rectangle {
                             onClicked: Api.call("toggleExpanded", row.modelData.id)
                         }
                     }
-                    Label { text: Theme.kindIcon(row.modelData.kind, row.modelData.role); font.pixelSize: 13 }
+                    KindIcon { kind: row.modelData.kind; role: row.modelData.role || "" }
                     Rectangle {
                         visible: !!row.modelData.label_color
                         width: 8; height: 8; radius: 4
@@ -213,7 +213,7 @@ Rectangle {
                         enabled: !row.isRoot
                         Repeater {
                             model: ["text", "folder", "character", "place", "research", "note"]
-                            MenuItem { required property string modelData; text: Theme.kindIcon(modelData, null) + " " + modelData; onTriggered: Api.call("setField", row.modelData.id, "kind", modelData) }
+                            MenuItem { required property string modelData; text: modelData; icon.source: Theme.kindIcon(modelData, null); icon.color: "transparent"; onTriggered: Api.call("setField", row.modelData.id, "kind", modelData) }
                         }
                     }
                     MenuItem { text: qsTr("Expand All"); onTriggered: Api.call("setAllExpanded", true) }

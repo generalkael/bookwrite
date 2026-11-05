@@ -82,7 +82,7 @@ Rectangle {
                         Layout.minimumWidth: ov.widths[0]
                         Layout.maximumWidth: ov.widths[0]
                         Item { Layout.preferredWidth: r.modelData.depth * 14 }
-                        Label { text: Theme.kindIcon(r.modelData.kind, null) }
+                        KindIcon { kind: r.modelData.kind }
                         Label {
                             text: r.modelData.title; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true
                             font.bold: r.modelData.kind === "folder"
