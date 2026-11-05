@@ -36,6 +36,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   `Cargo.lock`), as Flathub requires, and the AppStream metadata has screenshots.
 
 ### Fixed
+- **Editor page resizes with the window.** It fills the editor pane by default (⇔ still offers fixed
+  widths) and is always at least as tall as the pane; it used to stay 720 px wide and 640 px tall.
+- **Editor scrolls while you type.** Typing past the bottom of the pane now scrolls to keep the
+  caret visible (previously only typewriter mode did).
 - **Save As** now copies snapshots (and imported files) to the new project instead of leaving
   them behind.
 - **Ctrl+N** no longer clashes between New Project and New Document: it is New Project on the

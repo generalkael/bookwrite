@@ -29,7 +29,8 @@ QtObject {
 
     property string editorFont: "Georgia"
     property int editorSize: 15
-    property int pageWidth: 720
+    // Text column width in pixels; 0 = fit the editor pane (the default).
+    property int pageWidth: 0
     property real lineHeight: 1.45
     // Show Markdown styling (bold, headings, quotes…) while editing.
     property bool styledMarkdown: true

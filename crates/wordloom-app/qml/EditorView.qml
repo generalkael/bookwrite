@@ -94,6 +94,24 @@ Rectangle {
         a.insert(p, before + "* * *\n\n");
     }
 
+    // Scroll so the caret in `a` is visible (or centred, in typewriter mode).
+    function revealCursor(a) {
+        if (!a || !a.activeFocus) return;
+        const f = scroller.contentItem;            // the ScrollView's Flickable
+        const r = a.cursorRectangle;
+        const y = a.mapToItem(f.contentItem, 0, r.y).y;
+        const maxY = Math.max(0, f.contentHeight - f.height);
+        if (typewriter) {
+            f.contentY = Math.min(maxY, Math.max(0, y + r.height / 2 - f.height / 2));
+            return;
+        }
+        const margin = Math.min(60, f.height / 4);
+        if (y < f.contentY + margin)
+            f.contentY = Math.max(0, y - margin);
+        else if (y + r.height > f.contentY + f.height - margin)
+            f.contentY = Math.min(maxY, y + r.height - f.height + margin);
+    }
+
     function collect(id, depth, out) {
         const kids = Api.get("children", [], id);
         for (const k of kids) {
@@ -162,7 +180,13 @@ Rectangle {
                 ToolButton { visible: !ev.hasFile; text: qsTr("Typewriter"); checkable: true; checked: ev.typewriter; onToggled: ev.typewriter = checked; ToolTip.visible: hovered; ToolTip.text: qsTr("Keep the current line centred") }
                 ToolButton { visible: !ev.hasFile; text: "A−"; onClicked: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
                 ToolButton { visible: !ev.hasFile; text: "A+"; onClicked: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
-                ToolButton { visible: !ev.hasFile; text: "⇔"; onClicked: Theme.pageWidth = Theme.pageWidth >= 1100 ? 560 : Theme.pageWidth + 180; ToolTip.visible: hovered; ToolTip.text: qsTr("Page width") }
+                ToolButton {
+                    visible: !ev.hasFile; text: "⇔"
+                    // Fit → 560 → 740 → 920 → 1100 → Fit
+                    onClicked: Theme.pageWidth = Theme.pageWidth === 0 ? 560 : Theme.pageWidth >= 1100 ? 0 : Theme.pageWidth + 180
+                    ToolTip.visible: hovered
+                    ToolTip.text: Theme.pageWidth === 0 ? qsTr("Page width: fit the window (click for a fixed width)") : qsTr("Page width: %1 px (click to change)").arg(Theme.pageWidth)
+                }
                 ToolSeparator { visible: ev.secondary }
                 ToolButton { visible: ev.secondary; text: "⇄"; onClicked: ev.swapRequested(); ToolTip.visible: hovered; ToolTip.text: qsTr("Swap with the main editor") }
                 ToolButton { visible: ev.secondary; text: "✕"; onClicked: ev.closeRequested(); ToolTip.visible: hovered; ToolTip.text: qsTr("Close split (Ctrl+\\)") }
@@ -195,8 +219,13 @@ Rectangle {
 
                 Rectangle {
                     id: page
-                    width: Math.min(Theme.pageWidth + 96, parent.width - 24)
-                    height: Math.max(col.height + 96, 640)
+                    // Fills the pane unless a fixed page width is chosen (⇔). In focus
+                    // mode "fit" keeps a readable column instead of the whole screen.
+                    width: Theme.pageWidth > 0 ? Math.min(Theme.pageWidth + 96, parent.width - 24)
+                        : ev.focusMode ? Math.min(860 + 96, parent.width - 24)
+                        : parent.width - 24
+                    // At least as tall as the visible area, so the paper fills the pane.
+                    height: Math.max(col.height + 96, scroller.height - 48)
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 24
                     color: Theme.paper
@@ -330,13 +359,11 @@ Rectangle {
                 markColor: Theme.dark ? "#6f6d68" : "#b3afa6"
                 quoteColor: Theme.subtext
             }
-            onCursorPositionChanged: {
-                if (activeFocus) ev.activeCursor = cursorPosition;
-                if (ev.typewriter && activeFocus) {
-                    const p = area.mapToItem(scroller.contentItem.contentItem, 0, cursorRectangle.y);
-                    scroller.contentItem.contentY = Math.max(0, p.y - scroller.height / 2);
-                }
-            }
+            onCursorPositionChanged: if (activeFocus) ev.activeCursor = cursorPosition
+            // Keep the caret on screen as you type, move or the text reflows.
+            // Deferred so the page has grown to fit a new line first.
+            onCursorRectangleChanged: if (activeFocus) Qt.callLater(ev.revealCursor, area)
+            onHeightChanged: if (activeFocus) Qt.callLater(ev.revealCursor, area)
         }
         Text {
             visible: ev.preview
