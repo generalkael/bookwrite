@@ -28,6 +28,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   deleted for good. The Details panel lists a character's relationships.
 - **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
+- **Word count history.** The project now also records its manuscript and project word totals for
+  each day. A Word Count History window (click the goal ring, or Ctrl+Shift+H) charts words written
+  or running totals by day, week, month or year, with Daily / Weekly / Monthly / 90 days / Yearly /
+  Lifetime presets or any custom date range, plus range totals, average and best day.
 - **Spell checking.** Misspellings are marked in red as you type (View ▸ Check Spelling, F7);
   right-click for suggestions or *Add to Dictionary*. Character, place and track names are always
   accepted. Uses the system's Hunspell dictionary, or a bundled US English one.

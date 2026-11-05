@@ -34,7 +34,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
 | **Search & replace** | Searches titles, text, synopses, notes and keywords across the project, with snippets. Replace-all works across every document. **In one document**: Ctrl+F opens a find bar in the editor and Ctrl+H adds replace, with next / previous (Enter, Shift+Enter, F3), a match count, *Whole words* (on by default, so “the” leaves “then” alone) and *Match case*. In a folder's composite view it searches every part; Ctrl+Z undoes replacements. |
 | **Compile** | Exports the manuscript to EPUB (with a table of contents, one file per chapter), DOCX (named styles, chapters on new pages), Markdown, print-styled HTML, or plain text, with a live preview. No Pandoc or Calibre needed. Options cover the title page, chapter headings and numbering, scene headings, and the scene separator. |
-| **Statistics & targets** | Word counts for the manuscript and the whole project, words written today, writing streak, reading time, a 30-day history chart, a manuscript target with deadline (and the words per day needed to hit it), and a daily session target. A ring in the status bar fills as you write today and turns green, with a notice, when you reach the goal; click it to set or change the goal. |
+| **Statistics & targets** | Word counts for the manuscript and the whole project, words written today, writing streak, reading time, a 30-day history chart, a manuscript target with deadline (and the words per day needed to hit it), and a daily session target. A ring in the status bar fills as you write today and turns green, with a notice, when you reach the goal. **Word Count History** (click the ring, Project ▸ Word Count History…, or Ctrl+Shift+H) opens a window charting words written per day, week, month or year, or the manuscript / project total as a line. Presets: Daily (30 days), Weekly (26 weeks), Monthly (24 months), 90 days, Yearly and Lifetime; or pick your own From / To dates and grouping, and step the range with ‹ ›. It shows words written in the range, days written, the daily average and your best day, with the daily goal as a dashed line. |
 | **Labels & statuses** | Editable lists with colours. |
 | **Themes** | Follows the system light/dark setting, or you can force either one. |
 
@@ -135,6 +135,7 @@ Ctrl is ⌘ on macOS.
 | Compile / export | Ctrl+Shift+E |
 | Find in project · writing statistics | Ctrl+Shift+F · Ctrl+Shift+T |
 | Name generator | Ctrl+Shift+G |
+| Word count history | Ctrl+Shift+H |
 | Spell checking on / off | F7 |
 | Find · replace in the open document (next / previous: F3 · Shift+F3) | Ctrl+F · Ctrl+H |
 | Editor · corkboard · outliner · timeline | Ctrl+1 · Ctrl+2 · Ctrl+3 · Ctrl+4 |
@@ -157,6 +158,7 @@ works with git, Dropbox and diff tools, and you can still read it without Wordlo
 ```
 Title.wordloom/
   project.json          binder tree, metadata, labels, statuses, timeline, relationships, stats
+                        (incl. words written per day and daily word totals)
   content/<uuid>.md     one Markdown file per document that has text
   snapshots/<uuid>.json saved versions of a document
   files/<uuid>.<ext>    imported research files (images, PDFs, …), copied in unchanged

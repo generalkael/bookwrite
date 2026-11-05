@@ -41,6 +41,96 @@ pub struct WritingStats {
     pub session_target: Option<u32>,
     #[serde(default)]
     pub deadline: Option<NaiveDate>,
+    /// Word totals at the end of each day something was saved:
+    /// [manuscript words, project words].
+    #[serde(default)]
+    pub totals: BTreeMap<NaiveDate, [u64; 2]>,
+}
+
+/// How [`WritingStats::range_history`] groups days.
+#[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum Bucket {
+    Day,
+    /// Monday to Sunday.
+    Week,
+    Month,
+    Year,
+}
+
+impl Bucket {
+    /// "day", "week", "month", "year"; anything else picks a size that
+    /// suits the span (days up to two months, then weeks, months, years).
+    pub fn parse(s: &str, from: NaiveDate, to: NaiveDate) -> Self {
+        match s {
+            "day" => Self::Day,
+            "week" => Self::Week,
+            "month" => Self::Month,
+            "year" => Self::Year,
+            _ => {
+                let days = (to - from).num_days();
+                if days <= 62 {
+                    Self::Day
+                } else if days <= 366 {
+                    Self::Week
+                } else if days <= 366 * 5 {
+                    Self::Month
+                } else {
+                    Self::Year
+                }
+            }
+        }
+    }
+
+    /// First day of the bucket containing `d`.
+    fn start_of(self, d: NaiveDate) -> NaiveDate {
+        use chrono::Datelike;
+        match self {
+            Self::Day => d,
+            Self::Week => d - chrono::Duration::days(d.weekday().num_days_from_monday() as i64),
+            Self::Month => d.with_day(1).unwrap(),
+            Self::Year => NaiveDate::from_ymd_opt(d.year(), 1, 1).unwrap(),
+        }
+    }
+
+    fn next(self, start: NaiveDate) -> NaiveDate {
+        use chrono::Months;
+        match self {
+            Self::Day => start + chrono::Duration::days(1),
+            Self::Week => start + chrono::Duration::days(7),
+            Self::Month => start + Months::new(1),
+            Self::Year => start + Months::new(12),
+        }
+    }
+}
+
+/// One bar of the history chart.
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct HistoryBucket {
+    /// The days covered, clipped to the requested range.
+    pub start: NaiveDate,
+    pub end: NaiveDate,
+    /// Net words written (can be negative after heavy cutting).
+    pub written: i64,
+    /// Totals at the end of the bucket, carried forward from the last day
+    /// they were recorded; `None` before the first record.
+    pub manuscript: Option<u64>,
+    pub project: Option<u64>,
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct RangeHistory {
+    pub from: NaiveDate,
+    pub to: NaiveDate,
+    pub bucket: Bucket,
+    pub buckets: Vec<HistoryBucket>,
+    pub total_written: i64,
+    /// Days in the range with more words than before.
+    pub days_written: u32,
+    pub average_per_day: f64,
+    pub best_day: Option<(NaiveDate, i64)>,
+    /// The first day anything was recorded (for "lifetime").
+    pub first_day: Option<NaiveDate>,
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -71,6 +161,60 @@ impl WritingStats {
     pub fn record_on(&mut self, day: NaiveDate, delta: i64) {
         if delta != 0 {
             *self.daily.entry(day).or_insert(0) += delta;
+        }
+    }
+
+    /// Remember the word totals as of `day` (called on save).
+    pub fn note_totals(&mut self, day: NaiveDate, manuscript: u64, project: u64) {
+        self.totals.insert(day, [manuscript, project]);
+    }
+
+    pub fn first_day(&self) -> Option<NaiveDate> {
+        let a = self.daily.keys().next().copied();
+        let b = self.totals.keys().next().copied();
+        match (a, b) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
+        }
+    }
+
+    /// Words written and totals from `from` to `to` (inclusive), grouped.
+    pub fn range_history(&self, from: NaiveDate, to: NaiveDate, bucket: Bucket) -> RangeHistory {
+        let (from, to) = if from <= to { (from, to) } else { (to, from) };
+        let mut buckets = Vec::new();
+        let mut start = bucket.start_of(from);
+        while start <= to {
+            let next = bucket.next(start);
+            let (s, e) = (start.max(from), (next - chrono::Duration::days(1)).min(to));
+            let written = self.daily.range(s..=e).map(|(_, w)| w).sum();
+            let last = self.totals.range(..=e).next_back().map(|(_, t)| *t);
+            buckets.push(HistoryBucket {
+                start: s,
+                end: e,
+                written,
+                manuscript: last.map(|t| t[0]),
+                project: last.map(|t| t[1]),
+            });
+            start = next;
+        }
+        let days: Vec<(NaiveDate, i64)> =
+            self.daily.range(from..=to).map(|(d, w)| (*d, *w)).collect();
+        let total_written = days.iter().map(|(_, w)| w).sum();
+        let span = (to - from).num_days() + 1;
+        RangeHistory {
+            from,
+            to,
+            bucket,
+            buckets,
+            total_written,
+            days_written: days.iter().filter(|(_, w)| *w > 0).count() as u32,
+            average_per_day: total_written as f64 / span as f64,
+            best_day: days
+                .iter()
+                .filter(|(_, w)| *w > 0)
+                .max_by_key(|(_, w)| *w)
+                .copied(),
+            first_day: self.first_day(),
         }
     }
 
@@ -159,6 +303,68 @@ mod tests {
         assert_eq!(count_words("don't stop — well-known"), 3);
         assert_eq!(count_words("# Heading\n\n* item *two*"), 3);
         assert_eq!(count_words("Ünïcödé façade 42"), 3);
+    }
+
+    #[test]
+    fn range_history_buckets() {
+        let d = |s: &str| NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap();
+        let mut s = WritingStats::default();
+        s.record_on(d("2026-01-30"), 100);
+        s.record_on(d("2026-02-02"), 50); // a Monday
+        s.record_on(d("2026-02-03"), -20);
+        s.record_on(d("2026-03-15"), 400);
+        s.note_totals(d("2026-01-30"), 1100, 1500);
+        s.note_totals(d("2026-03-15"), 1530, 2000);
+        assert_eq!(s.first_day(), Some(d("2026-01-30")));
+
+        let days = s.range_history(d("2026-02-01"), d("2026-02-04"), Bucket::Day);
+        assert_eq!(days.buckets.len(), 4);
+        assert_eq!(days.buckets[1].written, 50);
+        assert_eq!(days.buckets[2].written, -20);
+        // Totals carry forward from before the range.
+        assert_eq!(days.buckets[0].manuscript, Some(1100));
+        assert_eq!((days.total_written, days.days_written), (30, 1));
+        assert_eq!(days.best_day, Some((d("2026-02-02"), 50)));
+
+        let weeks = s.range_history(d("2026-01-28"), d("2026-02-08"), Bucket::Week);
+        // Wed 28 Jan .. Sun 1 Feb, then Mon 2 .. Sun 8 Feb.
+        assert_eq!(weeks.buckets.len(), 2);
+        assert_eq!(
+            (weeks.buckets[0].start, weeks.buckets[0].end),
+            (d("2026-01-28"), d("2026-02-01"))
+        );
+        assert_eq!(
+            (weeks.buckets[0].written, weeks.buckets[1].written),
+            (100, 30)
+        );
+
+        let months = s.range_history(d("2026-01-01"), d("2026-03-31"), Bucket::Month);
+        let w: Vec<i64> = months.buckets.iter().map(|b| b.written).collect();
+        assert_eq!(w, [100, 30, 400]);
+        assert_eq!(months.buckets[2].manuscript, Some(1530));
+        let years = s.range_history(d("2025-06-01"), d("2026-12-31"), Bucket::Year);
+        assert_eq!(years.buckets.len(), 2);
+        assert_eq!(years.buckets[0].manuscript, None);
+
+        // Reversed dates are accepted; auto picks a size for the span.
+        assert_eq!(
+            s.range_history(d("2026-02-04"), d("2026-02-01"), Bucket::Day)
+                .buckets
+                .len(),
+            4
+        );
+        assert_eq!(
+            Bucket::parse("auto", d("2026-01-01"), d("2026-01-31")),
+            Bucket::Day
+        );
+        assert_eq!(
+            Bucket::parse("auto", d("2026-01-01"), d("2026-06-30")),
+            Bucket::Week
+        );
+        assert_eq!(
+            Bucket::parse("", d("2020-01-01"), d("2026-06-30")),
+            Bucket::Year
+        );
     }
 
     #[test]

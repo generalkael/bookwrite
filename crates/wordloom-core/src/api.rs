@@ -89,6 +89,7 @@ const READ_ONLY: &[&str] = &[
     "meta",
     "search",
     "stats",
+    "statsHistory",
     "compile",
     "snapshots",
     "compareSnapshots",
@@ -353,6 +354,7 @@ impl App {
             "search" => self.s()?.search(a.str(0)),
             "replaceAll" => self.s()?.replace_all(a.str(0), a.str(1)),
             "stats" => self.s()?.stats(None),
+            "statsHistory" => self.s()?.stats_history(a.str(0), a.str(1), a.str(2)),
             "setTargets" => {
                 self.s()?
                     .set_targets(a.int(0) as i32, a.int(1) as i32, a.str(2));

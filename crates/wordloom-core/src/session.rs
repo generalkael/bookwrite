@@ -63,6 +63,7 @@ impl Session {
     }
 
     pub fn save(&mut self) -> Result<()> {
+        self.note_totals();
         storage::save(&self.project, &self.dir)?;
         self.dirty = false;
         Ok(())
@@ -576,6 +577,33 @@ impl Session {
     pub fn stats(&self, today: Option<NaiveDate>) -> Value {
         let today = today.unwrap_or_else(|| Local::now().date_naive());
         json!(self.project.stats.summary(&self.project, today))
+    }
+
+    /// Record today's manuscript and project word totals for the history.
+    fn note_totals(&mut self) {
+        let today = Local::now().date_naive();
+        let s = self.project.stats.summary(&self.project, today);
+        self.project
+            .stats
+            .note_totals(today, s.manuscript_words as u64, s.project_words as u64);
+    }
+
+    /// Word history for the chart. Empty `from` means the first recorded day
+    /// (or 30 days ago), empty `to` today; `bucket` is day / week / month /
+    /// year, or anything else to choose by span.
+    pub fn stats_history(&self, from: &str, to: &str, bucket: &str) -> Value {
+        let today = Local::now().date_naive();
+        let parse = |s: &str| NaiveDate::parse_from_str(s.trim(), "%Y-%m-%d").ok();
+        let mut stats = self.project.stats.clone();
+        // Include unsaved progress for today.
+        let s = stats.summary(&self.project, today);
+        stats.note_totals(today, s.manuscript_words as u64, s.project_words as u64);
+        let to = parse(to).unwrap_or(today);
+        let from = parse(from)
+            .or_else(|| stats.first_day())
+            .unwrap_or(today - chrono::Duration::days(29));
+        let bucket = crate::stats::Bucket::parse(bucket, from.min(to), from.max(to));
+        json!(stats.range_history(from, to, bucket))
     }
 
     pub fn set_targets(&mut self, manuscript: i32, session: i32, deadline: &str) {

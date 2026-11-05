@@ -11,6 +11,7 @@ Dialog {
     width: 640
     standardButtons: Dialog.Close
     property var s: null
+    signal historyRequested()
     onAboutToShow: load()
     function load() {
         s = Api.get("stats", null);
@@ -59,7 +60,11 @@ Dialog {
             value: dlg.s && dlg.s.manuscript_target ? Math.min(1, dlg.s.manuscript_words / dlg.s.manuscript_target) : 0
         }
 
-        Label { text: qsTr("Last 30 days"); font.bold: true; color: Theme.text }
+        RowLayout {
+            Layout.fillWidth: true
+            Label { text: qsTr("Last 30 days"); font.bold: true; color: Theme.text; Layout.fillWidth: true }
+            Button { text: qsTr("Full History…"); flat: true; onClicked: dlg.historyRequested(); ToolTip.visible: hovered; ToolTip.text: qsTr("Word counts by day, week, month or year, for any dates (Ctrl+Shift+H)") }
+        }
         Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 110

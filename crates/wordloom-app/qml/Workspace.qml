@@ -21,7 +21,7 @@ Item {
     property var stats: null
     property string splitId: ""         // document in the split editor; "" = no split
     property var splitNode: null
-    signal statsRequested()
+    signal historyRequested()
 
     // Today's words against the daily goal (0..1, or -1 without a goal).
     readonly property real goalProgress: stats && stats.session_target ? Math.min(1, Math.max(0, stats.words_today) / stats.session_target) : -1
@@ -420,10 +420,10 @@ Item {
                         }
                     }
                     HoverHandler { id: ringHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: ws.statsRequested() }
+                    TapHandler { onTapped: ws.historyRequested() }
                     ToolTip.visible: ringHover.hovered
-                    ToolTip.text: ws.goalProgress < 0 ? qsTr("Set a daily word goal")
-                        : qsTr("%1% of today's goal").arg(Math.round(ws.goalProgress * 100))
+                    ToolTip.text: (ws.goalProgress < 0 ? qsTr("No daily goal set")
+                        : qsTr("%1% of today's goal").arg(Math.round(ws.goalProgress * 100))) + "\n" + qsTr("Click for your word count history")
                 }
                 Label {
                     color: ws.stats && ws.stats.session_target && ws.stats.words_today >= ws.stats.session_target ? Theme.ok : Theme.subtext

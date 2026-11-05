@@ -181,6 +181,39 @@ pub fn create(parent: &Path) -> Result<Session> {
         "The ferry left her on the jetty with a bag and a letter.\n\nThe lighthouse turned above her, sweeping the water.\n\nShe wondered if anyone was expecting her.",
     )?;
 
+    // A few weeks of writing history for the word-count chart, ending
+    // yesterday and adding up to the sample's actual word counts.
+    let today = chrono::Local::now().date_naive();
+    let sum = s.project.stats.summary(&s.project, today);
+    let (ms_words, project_words) = (sum.manuscript_words as i64, sum.project_words as i64);
+    // Writing on most days, a few off days and one big session per week.
+    let pattern: Vec<i64> = (0..70)
+        .map(|i| match i % 7 {
+            2 | 5 if i % 3 == 0 => 0,
+            6 => 9,
+            _ => 2 + (i * 7 % 5),
+        })
+        .collect();
+    let weight: i64 = pattern.iter().sum();
+    let (mut written, mut cum) = (0, 0);
+    for (i, w) in pattern.iter().enumerate() {
+        let day = today - chrono::Duration::days(70 - i as i64);
+        // Cumulative rounding spreads the words evenly and ends exactly on
+        // the sample's real count.
+        cum += w;
+        let words = cum * ms_words / weight - written;
+        written += words;
+        s.project.stats.record_on(day, words);
+        s.project.stats.note_totals(
+            day,
+            written as u64,
+            (written * project_words / ms_words.max(1)) as u64,
+        );
+    }
+
+    // A small daily goal, so the status-bar ring and the chart's goal line show.
+    s.project.stats.session_target = Some(4);
+
     s.save()?;
     Ok(s)
 }
