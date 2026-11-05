@@ -34,13 +34,22 @@ Item {
         stats = Api.get("stats", null);
     }
 
+    // Select an item, in `mode` if given. Otherwise documents open in the
+    // editor (a character picked on the relationship map stays there), and a
+    // folder with no text of its own opens as a corkboard of its contents.
     function select(id, mode) {
         flush();
         currentId = id;
-        if (mode) viewMode = mode;
-        else if (viewMode === "timeline") viewMode = "editor";
-        else if (current && current.kind === "folder" && viewMode === "editor" && current.child_count > 0 && current.words === 0)
+        if (mode) { viewMode = mode; return; }
+        if (!current) return;
+        const isGroup = current.is_root || current.kind === "folder";
+        if (!isGroup) {
+            if (!(viewMode === "relations" && current.kind === "character")) viewMode = "editor";
+        } else if (viewMode === "timeline") {
+            viewMode = "editor";
+        } else if (viewMode === "editor" && current.child_count > 0 && current.words === 0) {
             viewMode = "corkboard";
+        }
     }
 
     function flush() {

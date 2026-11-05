@@ -36,6 +36,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   `Cargo.lock`), as Flathub requires, and the AppStream metadata has screenshots.
 
 ### Fixed
+- **Clicking a document opens the editor.** After a folder had switched to the corkboard (or from
+  the outliner), selecting a document in it kept showing the corkboard.
 - **Editor page resizes with the window.** It fills the editor pane by default (⇔ still offers fixed
   widths) and is always at least as tall as the pane; it used to stay 720 px wide and 640 px tall.
 - **Editor scrolls while you type.** Typing past the bottom of the pane now scrolls to keep the
