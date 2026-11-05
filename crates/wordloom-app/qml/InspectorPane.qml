@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import com.wordloom.app
 
-// Right-hand inspector: metadata, notes, snapshots and timeline links for the
+// The Details panel (InspectorPane in code): metadata, notes, snapshots and timeline links for the
 // selected item.
 Rectangle {
     id: ip

@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import com.wordloom.app
 
-// The main three-pane layout: binder | view | inspector, plus toolbar and
+// The main three-pane layout: binder | view | Details panel, plus toolbar and
 // status bar. Owns the current selection and view mode, and the optional
 // split editor: a second editor beside the main view that keeps showing one
 // document while the binder drives the main view.
@@ -229,7 +229,7 @@ Item {
                     Layout.maximumWidth: 420
                 }
                 ToolSeparator {}
-                ToolButton { text: ws.showInspector ? qsTr("Hide Inspector") : qsTr("Inspector"); onClicked: ws.showInspector = !ws.showInspector }
+                ToolButton { text: ws.showInspector ? qsTr("Hide Details") : qsTr("Show Details"); onClicked: ws.showInspector = !ws.showInspector }
             }
         }
 

@@ -10,7 +10,7 @@ Rust both support those platforms. CI currently builds Linux only: Windows CI is
 until the Linux version is complete (it passed when last enabled), and macOS CI waits on a Qt
 version that supports the macOS 26 SDK.
 
-![Wordloom's editor with styled Markdown, the binder and the inspector](docs/screenshots/editor.png)
+![Wordloom's editor with styled Markdown, the binder and the Details panel](docs/screenshots/editor.png)
 
 More screenshots: [timeline](docs/screenshots/timeline.png) ·
 [relationship map](docs/screenshots/relations.png) · [corkboard](docs/screenshots/corkboard.png) ·
@@ -25,9 +25,9 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Focus mode** | F11 hides everything except the page. |
 | **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card, resize cards, reorder them from the context menu. |
 | **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place. |
-| **Inspector** | Synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes, snapshots, and the timeline events linked to the item. |
+| **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
-| **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The inspector lists each character's relationships. |
+| **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The Details panel lists each character's relationships. |
 | **Research files** | Import images and PDFs (File ▸ Import File…, or drop files on the binder). They're copied into the project and shown in the editor: images with fit / zoom, PDFs page by page. Other file types open in your default app. |
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
 | **Search & replace** | Searches titles, text, synopses, notes and keywords across the project, with snippets. Replace-all works across every document. |
@@ -136,7 +136,7 @@ Ctrl is ⌘ on macOS.
 | Relationship map | Ctrl+6 |
 | Split editor on / off | Ctrl+\\ |
 | Focus mode (leave with Esc) | F11 |
-| Show / hide inspector | Ctrl+Alt+I |
+| Show / hide the Details panel | Ctrl+Alt+I |
 | Bold · italic (in the editor) | Ctrl+B · Ctrl+I |
 | Larger / smaller editor text | Ctrl++ · Ctrl+− |
 | Zoom an image in the viewer | Ctrl+scroll |

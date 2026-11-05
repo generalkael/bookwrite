@@ -24,7 +24,7 @@
   </description>
   <screenshots>
     <screenshot type="default">
-      <caption>The editor, with styled Markdown and the binder and inspector</caption>
+      <caption>The editor, with styled Markdown and the binder and the Details panel</caption>
       <image>https://raw.githubusercontent.com/generalkael/wordloom/main/docs/screenshots/editor.png</image>
     </screenshot>
     <screenshot>

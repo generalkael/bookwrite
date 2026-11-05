@@ -24,7 +24,7 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   Ctrl+I toggle the markup. View ▸ Styled Markdown switches it off.
 - **Relationship map.** A new Relations view (Ctrl+6) with draggable character cards and labelled,
   directed relationships with notes. Undoable; relationships are removed when a character is
-  deleted for good. The inspector lists a character's relationships.
+  deleted for good. The Details panel lists a character's relationships.
 - **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
 - Keyboard shortcut reference in the README.
@@ -37,7 +37,7 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
 
 ### Fixed
 - **Narrow windows.** The editor header no longer overflows (less-used buttons fold into a ⋯
-  menu), the split editor opens at half the space and fits beside the inspector in a 1000 px
+  menu), the split editor opens at half the space and fits beside the Details panel in a 1000 px
   window, and narrow pages use smaller margins.
 - **Clicking a document opens the editor.** After a folder had switched to the corkboard (or from
   the outliner), selecting a document in it kept showing the corkboard.
@@ -51,6 +51,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   start screen and New Document once a project is open.
 
 ### Changed
+- The **Inspector** is now called the **Details** panel (toolbar: Show/Hide Details; View ▸ Show
+  Details, still Ctrl+Alt+I).
 - Binder, corkboard, outliner, editor and timeline icons are bundled SVGs instead of emoji, so they
   look the same everywhere. Emoji showed as empty boxes where the system's emoji font couldn't be
   drawn, including in the AppImage. Toolbar "＋" and "⎙" symbols became a plain "+" and text for the

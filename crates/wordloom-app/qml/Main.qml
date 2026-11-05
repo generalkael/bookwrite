@@ -207,7 +207,7 @@ ApplicationWindow {
             Action { text: qsTr("&Split Editor"); shortcut: "Ctrl+\\"; checkable: true; checked: win.ws ? win.ws.splitId !== "" : false; onTriggered: win.ws.toggleSplit() }
             Action { text: qsTr("&Focus Mode"); shortcut: "F11"; checkable: true; checked: win.ws ? win.ws.focusMode : false; onTriggered: win.ws.focusMode = !win.ws.focusMode }
             Action { text: qsTr("Show &Binder"); checkable: true; checked: win.ws ? win.ws.showBinder : true; onTriggered: win.ws.showBinder = !win.ws.showBinder }
-            Action { text: qsTr("Show &Inspector"); shortcut: "Ctrl+Alt+I"; checkable: true; checked: win.ws ? win.ws.showInspector : true; onTriggered: win.ws.showInspector = !win.ws.showInspector }
+            Action { text: qsTr("Show &Details"); shortcut: "Ctrl+Alt+I"; checkable: true; checked: win.ws ? win.ws.showInspector : true; onTriggered: win.ws.showInspector = !win.ws.showInspector }
             MenuSeparator {}
             Action { text: qsTr("Styled &Markdown"); checkable: true; checked: Theme.styledMarkdown; onTriggered: Theme.styledMarkdown = !Theme.styledMarkdown }
             Action { text: qsTr("Larger Text"); shortcut: StandardKey.ZoomIn; onTriggered: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
