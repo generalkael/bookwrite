@@ -96,7 +96,10 @@ ApplicationWindow {
                 else if (v === "split") { win.ws.openFirstScene(); win.ws.openInSplit(fileItem); }
                 else if (v === "file") win.ws.select(fileItem, "editor");
                 else if (v === "compare") { win.ws.openFirstScene(); win.ws.compareSnapshot(""); }
-                else if (v === "relations") { win.ws.select(Api.get("children", [{ id: "" }], Api.call("rootId", "characters"))[0].id, "relations"); }
+                else if (v === "relations") {
+                    const cast = Api.get("children", [], Api.call("rootId", "characters"));
+                    if (cast.length) win.ws.select(cast[0].id, "relations"); else win.ws.viewMode = "relations";
+                }
                 else if (v === "relation") { win.ws.viewMode = "relations"; const m = Api.get("relations", null); if (m && m.links.length) win.ws.relationDialogRef().openEdit(m.links[0]); }
                 if (v === "corkboard" || v === "outliner") win.ws.select(Api.call("rootId", "manuscript"), v);
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
