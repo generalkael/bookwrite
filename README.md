@@ -23,6 +23,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Binder** | A project tree with fixed sections (Manuscript, Characters, Places, Research, Notes, Trash). Drag and drop, inline rename (F2), keyboard moves (Ctrl+↑/↓ to move, Ctrl+←/→ to outdent/indent), duplicate, split at cursor, merge, convert type, trash/empty trash. Clicking a document opens it in the editor; clicking a folder with no text of its own shows its contents on the corkboard. Items with a word target (set in the Details panel) show a small progress bar, green once reached; hover it for the numbers. |
 | **Editor** | A distraction-light paper page that fills the window (or a fixed column width: ⇔ cycles Fit, 560 … 1100 px), adjustable font size, Markdown preview, and typewriter scrolling. The page scrolls to keep the caret in view as you type. In a narrow pane the editor's view and format buttons move into a ⋯ menu. **Styled Markdown**: headings, **bold**, *italic*, block quotes and scene breaks are shown styled as you type, with their Markdown markers faded, while the file on disk stays plain Markdown. The format bar (B, I, H, “, * * *) and Ctrl+B / Ctrl+I add or remove the markers for you (Ctrl+Z undoes them), and View ▸ Styled Markdown turns styling off. **Composite mode**: select a folder and every document inside it appears as one continuous manuscript you can edit, with each part saving separately. **Split editor** (◫ or Ctrl+\\, or *Open in Split Editor* in the binder): keep one document beside the main view while you work elsewhere; ⇄ swaps the two. The same document can be open in both panes. |
 | **Focus mode** | F11 hides everything except the page. |
+| **Reading mode** | ❦ Read (Ctrl+7) shows the whole manuscript, or just the selected chapter, as a read-only book page: title page, centred chapter headings, scene breaks and book-style indents, built from the same compile step as export. Adjust the text size and column width, page with Page Up / Down or Space, and double-click (or *Edit*) to go back to writing. |
 | **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card, resize cards, reorder them from the context menu. |
 | **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place. |
 | **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes, snapshots, and the timeline events linked to the item. |
@@ -141,7 +142,7 @@ Ctrl is ⌘ on macOS.
 | Spell checking on / off | F7 |
 | Find · replace in the open document (next / previous: F3 · Shift+F3) | Ctrl+F · Ctrl+H |
 | Editor · corkboard · outliner · timeline | Ctrl+1 · Ctrl+2 · Ctrl+3 · Ctrl+4 |
-| Relationship map | Ctrl+6 |
+| Relationship map · reading mode | Ctrl+6 · Ctrl+7 |
 | Split editor on / off | Ctrl+\\ |
 | Focus mode (leave with Esc) | F11 |
 | Show / hide the Details panel | Ctrl+Alt+I |

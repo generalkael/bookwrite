@@ -13,6 +13,7 @@ const QML: &[&str] = &[
     "qml/InspectorPane.qml",
     "qml/GanttView.qml",
     "qml/RelationsView.qml",
+    "qml/ReaderView.qml",
     "qml/EventDialog.qml",
     "qml/TrackDialog.qml",
     "qml/CompileDialog.qml",

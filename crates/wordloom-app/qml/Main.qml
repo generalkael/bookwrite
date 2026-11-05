@@ -72,7 +72,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -101,6 +101,7 @@ ApplicationWindow {
                 else if (v === "names") nameDialog.open();
                 else if (v === "history") historyWindow.show(3);
                 else if (v === "sprint") sprintDialog.open();
+                else if (v === "reader") win.ws.viewMode = "reader";
                 else if (v === "stats") statsDialog.open();
                 else if (v === "settings") settingsDialog.open();
                 else if (v === "add") { win.ws.viewMode = "editor"; win.ws.addInSection("characters"); }
@@ -222,6 +223,7 @@ ApplicationWindow {
             Action { text: qsTr("&Outliner"); shortcut: "Ctrl+3"; onTriggered: win.ws.viewMode = "outliner" }
             Action { text: qsTr("&Timeline (Gantt)"); shortcut: "Ctrl+4"; onTriggered: win.ws.viewMode = "timeline" }
             Action { text: qsTr("&Relationship Map"); shortcut: "Ctrl+6"; onTriggered: win.ws.viewMode = "relations" }
+            Action { text: qsTr("Rea&ding Mode"); shortcut: "Ctrl+7"; onTriggered: win.ws.viewMode = "reader" }
             MenuSeparator {}
             Action { text: qsTr("&Split Editor"); shortcut: "Ctrl+\\"; checkable: true; checked: win.ws ? win.ws.splitId !== "" : false; onTriggered: win.ws.toggleSplit() }
             Action { text: qsTr("&Focus Mode"); shortcut: "F11"; checkable: true; checked: win.ws ? win.ws.focusMode : false; onTriggered: win.ws.focusMode = !win.ws.focusMode }

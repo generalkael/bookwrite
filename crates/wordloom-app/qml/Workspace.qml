@@ -14,7 +14,7 @@ Item {
 
     property string currentId: ""
     property var current: null          // nodeInfo of currentId
-    property string viewMode: "editor"  // editor | corkboard | outliner | timeline | relations
+    property string viewMode: "editor"  // editor | corkboard | outliner | timeline | relations | reader
     property bool focusMode: false
     property bool showBinder: true
     property bool showInspector: true
@@ -61,7 +61,7 @@ Item {
         flush();
         currentId = id;
         if (mode) { viewMode = mode; return; }
-        if (!current) return;
+        if (!current || viewMode === "reader") return;   // keep reading; the reader follows the selection
         const isGroup = current.is_root || current.kind === "folder";
         if (!isGroup) {
             if (!(viewMode === "relations" && current.kind === "character")) viewMode = "editor";
@@ -238,7 +238,8 @@ Item {
                         { mode: "corkboard", label: qsTr("▦ Corkboard") },
                         { mode: "outliner", label: qsTr("☰ Outliner") },
                         { mode: "timeline", label: qsTr("▤ Timeline") },
-                        { mode: "relations", label: qsTr("◇ Relations") }
+                        { mode: "relations", label: qsTr("◇ Relations") },
+                        { mode: "reader", label: qsTr("❦ Read") }
                     ]
                     delegate: ToolButton {
                         required property var modelData
@@ -307,7 +308,7 @@ Item {
                     SplitView.fillWidth: true
                     // Small enough that two editors fit side by side in a narrow window.
                     SplitView.minimumWidth: 180
-                    currentIndex: ws.focusMode ? 0 : ["editor", "corkboard", "outliner", "timeline", "relations"].indexOf(ws.viewMode)
+                    currentIndex: ws.focusMode ? 0 : ["editor", "corkboard", "outliner", "timeline", "relations", "reader"].indexOf(ws.viewMode)
 
                     EditorView {
                         id: editorView
@@ -341,6 +342,12 @@ Item {
                         selectedNode: ws.currentId
                         onOpenRequested: (id) => ws.select(id, "editor")
                         onSelectRequested: (id) => ws.select(id, "relations")
+                    }
+                    // Order matches the viewMode list above.
+                    ReaderView {
+                        active: ws.viewMode === "reader"
+                        node: ws.current
+                        onEditRequested: ws.viewMode = "editor"
                     }
                 }
 

@@ -28,6 +28,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   deleted for good. The Details panel lists a character's relationships.
 - **Timeline swim lanes.** *Lanes* groups tracks by kind under collapsible headers.
 - The sample project includes an imported map and an earlier-draft snapshot.
+- **Reading mode** (❦ Read, Ctrl+7): the manuscript or the selected chapter as a read-only book
+  page, from the same compile step as export, with its own text size and column width.
 - **Word-target progress in the binder.** Documents and folders with a word target show a small
   progress bar (green when reached) with the count on hover.
 - **Writing sprints** (Ctrl+Shift+R): timed sessions with an optional word goal, a status-bar
