@@ -10,10 +10,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # macOS is off for now: Qt 6.8.3 (the last open-source 6.8) doesn't
-        # support the macOS 26 SDK on current runners (it links the removed
-        # AGL framework). Re-add macos-latest together with a newer Qt.
-        os: [ubuntu-latest, windows-latest]
+        # Linux only while the Linux version is finished. To bring the others
+        # back, add them here:
+        # - windows-latest: passed previously; off for now to save CI time.
+        # - macos-latest: Qt 6.8.3 (the last open-source 6.8) doesn't support
+        #   the macOS 26 SDK on current runners (it links the removed AGL
+        #   framework), so re-add it together with a newer Qt.
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
