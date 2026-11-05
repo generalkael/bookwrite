@@ -1,6 +1,7 @@
 //! Wordloom desktop application entry point.
 
 mod controller;
+mod styling;
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQuickStyle, QString, QUrl};
 
@@ -23,6 +24,7 @@ fn main() {
         QQuickStyle::set_style(&QString::from("Fusion"));
     }
 
+    styling::ffi::register_styler_types();
     let mut engine = QQmlApplicationEngine::new();
     if let Some(engine) = engine.as_mut() {
         engine.load(&QUrl::from("qrc:/qt/qml/com/wordloom/app/qml/Main.qml"));

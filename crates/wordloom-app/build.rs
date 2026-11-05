@@ -47,6 +47,8 @@ fn main() {
         .qrc_resources(icons)
         .qt_module("Quick")
         .qt_module("QuickControls2")
-        .files(["src/controller.rs"])
+        .files(["src/controller.rs", "src/styling.rs"])
+        // Live Markdown styling in the editor (a QSyntaxHighlighter).
+        .cpp_files(["src/styler.h", "src/styler.cpp"])
         .build();
 }

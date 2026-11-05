@@ -19,6 +19,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   types open in the default app. Needs Qt PDF for the PDF viewer.
 - **Snapshot comparison.** *Compare…* on the Snapshots tab shows a snapshot side by side with the
   current text or another snapshot, with paragraphs aligned and changed words highlighted.
+- **Styled Markdown editing.** The editor shows headings, bold, italic, quotes and scene breaks
+  styled as you type, with faded markers; documents stay plain Markdown. A format bar and Ctrl+B /
+  Ctrl+I toggle the markup. View ▸ Styled Markdown switches it off.
 - **Relationship map.** A new Relations view (Ctrl+6) with draggable character cards and labelled,
   directed relationships with notes. Undoable; relationships are removed when a character is
   deleted for good. The inspector lists a character's relationships.

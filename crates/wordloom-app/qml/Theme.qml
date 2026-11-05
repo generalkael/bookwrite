@@ -31,6 +31,8 @@ QtObject {
     property int editorSize: 15
     property int pageWidth: 720
     property real lineHeight: 1.45
+    // Show Markdown styling (bold, headings, quotes…) while editing.
+    property bool styledMarkdown: true
 
     readonly property int gap: 8
     readonly property int radius: 5

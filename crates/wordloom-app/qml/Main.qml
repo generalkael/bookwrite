@@ -64,7 +64,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -102,6 +102,7 @@ ApplicationWindow {
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
                 else if (v === "timeline") win.ws.showLanes(false);
                 else if (v === "lanes") win.ws.showLanes(true, { place: true });
+                else if (v === "styled") { const row = Api.get("binder", []).find(r => r.title === "Night Watch"); if (row) win.ws.select(row.id, "editor"); }
                 else if (v === "start") win.closeProject();
             }
             step++;
@@ -205,6 +206,7 @@ ApplicationWindow {
             Action { text: qsTr("Show &Binder"); checkable: true; checked: win.ws ? win.ws.showBinder : true; onTriggered: win.ws.showBinder = !win.ws.showBinder }
             Action { text: qsTr("Show &Inspector"); shortcut: "Ctrl+Alt+I"; checkable: true; checked: win.ws ? win.ws.showInspector : true; onTriggered: win.ws.showInspector = !win.ws.showInspector }
             MenuSeparator {}
+            Action { text: qsTr("Styled &Markdown"); checkable: true; checked: Theme.styledMarkdown; onTriggered: Theme.styledMarkdown = !Theme.styledMarkdown }
             Action { text: qsTr("Larger Text"); shortcut: StandardKey.ZoomIn; onTriggered: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
             Action { text: qsTr("Smaller Text"); shortcut: StandardKey.ZoomOut; onTriggered: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
             Menu {

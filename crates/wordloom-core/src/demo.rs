@@ -34,7 +34,7 @@ pub fn create(parent: &Path) -> Result<Session> {
             "The Log",
             vec![
                 ("Night Watch", "Mara finds the keeper's log and a missing week.",
-                 "The pages for the week of the wreck had been cut out cleanly, with a blade."),
+                 "The pages for the week of the wreck had been cut out cleanly, with a blade.\n\nOnly one line survived on the stub:\n\n> *2nd Oct. Light failed at three bells. Not my doing.*\n\nShe read it twice. **Not my doing.** Then whose?"),
                 ("The Week Before", "Flashback: the night of the wreck.",
                  "The *Alba* came in too fast, lights dark, and Tobias watched it happen."),
             ],

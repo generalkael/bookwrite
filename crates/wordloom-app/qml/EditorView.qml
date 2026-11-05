@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import com.wordloom.app
+import com.wordloom.styling
 
 // The writing surface. A single document is edited on its own; selecting a
 // folder shows all of its documents stitched together as one continuous,
@@ -23,6 +24,7 @@ Rectangle {
     property string activeId: ""
     property int activeCursor: 0
     property bool secondary: false
+    property var activeArea: null      // the TextArea being typed in
     readonly property bool hasFile: node !== null && !!node.file
     signal openRequested(string id)
     signal swapRequested()
@@ -34,6 +36,62 @@ Rectangle {
 
     function flush() {
         for (let i = 0; i < rep.count; ++i) { const it = rep.itemAt(i); if (it) it.flush(); }
+    }
+
+    // ---- Markdown formatting (Ctrl+B / Ctrl+I and the format bar). Edits go
+    // through the TextArea, so its own undo (Ctrl+Z) reverses them.
+    function starsBefore(t, i) { let k = 0; while (i - k - 1 >= 0 && t[i - k - 1] === "*") ++k; return k; }
+    function starsAfter(t, i) { let k = 0; while (i + k < t.length && t[i + k] === "*") ++k; return k; }
+    // n = 1: italic, 2: bold. Wraps the selection, or unwraps it if already styled.
+    function toggleEmphasis(n) {
+        const a = activeArea;
+        if (!a) return;
+        const mark = n === 2 ? "**" : "*";
+        const s = a.selectionStart, e = a.selectionEnd, t = a.text;
+        if (s === e) { a.insert(s, mark + mark); a.cursorPosition = s + n; return; }
+        const r = Math.min(starsBefore(t, s), starsAfter(t, e));
+        const has = n === 1 ? (r === 1 || r >= 3) : r >= 2;
+        if (has) { a.remove(e, e + n); a.remove(s - n, s); a.select(s - n, e - n); }
+        else { a.insert(e, mark); a.insert(s, mark); a.select(s + n, e + n); }
+    }
+    function lineStart(t, i) { return t.lastIndexOf("\n", i - 1) + 1; }
+    // No heading → # → ## → ### → none, on the caret's line.
+    function cycleHeading() {
+        const a = activeArea;
+        if (!a) return;
+        const ls = lineStart(a.text, a.cursorPosition);
+        const m = /^(#{1,6}) /.exec(a.text.substring(ls));
+        const level = m ? m[1].length : 0;
+        const keep = a.cursorPosition - ls - (m ? m[0].length : 0);
+        if (m) a.remove(ls, ls + m[0].length);
+        const next = level >= 3 ? 0 : level + 1;
+        if (next) a.insert(ls, "#".repeat(next) + " ");
+        a.cursorPosition = ls + Math.max(0, keep) + (next ? next + 1 : 0);
+    }
+    // Quote or unquote every line the selection touches.
+    function toggleQuote() {
+        const a = activeArea;
+        if (!a) return;
+        const t = a.text;
+        const starts = [];
+        for (let i = lineStart(t, a.selectionStart); i <= a.selectionEnd; i = t.indexOf("\n", i) + 1) {
+            starts.push(i);
+            if (t.indexOf("\n", i) < 0) break;
+        }
+        const quoted = starts.every(i => t.startsWith(">", i));
+        for (let k = starts.length - 1; k >= 0; --k) {
+            const i = starts[k];
+            if (quoted) a.remove(i, i + (t.startsWith("> ", i) ? 2 : 1));
+            else a.insert(i, "> ");
+        }
+    }
+    function sceneBreak() {
+        const a = activeArea;
+        if (!a) return;
+        const p = a.cursorPosition, head = a.text.substring(0, p);
+        // Start on a fresh paragraph.
+        const before = p === 0 || head.endsWith("\n\n") ? "" : head.endsWith("\n") ? "\n" : "\n\n";
+        a.insert(p, before + "* * *\n\n");
     }
 
     function collect(id, depth, out) {
@@ -78,6 +136,28 @@ Rectangle {
                 Label { text: ev.node ? ev.node.title : ""; font.bold: true; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
                 Label { visible: ev.docs.length > 1; text: qsTr("Composite · %1 parts").arg(ev.docs.length); color: Theme.subtext }
                 ToolButton { visible: ev.hasFile; text: qsTr("Open in Default App"); onClicked: fileViewer.openExternally() }
+                // Format bar
+                Repeater {
+                    model: ev.hasFile || ev.preview ? [] : [
+                        { label: "B", tip: qsTr("Bold (Ctrl+B)"), act: () => ev.toggleEmphasis(2), bold: true },
+                        { label: "I", tip: qsTr("Italic (Ctrl+I)"), act: () => ev.toggleEmphasis(1), italic: true },
+                        { label: "H", tip: qsTr("Heading: none → # → ## → ###"), act: () => ev.cycleHeading(), bold: true },
+                        { label: "“", tip: qsTr("Block quote"), act: () => ev.toggleQuote() },
+                        { label: "* * *", tip: qsTr("Scene break"), act: () => ev.sceneBreak() }
+                    ]
+                    delegate: ToolButton {
+                        required property var modelData
+                        text: modelData.label
+                        font.bold: !!modelData.bold
+                        font.italic: !!modelData.italic
+                        focusPolicy: Qt.NoFocus
+                        enabled: ev.activeArea !== null
+                        onClicked: modelData.act()
+                        ToolTip.visible: hovered
+                        ToolTip.text: modelData.tip
+                    }
+                }
+                ToolSeparator { visible: !ev.hasFile && !ev.preview }
                 ToolButton { visible: !ev.hasFile; text: qsTr("Preview"); checkable: true; checked: ev.preview; onToggled: { ev.flush(); ev.preview = checked; } ToolTip.visible: hovered; ToolTip.text: qsTr("Render Markdown formatting") }
                 ToolButton { visible: !ev.hasFile; text: qsTr("Typewriter"); checkable: true; checked: ev.typewriter; onToggled: ev.typewriter = checked; ToolTip.visible: hovered; ToolTip.text: qsTr("Keep the current line centred") }
                 ToolButton { visible: !ev.hasFile; text: "A−"; onClicked: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }
@@ -237,7 +317,19 @@ Rectangle {
             topPadding: 2
             bottomPadding: 2
             onTextChanged: if (!de.loading) saveTimer.restart()
-            onActiveFocusChanged: { if (activeFocus) ev.activeId = de.docId; else de.flush(); }
+            onActiveFocusChanged: { if (activeFocus) { ev.activeId = de.docId; ev.activeArea = area; } else de.flush(); }
+            Keys.onPressed: (e) => {
+                if ((e.modifiers & Qt.ControlModifier) && !(e.modifiers & (Qt.ShiftModifier | Qt.AltModifier))) {
+                    if (e.key === Qt.Key_B) { ev.activeArea = area; ev.toggleEmphasis(2); e.accepted = true; }
+                    else if (e.key === Qt.Key_I) { ev.activeArea = area; ev.toggleEmphasis(1); e.accepted = true; }
+                }
+            }
+            MarkdownStyler {
+                document: area.textDocument
+                enabled: Theme.styledMarkdown
+                markColor: Theme.dark ? "#6f6d68" : "#b3afa6"
+                quoteColor: Theme.subtext
+            }
             onCursorPositionChanged: {
                 if (activeFocus) ev.activeCursor = cursorPosition;
                 if (ev.typewriter && activeFocus) {

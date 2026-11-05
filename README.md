@@ -15,7 +15,7 @@ version that supports the macOS 26 SDK.
 | Area | What you get |
 |---|---|
 | **Binder** | A project tree with fixed sections (Manuscript, Characters, Places, Research, Notes, Trash). Drag and drop, inline rename (F2), keyboard moves (Ctrl+↑/↓ to move, Ctrl+←/→ to outdent/indent), duplicate, split at cursor, merge, convert type, trash/empty trash. |
-| **Editor** | A distraction-light paper page with adjustable font size and page width, Markdown preview, and typewriter scrolling. **Composite mode**: select a folder and every document inside it appears as one continuous manuscript you can edit, with each part saving separately. **Split editor** (◫ or Ctrl+\\, or *Open in Split Editor* in the binder): keep one document beside the main view while you work elsewhere; ⇄ swaps the two. The same document can be open in both panes. |
+| **Editor** | A distraction-light paper page with adjustable font size and page width, Markdown preview, and typewriter scrolling. **Styled Markdown**: headings, **bold**, *italic*, block quotes and scene breaks are shown styled as you type, with their Markdown markers faded, while the file on disk stays plain Markdown. The format bar (B, I, H, “, * * *) and Ctrl+B / Ctrl+I add or remove the markers for you (Ctrl+Z undoes them), and View ▸ Styled Markdown turns styling off. **Composite mode**: select a folder and every document inside it appears as one continuous manuscript you can edit, with each part saving separately. **Split editor** (◫ or Ctrl+\\, or *Open in Split Editor* in the binder): keep one document beside the main view while you work elsewhere; ⇄ swaps the two. The same document can be open in both panes. |
 | **Focus mode** | F11 hides everything except the page. |
 | **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card, resize cards, reorder them from the context menu. |
 | **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place. |
@@ -127,6 +127,7 @@ Ctrl is ⌘ on macOS.
 | Split editor on / off | Ctrl+\\ |
 | Focus mode (leave with Esc) | F11 |
 | Show / hide inspector | Ctrl+Alt+I |
+| Bold · italic (in the editor) | Ctrl+B · Ctrl+I |
 | Larger / smaller editor text | Ctrl++ · Ctrl+− |
 | Zoom an image in the viewer | Ctrl+scroll |
 | **Binder:** move between items · expand/collapse | ↑ ↓ · → ← |
@@ -178,6 +179,7 @@ crates/
     demo.rs        the sample project
   wordloom-app/    the Qt front end
     src/controller.rs  one cxx-qt QObject (QML singleton `Wordloom`) wrapping api::App
+    src/styler.*       C++ QSyntaxHighlighter for styled Markdown (MarkdownStyler in QML)
     qml/*.qml          all views and dialogs
 ```
 
@@ -191,7 +193,6 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 ## Roadmap
 
-- Rich-text styling (today: plain text with Markdown)
 - Packaged installers for Windows (MSI) and macOS (DMG); the Linux AppImage and Flatpak are done
 - Flathub submission (needs vendored crates instead of downloading them during the build)
 
