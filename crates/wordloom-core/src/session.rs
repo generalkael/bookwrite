@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 use uuid::Uuid;
 
 use crate::compile::{self, CompileOptions};
+use crate::history::History;
 use crate::model::{Label, NodeId, NodeKind, Project, RootRole, Status};
 use crate::timeline::{Event, Track, TrackKind};
 use crate::{search, stats, storage, Error, Result};
@@ -17,6 +18,8 @@ pub struct Session {
     pub project: Project,
     pub dir: PathBuf,
     pub dirty: bool,
+    /// Undo/redo for this project; not saved to disk.
+    pub history: History,
 }
 
 pub fn parse_id(s: &str) -> Result<Uuid> {
@@ -44,6 +47,7 @@ impl Session {
             project,
             dir,
             dirty: false,
+            history: History::default(),
         })
     }
 
@@ -54,6 +58,7 @@ impl Session {
             project,
             dir,
             dirty: false,
+            history: History::default(),
         })
     }
 
@@ -79,6 +84,22 @@ impl Session {
     fn changed(&mut self) {
         self.dirty = true;
         self.project.touch();
+    }
+
+    // ----- undo -----------------------------------------------------------
+
+    /// Undo the last change; returns its label, or None if there was none.
+    pub fn undo(&mut self) -> Option<String> {
+        let label = self.history.undo(&mut self.project)?;
+        self.dirty = true;
+        Some(label)
+    }
+
+    /// Redo the last undone change; returns its label.
+    pub fn redo(&mut self) -> Option<String> {
+        let label = self.history.redo(&mut self.project)?;
+        self.dirty = true;
+        Some(label)
     }
 
     // ----- binder ---------------------------------------------------------

@@ -27,11 +27,18 @@ QtObject {
         return r.result;
     }
 
-    // Same, but quietly returns `fallback` if no project is open.
+    // For reads: returns `fallback` instead of the result if no project is
+    // open or the call fails, without a toast. (A view can briefly ask about
+    // an item that an undo just removed; that's not worth an error popup.
+    // The failure is still logged to stderr by the controller.)
     function get(method, fallback, ...args) {
         if (!Wordloom.projectOpen) return fallback;
-        const v = call(method, ...args);
-        return v === undefined ? fallback : v;
+        try {
+            const r = JSON.parse(Wordloom.call(method, JSON.stringify(args)));
+            return r.ok ? r.result : fallback;
+        } catch (e) {
+            return fallback;
+        }
     }
 
     function say(message) { api.notice(message); }

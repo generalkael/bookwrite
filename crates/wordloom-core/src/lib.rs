@@ -4,7 +4,8 @@
 //! the binder tree and its metadata ([`model`]), plain-text on-disk storage
 //! with snapshots and backups ([`storage`]), manuscript compilation
 //! ([`compile`]), search & replace ([`search`]), writing statistics
-//! ([`stats`]), and the story timeline / Gantt engine ([`timeline`]).
+//! ([`stats`]), project-wide undo ([`history`]), and the story timeline /
+//! Gantt engine ([`timeline`]).
 //!
 //! [`Session`] bundles an open project with its location and offers the
 //! string/JSON API that the Qt front end calls.
@@ -12,6 +13,7 @@
 pub mod api;
 pub mod compile;
 pub mod demo;
+pub mod history;
 pub mod model;
 pub mod recent;
 pub mod search;

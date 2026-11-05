@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{json, Value};
 
+use crate::history::Checkpoint;
 use crate::{recent, Error, Result, Session};
 
 pub struct App {
@@ -74,6 +75,7 @@ impl Args<'_> {
 const READ_ONLY: &[&str] = &[
     "binder",
     "nodeInfo",
+    "exists",
     "children",
     "text",
     "labels",
@@ -89,11 +91,71 @@ const READ_ONLY: &[&str] = &[
     "export",
     "takeSnapshot",
     "deleteSnapshot",
+    "history",
 ];
 
 /// Methods that change data but should not trigger a UI refresh (the
 /// editor already shows the new state, and refreshing would move the caret).
 const QUIET: &[&str] = &["setText"];
+
+/// The undo-menu name for a call, and a key that lets repeats of the same
+/// edit merge into one step. `None` means the call isn't undoable: it only
+/// reads, is editor typing (which has the editor's own undo), or is view
+/// state such as expanding a folder.
+fn undo_label(method: &str, a: &Args) -> Option<(String, Option<String>)> {
+    let label = match method {
+        "setField" => {
+            let field = a.str(1);
+            let key = Some(format!("{}:{field}", a.str(0)));
+            let label = match field {
+                "title" => "Rename".to_string(),
+                "synopsis" => "Edit Synopsis".into(),
+                "notes" => "Edit Notes".into(),
+                "label" => "Change Label".into(),
+                "status" => "Change Status".into(),
+                "keywords" => "Edit Keywords".into(),
+                "include_in_compile" => "Include in Compile".into(),
+                "target_words" => "Set Word Target".into(),
+                "kind" => "Convert".into(),
+                f => match f.strip_prefix("field:") {
+                    Some(k) => format!("Edit {k}"),
+                    None => "Edit".into(),
+                },
+            };
+            return Some((label, key));
+        }
+        "setMeta" => "Project Details",
+        "add" => "Add Item",
+        "move" | "dropOn" | "shift" => "Move",
+        "indent" => "Indent",
+        "outdent" => "Outdent",
+        "trash" => "Move to Trash",
+        "emptyTrash" => "Empty Trash",
+        "duplicate" => "Duplicate",
+        "split" => "Split",
+        "mergeWithNext" => "Merge",
+        "upsertLabel" | "removeLabel" => "Edit Labels",
+        "upsertStatus" | "removeStatus" => "Edit Statuses",
+        "replaceAll" => "Replace All",
+        "setTargets" => "Set Targets",
+        "restoreSnapshot" => "Restore Snapshot",
+        "setTimelineSettings" => "Timeline Settings",
+        "addTrack" => "Add Track",
+        "updateTrack" => "Edit Track",
+        "removeTrack" => "Delete Track",
+        "moveTrack" => "Move Track",
+        "addEvent" => "Add Event",
+        "updateEvent" => "Edit Event",
+        "removeEvent" => "Delete Event",
+        "moveEvent" => "Move Event",
+        "addMarker" => "Add Marker",
+        "removeMarker" => "Delete Marker",
+        "syncTracks" => "Sync Cast",
+        "sceneForEvent" => "Write This Scene",
+        _ => return None,
+    };
+    Some((label.to_string(), None))
+}
 
 impl App {
     pub fn new(recent_file: PathBuf) -> Self {
@@ -113,7 +175,19 @@ impl App {
                 Err(e) => return err_reply(&Error::Json(e)),
             }
         };
-        match self.dispatch(method, &Args(&args)) {
+        let a = Args(&args);
+        let undoable = undo_label(method, &a);
+        let before = match (&undoable, &self.session) {
+            (Some(_), Some(s)) => Some(Checkpoint::take(&s.project)),
+            _ => None,
+        };
+        let result = self.dispatch(method, &a);
+        if let (Ok(_), Some(before), Some((label, key))) = (&result, before, undoable) {
+            if let Some(s) = self.session.as_mut() {
+                s.history.record(before, &s.project, &label, key);
+            }
+        }
+        match result {
             Ok(v) => Reply {
                 json: json!({"ok": true, "result": v}).to_string(),
                 mutated: !READ_ONLY.contains(&method) && !QUIET.contains(&method),
@@ -181,6 +255,13 @@ impl App {
                 }
                 json!(true)
             }
+            // --- undo ---
+            "undo" => json!(self.s()?.undo()),
+            "redo" => json!(self.s()?.redo()),
+            "history" => {
+                let h = &self.s()?.history;
+                json!({"undo": h.undo_label(), "redo": h.redo_label()})
+            }
             "meta" => self.s()?.meta(),
             "setMeta" => {
                 self.s()?.set_meta(a.str(0), a.str(1));
@@ -195,6 +276,10 @@ impl App {
                 json!(true)
             }
             "nodeInfo" => self.s()?.node_info(a.str(0))?,
+            "exists" => {
+                let id = crate::session::parse_id(a.str(0)).ok();
+                json!(id.is_some_and(|id| self.s().is_ok_and(|s| s.project.nodes.contains_key(&id))))
+            }
             "children" => self.s()?.children(a.str(0))?,
             "text" => json!(self.s()?.text(a.str(0))?),
             "setText" => unit(self.s()?.set_text(a.str(0), a.str(1)))?,
@@ -280,6 +365,17 @@ impl App {
         self.session.as_ref().is_some_and(|s| s.dirty)
     }
 
+    /// Labels of the steps Undo and Redo would apply, if any.
+    pub fn undo_redo(&self) -> (Option<String>, Option<String>) {
+        match &self.session {
+            Some(s) => (
+                s.history.undo_label().map(str::to_string),
+                s.history.redo_label().map(str::to_string),
+            ),
+            None => (None, None),
+        }
+    }
+
     pub fn path(&self) -> Option<&Path> {
         self.session.as_ref().map(|s| s.dir.as_path())
     }
@@ -335,5 +431,56 @@ mod tests {
         assert!(app.call("bogus", "").json.contains("unknown method"));
         ok(&app.call("close", ""));
         assert_eq!(ok(&app.call("recent", ""))[0]["title"], "Book");
+    }
+
+    #[test]
+    fn undo_through_the_api() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut app = App::new(tmp.path().join("recent.json"));
+        let url = url::Url::from_file_path(tmp.path()).unwrap().to_string();
+        ok(&app.call("newProject", &json!([url, "Book", "Me"]).to_string()));
+        assert_eq!(app.undo_redo(), (None, None));
+        let ms = ok(&app.call("rootId", r#"["manuscript"]"#));
+        let id = ok(&app.call("add", &json!([ms, "text", "Intro", true]).to_string()));
+        ok(&app.call("setText", &json!([id, "hello world"]).to_string()));
+        ok(&app.call("setField", &json!([id, "title", "Opening"]).to_string()));
+        // Typing isn't an undo step; renaming and adding are.
+        assert_eq!(app.undo_redo().0.as_deref(), Some("Rename"));
+        let r = app.call("undo", "");
+        assert!(r.mutated);
+        assert_eq!(ok(&r), "Rename");
+        assert_eq!(
+            ok(&app.call("nodeInfo", &json!([id]).to_string()))["title"],
+            "Intro"
+        );
+        assert_eq!(ok(&app.call("undo", "")), "Add Item");
+        assert!(app
+            .call("nodeInfo", &json!([id]).to_string())
+            .error
+            .is_some());
+        assert_eq!(ok(&app.call("exists", &json!([id]).to_string())), false);
+        assert_eq!(
+            ok(&app.call("history", "")),
+            json!({"undo": null, "redo": "Add Item"})
+        );
+        // Saving while the item is undone must not write its orphaned text.
+        ok(&app.call("save", ""));
+        let md = tmp
+            .path()
+            .join("Book.wordloom/content")
+            .join(format!("{}.md", id.as_str().unwrap()));
+        assert!(!md.exists());
+        assert_eq!(ok(&app.call("redo", "")), "Add Item");
+        assert_eq!(
+            ok(&app.call("text", &json!([id]).to_string())),
+            "hello world"
+        );
+        // A new change clears redo.
+        ok(&app.call("addTrack", r#"["Hero","character"]"#));
+        assert_eq!(app.undo_redo(), (Some("Add Track".into()), None));
+        // Undo with nothing to undo is harmless.
+        ok(&app.call("undo", ""));
+        ok(&app.call("undo", ""));
+        assert_eq!(ok(&app.call("undo", "")), Value::Null);
     }
 }

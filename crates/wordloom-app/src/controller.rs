@@ -26,6 +26,9 @@ pub mod qobject {
         #[qproperty(i32, revision)]
         #[qproperty(bool, dirty)]
         #[qproperty(QString, last_error)]
+        /// What Undo / Redo would do ("Move", "Rename", …); empty if nothing.
+        #[qproperty(QString, undo_text)]
+        #[qproperty(QString, redo_text)]
         type Wordloom = super::WordloomRust;
     }
 
@@ -46,6 +49,8 @@ pub struct WordloomRust {
     revision: i32,
     dirty: bool,
     last_error: QString,
+    undo_text: QString,
+    redo_text: QString,
 }
 
 impl Default for WordloomRust {
@@ -62,6 +67,8 @@ impl Default for WordloomRust {
             revision: 0,
             dirty: false,
             last_error: QString::default(),
+            undo_text: QString::default(),
+            redo_text: QString::default(),
         }
     }
 }
@@ -97,6 +104,17 @@ impl qobject::Wordloom {
         }
         if dirty != *self.dirty() {
             self.as_mut().set_dirty(dirty);
+        }
+        let (undo, redo) = self.rust().app.undo_redo();
+        let (undo, redo) = (
+            QString::from(&undo.unwrap_or_default()),
+            QString::from(&redo.unwrap_or_default()),
+        );
+        if *self.undo_text() != undo {
+            self.as_mut().set_undo_text(undo);
+        }
+        if *self.redo_text() != redo {
+            self.as_mut().set_redo_text(redo);
         }
         let err = reply.error.clone().unwrap_or_default();
         if !err.is_empty() {

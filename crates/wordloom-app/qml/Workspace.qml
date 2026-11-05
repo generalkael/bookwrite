@@ -21,8 +21,9 @@ Item {
     onCurrentIdChanged: refresh()
 
     function refresh() {
+        // The selected item can vanish (undo, empty trash); drop it quietly.
+        if (currentId !== "" && !Api.get("exists", false, currentId)) { currentId = ""; return; }
         current = currentId !== "" ? (Api.get("nodeInfo", null, currentId)) : null;
-        if (currentId !== "" && current === null) currentId = "";
         stats = Api.get("stats", null);
     }
 
@@ -36,6 +37,21 @@ Item {
     }
 
     function flush() { if (editorView) editorView.flush(); }
+
+    // Close an in-progress binder rename without committing it.
+    function cancelRename() { binder.renamingId = ""; }
+
+    // Project-wide undo/redo (typing has the editor's own undo).
+    function undo() {
+        flush();
+        const label = Api.call("undo");
+        if (label) Api.say(qsTr("Undid %1").arg(label));
+    }
+    function redo() {
+        flush();
+        const label = Api.call("redo");
+        if (label) Api.say(qsTr("Redid %1").arg(label));
+    }
 
     function target() {
         return currentId !== "" ? currentId : Api.call("rootId", "manuscript");
@@ -113,6 +129,15 @@ Item {
                 spacing: 4
                 ToolButton { text: "＋ " + qsTr("Document"); onClicked: ws.addItem("text"); ToolTip.visible: hovered; ToolTip.text: qsTr("New document (Ctrl+N)") }
                 ToolButton { text: "＋ " + qsTr("Folder"); onClicked: ws.addItem("folder") }
+                ToolSeparator {}
+                ToolButton {
+                    text: "↶"; font.pixelSize: 18; enabled: Wordloom.undoText !== ""; onClicked: ws.undo()
+                    ToolTip.visible: hovered; ToolTip.text: enabled ? qsTr("Undo %1").arg(Wordloom.undoText) : qsTr("Nothing to undo")
+                }
+                ToolButton {
+                    text: "↷"; font.pixelSize: 18; enabled: Wordloom.redoText !== ""; onClicked: ws.redo()
+                    ToolTip.visible: hovered; ToolTip.text: enabled ? qsTr("Redo %1").arg(Wordloom.redoText) : qsTr("Nothing to redo")
+                }
                 ToolSeparator {}
                 Repeater {
                     model: [

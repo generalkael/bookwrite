@@ -87,7 +87,8 @@ pub fn save(project: &Project, dir: &Path) -> Result<()> {
     // Write changed bodies, drop files for removed or emptied documents.
     for (id, text) in &project.contents {
         let path = content_path(dir, *id);
-        if text.is_empty() {
+        // Text can outlive its node in memory (kept so redo can restore it).
+        if text.is_empty() || !project.nodes.contains_key(id) {
             let _ = fs::remove_file(&path);
             continue;
         }

@@ -64,7 +64,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "event", "search", "compile", "stats", "settings", "add", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "timeline", "event", "search", "compile", "stats", "settings", "add", "undo", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -88,6 +88,7 @@ ApplicationWindow {
                 else if (v === "stats") statsDialog.open();
                 else if (v === "settings") settingsDialog.open();
                 else if (v === "add") { win.ws.viewMode = "editor"; win.ws.addInSection("characters"); }
+                else if (v === "undo") { win.ws.cancelRename(); win.ws.undo(); }
                 if (v === "corkboard" || v === "outliner") win.ws.select(Api.call("rootId", "manuscript"), v);
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
                 else if (v === "timeline") win.ws.viewMode = "timeline";
@@ -143,6 +144,22 @@ ApplicationWindow {
             MenuSeparator {}
             Action { text: qsTr("&Close Project"); enabled: Wordloom.projectOpen; onTriggered: win.closeProject() }
             Action { text: qsTr("&Quit"); shortcut: StandardKey.Quit; onTriggered: win.close() }
+        }
+        Menu {
+            title: qsTr("&Edit")
+            // In a text box Ctrl+Z undoes typing; these undo project changes.
+            Action {
+                text: Wordloom.undoText ? qsTr("&Undo %1").arg(Wordloom.undoText) : qsTr("&Undo")
+                shortcut: StandardKey.Undo
+                enabled: win.ws !== null && Wordloom.undoText !== ""
+                onTriggered: win.ws.undo()
+            }
+            Action {
+                text: Wordloom.redoText ? qsTr("&Redo %1").arg(Wordloom.redoText) : qsTr("&Redo")
+                shortcut: StandardKey.Redo
+                enabled: win.ws !== null && Wordloom.redoText !== ""
+                onTriggered: win.ws.redo()
+            }
         }
         Menu {
             title: qsTr("&Project")
