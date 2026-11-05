@@ -342,7 +342,7 @@ ApplicationWindow {
         anchors.centerIn: parent
         standardButtons: Dialog.Ok
         Label {
-            text: "<h2>Wordloom</h2><p>A writing studio for long-form work:<br/>binder, corkboard, outliner, snapshots,<br/>compile, and a story timeline Gantt.</p><p>Built with Rust and Qt " + "6</p>"
+            text: "<h2>Wordloom</h2><p>A writing studio for long-form work:<br/>binder, corkboard, outliner, split editor,<br/>research files, snapshots, project-wide undo,<br/>compile to EPUB / DOCX / HTML / Markdown,<br/>and a story timeline Gantt.</p><p>Built with Rust and Qt " + "6</p>"
             textFormat: Text.RichText
         }
     }

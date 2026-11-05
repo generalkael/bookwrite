@@ -74,21 +74,50 @@ open in your default app instead.
 **macOS:** `brew install qt` (or use the Qt installer), then `macdeployqt` to bundle the libraries.
 
 To try it out, click **Explore the Sample** on the start screen. It creates a short sample novel
-in `~/Documents/Wordloom` with chapters, characters, labels, and a timeline that includes
-dependencies and a deliberate conflict.
+in `~/Documents/Wordloom` with chapters, characters, labels, an imported map in Research, and a
+timeline that includes dependencies and a deliberate conflict.
+
+## Keyboard shortcuts
+
+Ctrl is ⌘ on macOS.
+
+| Action | Keys |
+|---|---|
+| New project / open / save | Ctrl+N (start screen) · Ctrl+O · Ctrl+S |
+| New document / new folder | Ctrl+N · Ctrl+Shift+N |
+| Duplicate · split at cursor · merge with next | Ctrl+D · Ctrl+K · Ctrl+Shift+M |
+| Undo / redo project changes (outside text boxes) | Ctrl+Z · Ctrl+Shift+Z |
+| Import file into Research | Ctrl+Shift+I |
+| Take snapshot | Ctrl+5 |
+| Compile / export | Ctrl+Shift+E |
+| Find in project · writing statistics | Ctrl+Shift+F · Ctrl+Shift+T |
+| Editor · corkboard · outliner · timeline | Ctrl+1 · Ctrl+2 · Ctrl+3 · Ctrl+4 |
+| Split editor on / off | Ctrl+\\ |
+| Focus mode (leave with Esc) | F11 |
+| Show / hide inspector | Ctrl+Alt+I |
+| Larger / smaller editor text | Ctrl++ · Ctrl+− |
+| Zoom an image in the viewer | Ctrl+scroll |
+| **Binder:** move between items · expand/collapse | ↑ ↓ · → ← |
+| **Binder:** move item up/down · indent/outdent | Ctrl+↑ ↓ · Ctrl+→ ← |
+| **Binder:** open · rename · move to trash | Enter · F2 · Delete |
 
 ## Project format
 
-A project is a folder, `Title.wordloom/`, made only of plain text, so it works with git, Dropbox
-and diff tools, and you can still read it without Wordloom:
+A project is a folder, `Title.wordloom/`. Apart from files you import, it is all plain text, so it
+works with git, Dropbox and diff tools, and you can still read it without Wordloom:
 
 ```
 Title.wordloom/
   project.json          binder tree, metadata, labels, statuses, timeline, stats
   content/<uuid>.md     one Markdown file per document that has text
   snapshots/<uuid>.json saved versions of a document
+  files/<uuid>.<ext>    imported research files (images, PDFs, …), copied in unchanged
   backups/              rolling copies of project.json (one per 10 minutes, last 20 kept)
 ```
+
+Imported files are never deleted, even when their item is trashed and the trash emptied, so undo,
+duplicates and backups can always find them. To reclaim space, delete files in `files/` that no
+item in `project.json` refers to. **Save As** copies `files/` and `snapshots/` to the new project.
 
 Every write goes to a temporary file that is then renamed into place, so a crash can't leave a
 file half-written. Wordloom autosaves every 15 seconds while there are unsaved changes, and
