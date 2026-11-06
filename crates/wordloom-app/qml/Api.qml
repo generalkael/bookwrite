@@ -54,6 +54,13 @@ QtObject {
 
     function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
 
+    // 1536 → "1.5 KB"
+    function fmtBytes(n) {
+        const u = ["bytes", "KB", "MB", "GB"];
+        let i = 0;
+        while (n >= 1024 && i < u.length - 1) { n /= 1024; ++i; }
+        return (i === 0 ? n : n.toFixed(1)) + " " + u[i];
+    }
     function fmtNumber(n) { return Number(n || 0).toLocaleString(Qt.locale(), 'f', 0); }
 
     // Convert a timeline unit index into a ruler label.

@@ -58,6 +58,58 @@ pub fn new_bundle_path(parent: &Path, title: &str) -> PathBuf {
     parent.join(format!("{safe}.{EXTENSION}"))
 }
 
+/// Pack the project folder into one zip file at `dest`: everything a copy
+/// needs (project.json, documents, snapshots, imported files), without the
+/// lock, the rolling backups or half-written temp files. Entries sit under
+/// the folder's own name, so unzipping gives back `Title.wordloom/`.
+/// Returns the number of files packed.
+pub fn backup_zip(dir: &Path, dest: &Path) -> Result<usize> {
+    fn walk(dir: &Path, rel: &str, out: &mut Vec<(String, PathBuf)>) -> Result<()> {
+        let mut entries: Vec<_> = fs::read_dir(dir)?.collect::<std::io::Result<_>>()?;
+        entries.sort_by_key(|e| e.file_name());
+        for e in entries {
+            let name = e.file_name().to_string_lossy().into_owned();
+            let path = e.path();
+            let top = rel.is_empty();
+            if (top && (name == LOCK_FILE || name == BACKUPS_DIR || name.contains(".damaged-")))
+                || name.ends_with(".tmp")
+            {
+                continue;
+            }
+            let r = if top { name } else { format!("{rel}/{name}") };
+            if e.file_type()?.is_dir() {
+                walk(&path, &r, out)?;
+            } else {
+                out.push((r, path));
+            }
+        }
+        Ok(())
+    }
+    let mut files = Vec::new();
+    walk(dir, "", &mut files)?;
+    let folder = dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| format!("Project.{EXTENSION}"));
+    // Zip timestamps are local time.
+    let mut z = crate::zip::ZipWriter::new(chrono::Local::now().naive_local().and_utc());
+    let mut total: u64 = 0;
+    for (rel, path) in &files {
+        let data = fs::read(path)?;
+        total += data.len() as u64;
+        // A plain (non-zip64) archive tops out at 4 GB.
+        if total > u32::MAX as u64 - (1 << 24) || files.len() > u16::MAX as usize {
+            return Err(Error::Invalid(
+                "the project is too large for a zip backup (over 4 GB); copy the folder instead"
+                    .into(),
+            ));
+        }
+        z.add(&format!("{folder}/{rel}"), &data);
+    }
+    write_atomic(dest, &z.finish())?;
+    Ok(files.len())
+}
+
 pub fn is_project(path: &Path) -> bool {
     bundle_dir(path).join(PROJECT_FILE).is_file()
 }
@@ -73,6 +125,7 @@ fn write_atomic(path: &Path, data: &[u8]) -> Result<()> {
 }
 
 pub const FILES_DIR: &str = "files";
+pub const BACKUPS_DIR: &str = "backups";
 
 /// Marks a project as open, so a second Wordloom (another window, or
 /// another computer sharing the folder) can warn before both write to it.
@@ -280,7 +333,7 @@ pub fn save(project: &Project, dir: &Path) -> Result<()> {
 }
 
 fn backup(dir: &Path, pf: &Path) -> Result<()> {
-    let bdir = dir.join("backups");
+    let bdir = dir.join(BACKUPS_DIR);
     fs::create_dir_all(&bdir)?;
     let newest = fs::read_dir(&bdir)?
         .filter_map(|e| e.ok()?.metadata().ok()?.modified().ok())
@@ -336,7 +389,7 @@ pub fn load(path: &Path) -> Result<Project> {
 
 /// Backups in `backups/`, newest first.
 pub fn backups_newest_first(dir: &Path) -> Vec<PathBuf> {
-    let mut all: Vec<PathBuf> = fs::read_dir(dir.join("backups"))
+    let mut all: Vec<PathBuf> = fs::read_dir(dir.join(BACKUPS_DIR))
         .map(|rd| {
             rd.filter_map(|e| e.ok().map(|e| e.path()))
                 .filter(|p| p.extension().is_some_and(|e| e == "json"))
@@ -456,7 +509,7 @@ mod tests {
         p.set_text(scene, String::new()).unwrap();
         save(&p, &dir).unwrap();
         assert!(!content_path(&dir, scene).exists());
-        assert_eq!(fs::read_dir(dir.join("backups")).unwrap().count(), 1);
+        assert_eq!(fs::read_dir(dir.join(BACKUPS_DIR)).unwrap().count(), 1);
     }
 
     #[test]

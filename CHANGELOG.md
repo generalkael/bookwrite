@@ -54,6 +54,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **File ▸ Back Up to Zip…** saves the whole project (documents, snapshots, imported files) as
+  one `.zip`, named with the date and time, in the folder you used last time. Unzip it to get the
+  `Title.wordloom` folder back. The lock and the rolling `project.json` backups are left out.
 - **File ▸ Clean Up Unused Files…** deletes imported files no item, Trash item or undo step uses.
 - Keyboard shortcut reference in the README.
 - **Linux AppImage**, built and smoke-tested by CI on every push to `main`
@@ -64,6 +67,7 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   `Cargo.lock`), as Flathub requires, and the AppStream metadata has screenshots.
 
 ### Fixed
+- The Details panel no longer logs an error when the selected item has just been deleted.
 - **Ordinals aren't misspellings.** Spell checking no longer marks the letters in “2nd” or “10km”.
 - **Word Count History in a forced theme.** Its date boxes and menus followed the system colours,
   so with Dark forced on a light desktop they were light with unreadable light text. Esc now

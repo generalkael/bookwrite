@@ -112,6 +112,11 @@ Item {
                   "the window's controls use the app theme, not the system colours");
             history.close();
         }],
+        ["zip backup", () => {
+            const dir = Api.get("meta", null).path;
+            const r = Api.call("backupZip", dir.substring(0, dir.lastIndexOf("/")) + "/selftest-backup.zip");
+            check(r && r.files >= 5 && r.bytes > 1000, "Back Up to Zip packs the project (" + (r ? r.files + " files, " + r.bytes + " bytes" : "failed") + ")");
+        }],
         ["sprint", () => {
             ws().select(rowId("Arrival"), "editor");
             sprint.durationMin = 1; sprint.goal = 3; sprint.start();

@@ -23,7 +23,8 @@ Rectangle {
     // {>> comments <<} in this item and the items under it.
     property var comments: []
     function reloadComments() {
-        const list = nodeId ? Api.get("comments", [], nodeId) : [];
+        // (After a delete the old id can linger for a moment.)
+        const list = nodeId && Api.get("exists", false, nodeId) ? Api.get("comments", [], nodeId) : [];
         const seen = {};
         for (const c of list) { c.n = seen[c.node] || 0; seen[c.node] = c.n + 1; }
         comments = list;

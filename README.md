@@ -171,6 +171,12 @@ Title.wordloom/
   .wordloom.lock        present while the project is open (add it to .gitignore if you use git)
 ```
 
+**File ▸ Back Up to Zip…** packs the whole project into one `.zip` file (named like
+`Title backup 2026-11-05 1430.zip`) in a folder you choose, such as a USB stick or a cloud
+folder; Wordloom remembers the folder for next time. Unzip it to get the `Title.wordloom/`
+folder back and open that. The lock and the `backups/` folder are left out; entries are stored
+uncompressed, so the zip is about the size of the project.
+
 Imported files are not deleted when their item is trashed or the trash is emptied, so undo and
 duplicates can always find them. To reclaim space, use **File ▸ Clean Up Unused Files…**: it
 deletes only files that no item (in the Trash or not) and no undo or redo step refers to. **Save As** copies `files/` and `snapshots/` to the new project.
@@ -202,7 +208,7 @@ crates/
     model.rs       binder arena (flat map + ordered children), tree operations, metadata
     timeline.rs    Gantt engine: tracks, events, participants, dependencies,
                    cycle rejection, cascade, conflict detection, chronology
-    storage.rs     bundle format, atomic writes, backups, snapshots, imported files
+    storage.rs     bundle format, atomic writes, backups, zip backup, snapshots, imported files
     comments.rs    inline {>> comments <<}: finding, listing, stripping for counts and compile
     compile.rs     manuscript → Markdown / HTML / plain text
     epub.rs        EPUB 3 package
@@ -233,7 +239,7 @@ Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog i
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, find & replace, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, find & replace, zip backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

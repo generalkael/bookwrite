@@ -18,6 +18,10 @@ ApplicationWindow {
         property alias width: win.width
         property alias height: win.height
     }
+    Settings {
+        category: "backup"
+        property alias folder: backupDialog.lastFolder
+    }
     visible: true
     color: Theme.window
     title: (Wordloom.projectOpen ? Wordloom.title + (Wordloom.dirty ? " •" : "") + " — " : "") + "Wordloom"
@@ -181,6 +185,7 @@ ApplicationWindow {
             MenuSeparator {}
             Action { text: qsTr("&Save"); shortcut: StandardKey.Save; enabled: Wordloom.projectOpen; onTriggered: win.saveNow() }
             Action { text: qsTr("Save &As…"); enabled: Wordloom.projectOpen; onTriggered: saveAsDialog.open() }
+            Action { text: qsTr("&Back Up to Zip…"); enabled: Wordloom.projectOpen; onTriggered: backupDialog.start() }
             Action { text: qsTr("&Import File…"); shortcut: "Ctrl+Shift+I"; enabled: win.ws !== null; onTriggered: importDialog.open() }
             Action { text: qsTr("Clean Up &Unused Files…"); enabled: win.ws !== null; onTriggered: cleanupDialog.check() }
             Action { text: qsTr("Take &Snapshot"); shortcut: "Ctrl+5"; enabled: win.ws !== null; onTriggered: win.ws.snapshot() }
@@ -410,6 +415,33 @@ ApplicationWindow {
         onAccepted: {
             const r = Api.call("removeUnusedFiles");
             if (r !== undefined) Api.say(qsTr("Deleted %1 unused file(s), %2").arg(r.count).arg(size(r.bytes)));
+        }
+    }
+    // File ▸ Back Up to Zip…: the whole project in one .zip, named with the
+    // date, in the folder used last time (Documents at first).
+    FileDialog {
+        id: backupDialog
+        title: qsTr("Back Up Project to Zip")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "zip"
+        nameFilters: [qsTr("Zip archives (*.zip)")]
+        property string lastFolder: ""
+        function start() {
+            if (win.ws) win.ws.flush();
+            const folder = lastFolder || StandardPaths.writableLocation(StandardPaths.DocumentsLocation);
+            const safe = Wordloom.title.replace(/[^\w \-]/g, "_").trim() || "Untitled";
+            const when = new Date();
+            const pad = (n) => (n < 10 ? "0" : "") + n;
+            const stamp = when.getFullYear() + "-" + pad(when.getMonth() + 1) + "-" + pad(when.getDate()) + " " + pad(when.getHours()) + pad(when.getMinutes());
+            currentFolder = folder;
+            selectedFile = folder.toString().replace(/\/$/, "") + "/" + encodeURIComponent(safe + " backup " + stamp + ".zip");
+            open();
+        }
+        onAccepted: {
+            const f = selectedFile.toString();
+            lastFolder = f.substring(0, f.lastIndexOf("/"));
+            const r = Api.call("backupZip", f);
+            if (r) Api.say(qsTr("Backed up %1 files (%2) to %3").arg(r.files).arg(Api.fmtBytes(r.bytes)).arg(r.path));
         }
     }
     FileDialog {

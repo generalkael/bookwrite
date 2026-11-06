@@ -393,6 +393,7 @@ impl App {
             }
             "compile" => json!(self.s()?.compile(&a.json(0))?),
             "importFile" => json!(self.s()?.import_file(a.str(0), &to_path(a.str(1)))?),
+            "backupZip" => self.s()?.backup_zip(&to_path(a.str(0)))?,
             "export" => {
                 let p = self.s()?.export(&to_path(a.str(0)), &a.json(1))?;
                 json!(p)

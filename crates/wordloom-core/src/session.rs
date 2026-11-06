@@ -147,6 +147,30 @@ impl Session {
         Ok(orphans.len())
     }
 
+    /// Save, then pack the project into `Title backup YYYY-MM-DD HHMM.zip`
+    /// in `folder` (or at `folder` itself if it ends in `.zip`).
+    pub fn backup_zip(&mut self, folder: &Path) -> Result<Value> {
+        self.save()?;
+        let dest = if folder
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
+        {
+            folder.to_path_buf()
+        } else {
+            let stem = storage::new_bundle_path(folder, &self.project.meta.title);
+            let stem = stem
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
+            let when = chrono::Local::now().format("%Y-%m-%d %H%M");
+            folder.join(format!("{stem} backup {when}.zip"))
+        };
+        let files = storage::backup_zip(&self.dir, &dest)?;
+        let bytes = std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0);
+        Ok(json!({"path": dest, "files": files, "bytes": bytes}))
+    }
+
     /// Save a copy to a new bundle location and continue working there.
     pub fn save_as(&mut self, parent: &Path, title: &str) -> Result<()> {
         let dir = storage::new_bundle_path(parent, title);
@@ -1291,5 +1315,36 @@ mod tests {
         );
         assert!(html.contains("She left. The door shut."));
         assert!(!html.contains("abrupt"));
+    }
+
+    #[test]
+    fn zip_backup_has_the_project_but_not_the_lock() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut s = Session::create(tmp.path(), "Zip Me", "").unwrap();
+        let ms = s.root_id("manuscript").unwrap();
+        let a = s.add(&ms, "text", "A", true).unwrap();
+        s.set_text(&a, "Packed text.").unwrap();
+        s.take_snapshot(&a, "v1").unwrap();
+        let out = tempfile::tempdir().unwrap();
+        let r = s.backup_zip(out.path()).unwrap();
+        let path = std::path::PathBuf::from(r["path"].as_str().unwrap());
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        assert!(
+            name.starts_with("Zip Me backup ") && name.ends_with(".zip"),
+            "{name}"
+        );
+        let bytes = std::fs::read(&path).unwrap();
+        let has = |needle: &str| bytes.windows(needle.len()).any(|w| w == needle.as_bytes());
+        assert!(has("Zip Me.wordloom/project.json"));
+        assert!(has("Zip Me.wordloom/content/"));
+        assert!(has("Zip Me.wordloom/snapshots/"));
+        assert!(has("Packed text."));
+        assert!(!has(".wordloom.lock"));
+        assert!(!has("/backups/"));
+        assert!(r["files"].as_u64().unwrap() >= 3);
+        // An explicit .zip path is used as given.
+        let named = out.path().join("mine.zip");
+        s.backup_zip(&named).unwrap();
+        assert!(named.is_file());
     }
 }
