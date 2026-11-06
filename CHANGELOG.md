@@ -58,6 +58,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   showing: picking the Manuscript on the corkboard of a 168,000-word novel took nearly 4 seconds
   and now takes a few milliseconds, as does opening a chapter from the reader.
 - `wordloom --bench=DIR` times every view on a generated novel-sized project.
+- The editor shares one right-click menu between all the documents it shows, instead of building a
+  menu per document: a folder of 200 scenes opens about 20% faster.
 - **Restore from Zip Backup.** File ▸ Restore from Zip Backup… unpacks a backup into a folder you
   choose (beside, never over, an existing copy) and opens it.
 - **Corkboard keyboard control.** Arrows, Home and End move a highlight between cards; Enter

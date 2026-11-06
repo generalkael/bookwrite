@@ -715,6 +715,46 @@ Rectangle {
         color: Theme.subtext
     }
 
+    // One right-click menu (spelling suggestions, cut / copy / paste) for
+    // every text area: a menu per document made a long composite slow to
+    // build.
+    property var menuArea: null
+    function menuRef() { return editMenu; }
+    Menu {
+        id: editMenu
+        // The text area it's for: the one under the pointer (each sets
+        // menuArea from its HoverHandler), else the one being typed in.
+        readonly property var a: ev.menuArea || ev.activeArea
+        readonly property var suggestions: a ? a.suggestions : []
+        readonly property bool misspelled: a ? a.misspelled : false
+        readonly property bool hasSelection: a ? a.selectedText.length > 0 : false
+        onAboutToShow: if (a && a.nativeMenu) a.prepareMenu(a.hoverPoint())
+        Repeater {
+            model: 6
+            delegate: MenuItem {
+                required property int index
+                visible: index < editMenu.suggestions.length
+                height: visible ? implicitHeight : 0
+                text: visible ? editMenu.suggestions[index] : ""
+                font.bold: true
+                onTriggered: editMenu.a.replaceWord(editMenu.suggestions[index])
+            }
+        }
+        MenuItem { visible: editMenu.misspelled && editMenu.suggestions.length === 0; height: visible ? implicitHeight : 0; text: qsTr("No suggestions"); enabled: false }
+        MenuItem {
+            visible: editMenu.misspelled
+            height: visible ? implicitHeight : 0
+            text: qsTr("Add “%1” to Dictionary").arg(editMenu.a ? editMenu.a.word : "")
+            onTriggered: { Api.call("spellAdd", editMenu.a.word); Api.spellingChanged(); }
+        }
+        MenuSeparator { visible: editMenu.misspelled; height: visible ? implicitHeight : 0 }
+        MenuItem { text: qsTr("Cut"); enabled: editMenu.hasSelection; onTriggered: editMenu.a.cut() }
+        MenuItem { text: qsTr("Copy"); enabled: editMenu.hasSelection; onTriggered: editMenu.a.copy() }
+        MenuItem { text: qsTr("Paste"); enabled: editMenu.a ? editMenu.a.canPaste : false; onTriggered: editMenu.a.paste() }
+        MenuSeparator {}
+        MenuItem { text: qsTr("Select All"); onTriggered: editMenu.a.selectAll() }
+    }
+
     component DocEditor: ColumnLayout {
         id: de
         property string docId
@@ -807,11 +847,12 @@ Rectangle {
             property bool misspelled: false
             property var suggestions: []
             Component.onCompleted: { try { area.ContextMenu.menu = editMenu; area.nativeMenu = true; } catch (e) {} }
-            HoverHandler { id: areaHover }
+            HoverHandler { id: areaHover; onHoveredChanged: if (hovered) ev.menuArea = area }
+            function hoverPoint() { return areaHover.point.position; }
             TapHandler {
                 acceptedButtons: Qt.RightButton
                 enabled: !area.nativeMenu
-                onTapped: (ep) => { area.prepareMenu(ep.position); editMenu.popup(); }
+                onTapped: (ep) => { ev.menuArea = area; area.prepareMenu(ep.position); editMenu.popup(); }
             }
             function prepareMenu(pos) {
                 const p = area.positionAt(pos.x, pos.y);
@@ -830,34 +871,6 @@ Rectangle {
             function replaceWord(w) {
                 area.remove(wordStart, wordEnd);
                 area.insert(wordStart, w);
-            }
-            Menu {
-                id: editMenu
-                onAboutToShow: if (area.nativeMenu) area.prepareMenu(areaHover.point.position)
-                Repeater {
-                    model: 6
-                    delegate: MenuItem {
-                        required property int index
-                        visible: index < area.suggestions.length
-                        height: visible ? implicitHeight : 0
-                        text: visible ? area.suggestions[index] : ""
-                        font.bold: true
-                        onTriggered: area.replaceWord(area.suggestions[index])
-                    }
-                }
-                MenuItem { visible: area.misspelled && area.suggestions.length === 0; height: visible ? implicitHeight : 0; text: qsTr("No suggestions"); enabled: false }
-                MenuItem {
-                    visible: area.misspelled
-                    height: visible ? implicitHeight : 0
-                    text: qsTr("Add “%1” to Dictionary").arg(area.word)
-                    onTriggered: { Api.call("spellAdd", area.word); Api.spellingChanged(); }
-                }
-                MenuSeparator { visible: area.misspelled; height: visible ? implicitHeight : 0 }
-                MenuItem { text: qsTr("Cut"); enabled: area.selectedText.length > 0; onTriggered: area.cut() }
-                MenuItem { text: qsTr("Copy"); enabled: area.selectedText.length > 0; onTriggered: area.copy() }
-                MenuItem { text: qsTr("Paste"); enabled: area.canPaste; onTriggered: area.paste() }
-                MenuSeparator {}
-                MenuItem { text: qsTr("Select All"); onTriggered: area.selectAll() }
             }
             Connections { target: Api; function onSpellingChanged() { styler.rehighlight(); } }
             Keys.onPressed: (e) => {

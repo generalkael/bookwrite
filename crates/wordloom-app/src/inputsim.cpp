@@ -1,6 +1,7 @@
 #include "inputsim.h"
 
 #include <QGuiApplication>
+#include <QContextMenuEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPointingDevice>
@@ -40,4 +41,23 @@ void InputSim::key(QQuickWindow *window, int key, int modifiers)
     QGuiApplication::sendEvent(window, &press);
     QKeyEvent release(QEvent::KeyRelease, key, mods);
     QGuiApplication::sendEvent(window, &release);
+}
+
+void InputSim::click(QQuickWindow *window, QPointF at, int button)
+{
+    if (!window)
+        return;
+    const auto b = Qt::MouseButton(button);
+    const auto send = [window](QEvent::Type type, QPointF pos, Qt::MouseButton btn, Qt::MouseButtons buttons) {
+        QMouseEvent e(type, pos, pos, window->mapToGlobal(pos), btn, buttons, Qt::NoModifier, QPointingDevice::primaryPointingDevice());
+        QGuiApplication::sendEvent(window, &e);
+    };
+    send(QEvent::MouseMove, at, Qt::NoButton, Qt::NoButton);
+    send(QEvent::MouseButtonPress, at, b, b);
+    send(QEvent::MouseButtonRelease, at, b, Qt::NoButton);
+    // Qt 6.9+ opens context menus from a QContextMenuEvent.
+    if (b == Qt::RightButton) {
+        QContextMenuEvent e(QContextMenuEvent::Mouse, at.toPoint(), window->mapToGlobal(at).toPoint());
+        QGuiApplication::sendEvent(window, &e);
+    }
 }

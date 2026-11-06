@@ -190,6 +190,13 @@ Item {
             a.prepareMenu(Qt.point(r.x + 1, r.y + r.height / 2));
             check(a.word === "lantren" && a.misspelled, "'lantren' is flagged");
             check(a.suggestions.indexOf("lantern") >= 0, "'lantern' is suggested");
+            ed().menuArea = a;
+            const m = ed().menuRef();
+            check(m.misspelled && m.suggestions.indexOf("lantern") >= 0, "the shared right-click menu shows them for the area clicked");
+            ed().menuArea = null; a.prepareMenu(Qt.point(0, 0));
+            input.click(win, a.mapToItem(null, r.x + 1, r.y + r.height / 2), Qt.RightButton);
+            check(m.opened && m.a === a && m.suggestions.indexOf("lantern") >= 0, "a real right-click on the word opens the menu with suggestions (" + m.opened + ")");
+            m.close();
             check(Api.get("spellCheck", false, "Tobias"), "character names are accepted");
         }],
         ["views", () => {
