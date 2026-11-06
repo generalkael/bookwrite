@@ -31,7 +31,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Focus mode** | F11 hides everything except the page. |
 | **Reading mode** | ❦ Read (Ctrl+7) shows the whole manuscript, or just the selected chapter, as a read-only book page: title page, centred chapter headings, scene breaks and book-style indents, built from the same compile step as export. Adjust the text size and column width, page with Page Up / Down or Space, and double-click (or *Edit*) to go back to writing. |
 | **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card, resize cards, reorder them from the context menu. |
-| **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place. |
+| **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place. See [Using the outliner](#using-the-outliner). |
 | **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes and inline comments, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
 | **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The Details panel lists each character's relationships. |
@@ -50,6 +50,50 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Statistics & targets** | Word counts for the manuscript and the whole project, words written today, writing streak, reading time, a 30-day history chart, a manuscript target with deadline (and the words per day needed to hit it), and a daily session target. A ring in the status bar fills as you write today and turns green, with a notice, when you reach the goal. **Word Count History** (click the ring, Project ▸ Word Count History…, or Ctrl+Shift+H) opens a window charting words written per day, week, month or year, or the manuscript / project total as a line. Presets: Daily (30 days), Weekly (26 weeks), Monthly (24 months), 90 days, Yearly and Lifetime; or pick your own From / To dates and grouping, and step the range with ‹ ›. It shows words written in the range, days written, the daily average and your best day, with the daily goal as a dashed line. |
 | **Labels & statuses** | Editable lists with colours. |
 | **Themes** | Follows the system light/dark setting, or you can force either one. |
+
+### Using the outliner
+
+The outliner shows a part of your book as a table, one row per item, so you can plan it, see its
+shape and update it without opening each scene.
+
+**Opening it.** Select a folder in the binder (a chapter, a part, or the Manuscript itself), then
+click **☰ Outliner** on the toolbar, choose View ▸ Outliner, or press **Ctrl+3**. The table lists
+everything inside that folder, at every level: sub-folders are bold, and each level is indented a
+step further. While the outliner is showing, clicking another folder in the binder switches the
+table to that folder. Clicking a document opens it in the editor. The Characters, Places,
+Research and Notes sections work the same way.
+
+**The columns:**
+
+| Column | What it shows | How to change it |
+|---|---|---|
+| Title | The item's name and type icon | Double-click to open the item in the editor. Rename and reorder in the binder (F2, Ctrl+↑ ↓). |
+| Synopsis | The one-line summary, the same text as the corkboard card and the Details panel | Click and type. It's saved when you press Enter or click elsewhere. |
+| Label | The item's label (e.g. a POV character or plot thread) | Pick from the list; *No Label* clears it. |
+| Status | Where the item stands (To Do, First Draft, Revised…) | Pick from the list; *No Status* clears it. |
+| Words | Words in the item **plus everything inside it**, so a chapter shows the whole chapter | Updates as you write. |
+| Target | The item's word target | Type a number and press Enter; clear it (or type 0) to remove the target. |
+| Progress | A bar from 0 to the target (full once you reach it) | Shown only for items with a target. |
+
+Labels and statuses, and their colours, are edited in File ▸ Project Settings…. Every change made
+in the outliner can be undone with Edit ▸ Undo (“Undo Edit Synopsis”, “Undo Set Word Target”).
+
+**Planning a book with it:**
+
+1. In the binder, make a folder per chapter (+ Folder) and an empty document per scene you have in
+   mind (+ Document). Titles can be rough.
+2. Select the Manuscript and press Ctrl+3. Go down the Synopsis column writing one line per scene:
+   what happens and why it matters.
+3. Give scenes (or whole chapters) a Target, and set each Status to *To Do*.
+4. Use Label for whatever you want to track across the book, such as point of view or subplot.
+   Its colour shows on corkboard cards and as a dot on binder rows, so you can see the balance at a
+   glance.
+5. As you draft, the Words and Progress columns fill in. Change Status as scenes move from first
+   draft to revised. Double-click any title to jump in and write.
+
+The **corkboard** (Ctrl+2) shows the same synopses, labels and statuses as index cards for one
+folder at a time; right-click a card to move it earlier or later. The outliner is better for
+seeing the whole book at once.
 
 ### The timeline (Gantt)
 
