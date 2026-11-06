@@ -411,6 +411,9 @@ impl App {
             "importFile" => json!(self.s()?.import_file(a.str(0), &to_path(a.str(1)))?),
             "importManuscript" => self.s()?.import_manuscript(&to_path(a.str(0)))?,
             "backupZip" => self.s()?.backup_zip(&to_path(a.str(0)))?,
+            "autoBackup" => self
+                .s()?
+                .auto_backup(&to_path(a.str(0)), a.int(1).max(1) as usize)?,
             "export" => {
                 let p = self.s()?.export(&to_path(a.str(0)), &a.json(1))?;
                 json!(p)

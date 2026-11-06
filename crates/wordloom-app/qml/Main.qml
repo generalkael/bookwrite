@@ -21,6 +21,9 @@ ApplicationWindow {
     Settings {
         category: "backup"
         property alias folder: backupDialog.lastFolder
+        property alias autoOnClose: autoBackupDialog.closeBackups
+        property alias autoFolder: autoBackupDialog.folder
+        property alias autoKeep: autoBackupDialog.keep
     }
     visible: true
     color: Theme.window
@@ -47,7 +50,7 @@ ApplicationWindow {
     function newProject() { newDialog.open(); }
     function openProject() { openDialog.open(); }
     function openPath(path) {
-        if (Wordloom.projectOpen) Api.call("close");
+        if (Wordloom.projectOpen) { autoBackupDialog.beforeClose(); Api.call("close"); }
         if (Api.call("openProject", path) !== undefined) return;
         if (Api.lastErrorKind === "damaged") restoreDialog.offer(path);
         else if (Api.lastErrorKind === "locked") lockedDialog.offer(path);
@@ -59,6 +62,7 @@ ApplicationWindow {
     }
     function closeProject() {
         if (ws) ws.flush();
+        autoBackupDialog.beforeClose();
         Api.call("close");
     }
 
@@ -75,14 +79,14 @@ ApplicationWindow {
         if (selfTest.pending) Qt.callLater(selfTest.start);
     }
 
-    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog; analysis: analysisDialog; compile: compileDialog; goTo: goTo }
+    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog; analysis: analysisDialog; compile: compileDialog; goTo: goTo; autoBackup: autoBackupDialog }
 
     // Developer aid: visit every view, save a PNG of each, then quit.
     Timer {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "styled", "complete", "linebar", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "complete", "linebar", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -93,13 +97,13 @@ ApplicationWindow {
                 loader.grabToImage(r => r.saveToFile(file));
                 // Popups render in the window overlay, which can't be grabbed;
                 // capture the dialog's own content instead.
-                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, pdf: compileDialog, goto: goTo, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog }[v];
+                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, pdf: compileDialog, goto: goTo, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog, autobackup: autoBackupDialog }[v];
                 if (dlg && dlg.contentChildren.length) dlg.contentChildren[0].grabToImage(r => r.saveToFile(file.replace(".png", "-dialog.png")));
                 if (v === "history") historyWindow.contentItem.grabToImage(r => r.saveToFile(file.replace(".png", "-window.png")));
             } else if (v === undefined) {
                 stop(); Qt.quit(); return;
             } else if (win.ws) {
-                compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); analysisDialog.close(); goTo.close(); win.ws.closePopups();
+                compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); analysisDialog.close(); autoBackupDialog.close(); goTo.close(); win.ws.closePopups();
                 win.ws.searchFor(v === "search" ? "lighthouse" : "");
                 win.ws.focusMode = v === "focus";
                 Theme.lineHighlight = v === "linebar";
@@ -115,6 +119,7 @@ ApplicationWindow {
                 else if (v === "history") historyWindow.show(3);
                 else if (v === "sprint") sprintDialog.open();
                 else if (v === "analysis") analysisDialog.open();
+                else if (v === "autobackup") autoBackupDialog.open();
                 else if (v === "reader") win.ws.viewMode = "reader";
                 else if (v === "stats") statsDialog.open();
                 else if (v === "settings") settingsDialog.open();
@@ -153,6 +158,7 @@ ApplicationWindow {
         if (Wordloom.projectOpen) {
             if (ws) ws.flush();
             Api.call("save");
+            autoBackupDialog.beforeClose();
         }
     }
 
@@ -200,6 +206,7 @@ ApplicationWindow {
             Action { text: qsTr("&Save"); shortcut: StandardKey.Save; enabled: Wordloom.projectOpen; onTriggered: win.saveNow() }
             Action { text: qsTr("Save &As…"); enabled: Wordloom.projectOpen; onTriggered: saveAsDialog.open() }
             Action { text: qsTr("&Back Up to Zip…"); enabled: Wordloom.projectOpen; onTriggered: backupDialog.start() }
+            Action { text: qsTr("Automatic Bac&kups…"); onTriggered: autoBackupDialog.open() }
             Action { text: qsTr("Import &Manuscript…"); enabled: win.ws !== null; onTriggered: manuscriptDialog.open() }
             Action { text: qsTr("&Import File…"); shortcut: "Ctrl+Shift+I"; enabled: win.ws !== null; onTriggered: importDialog.open() }
             Action { text: qsTr("Clean Up &Unused Files…"); enabled: win.ws !== null; onTriggered: cleanupDialog.check() }
@@ -387,6 +394,7 @@ ApplicationWindow {
         onAccepted: {
             if (folder.toString() === "") { Api.say(qsTr("Choose where to create the project.")); return; }
             const t = newTitle.text.trim() || "Untitled";
+            if (Wordloom.projectOpen) { if (ws) ws.flush(); autoBackupDialog.beforeClose(); }
             Api.call("newProject", folder.toString(), t, newAuthor.text);
         }
     }
@@ -502,6 +510,75 @@ ApplicationWindow {
             const r = Api.call("backupZip", f);
             if (r) Api.say(qsTr("Backed up %1 files (%2) to %3").arg(r.files).arg(Api.fmtBytes(r.bytes)).arg(r.path));
         }
+    }
+    // File ▸ Automatic Backups…: a zip of the project, in a folder of your
+    // choice, each time it's closed (if anything changed), keeping the
+    // newest few (Session::auto_backup).
+    Dialog {
+        id: autoBackupDialog
+        title: qsTr("Automatic Backups")
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(520, win.width - 32)
+        property bool closeBackups: false
+        property string folder: ""
+        property int keep: 10
+        readonly property string where: folder || (StandardPaths.writableLocation(StandardPaths.DocumentsLocation).toString() + "/Wordloom Backups")
+        // Back up now; `quiet` leaves out the notice when nothing changed.
+        function run(quiet) {
+            if (!Wordloom.projectOpen) return undefined;
+            if (win.ws) win.ws.flush();
+            const r = Api.call("autoBackup", where, keep);
+            if (r === undefined) return r;
+            if (r.skipped) { if (!quiet) Api.say(qsTr("No changes since the last automatic backup")); }
+            else Api.say(qsTr("Backed up automatically to %1 (%2)").arg(r.path).arg(Api.fmtBytes(r.bytes)));
+            return r;
+        }
+        // Called just before a project closes (Close Project, opening or
+        // creating another, quitting).
+        function beforeClose() { if (closeBackups && Wordloom.projectOpen) run(true); }
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 10
+            CheckBox {
+                id: autoOn
+                text: qsTr("Back up to a zip file whenever a project is closed")
+                checked: autoBackupDialog.closeBackups
+                onToggled: autoBackupDialog.closeBackups = checked
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Label { text: qsTr("Folder") }
+                Label {
+                    Layout.fillWidth: true
+                    elide: Text.ElideMiddle
+                    text: decodeURIComponent(autoBackupDialog.where.replace(/^file:\/\//, ""))
+                    color: Theme.subtext
+                }
+                Button { text: qsTr("Choose…"); onClicked: autoFolderDialog.open() }
+            }
+            RowLayout {
+                Label { text: qsTr("Keep the newest") }
+                SpinBox { id: autoKeep; from: 1; to: 100; editable: true; value: autoBackupDialog.keep; onValueModified: autoBackupDialog.keep = value }
+                Label { text: qsTr("backups of each project") }
+            }
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Theme.subtext
+                text: qsTr("Backups are named like \u201cTitle autobackup 2026-11-06 1730.zip\u201d. If nothing has changed since the last one, no new zip is made. Older automatic backups beyond the number kept are deleted; other files in the folder, including ones made with Back Up to Zip, are left alone. Choose a folder on another drive or a synced cloud folder so a backup survives losing this disk.")
+            }
+        }
+        footer: DialogButtonBox {
+            Button { text: qsTr("Back Up Now"); enabled: Wordloom.projectOpen; onClicked: autoBackupDialog.run(false) }
+            Button { text: qsTr("Close"); DialogButtonBox.buttonRole: DialogButtonBox.RejectRole }
+        }
+    }
+    FolderDialog {
+        id: autoFolderDialog
+        title: qsTr("Keep automatic backups in…")
+        currentFolder: autoBackupDialog.where
+        onAccepted: autoBackupDialog.folder = selectedFolder.toString()
     }
     // File ▸ Import Manuscript…: a whole book from Word, Markdown or text,
     // split into chapters and scenes (wordloom-core's import.rs).

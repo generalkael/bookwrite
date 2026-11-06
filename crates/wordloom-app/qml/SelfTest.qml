@@ -12,6 +12,7 @@ Item {
     property var analysis                // AnalysisDialog
     property var compile                 // CompileDialog
     property var goTo                    // GoToPopup
+    property var autoBackup              // Main.qml's Automatic Backups dialog
     property int step: 0
     property int failures: 0
     property int passes: 0
@@ -239,6 +240,20 @@ Item {
             const dir = Api.get("meta", null).path;
             const r = Api.call("backupZip", dir.substring(0, dir.lastIndexOf("/")) + "/selftest-backup.zip");
             check(r && r.files >= 5 && r.bytes > 1000, "Back Up to Zip packs the project (" + (r ? r.files + " files, " + r.bytes + " bytes" : "failed") + ")");
+        }],
+        ["automatic backup", () => {
+            const dir = Api.get("meta", null).path, folder = dir.substring(0, dir.lastIndexOf("/")) + "/selftest-auto";
+            autoBackup.folder = folder; autoBackup.keep = 2; autoBackup.closeBackups = true;
+            const r1 = autoBackup.run(true);
+            check(r1 && !r1.skipped && /autobackup \d{4}-\d\d-\d\d \d{4}\.zip$/.test(r1.path), "an automatic backup is written (" + (r1 ? r1.path : "failed") + ")");
+            const r2 = autoBackup.run(true);
+            check(r2 && r2.skipped === true, "an unchanged project isn't backed up again");
+            const k = rowId("The Keeper"), old = Api.call("text", k);
+            Api.call("setText", k, old + " One more line.");
+            const r3 = autoBackup.run(true);
+            Api.call("setText", k, old);
+            check(r3 && !r3.skipped, "a change makes a new automatic backup");
+            autoBackup.closeBackups = false; autoBackup.folder = ""; autoBackup.keep = 10;
         }],
         ["sprint", () => {
             ws().select(rowId("Arrival"), "editor");

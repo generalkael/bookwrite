@@ -58,12 +58,9 @@ pub fn new_bundle_path(parent: &Path, title: &str) -> PathBuf {
     parent.join(format!("{safe}.{EXTENSION}"))
 }
 
-/// Pack the project folder into one zip file at `dest`: everything a copy
-/// needs (project.json, documents, snapshots, imported files), without the
-/// lock, the rolling backups or half-written temp files. Entries sit under
-/// the folder's own name, so unzipping gives back `Title.wordloom/`.
-/// Returns the number of files packed.
-pub fn backup_zip(dir: &Path, dest: &Path) -> Result<usize> {
+/// The files a zip backup holds, as (path inside the project, path on
+/// disk), in a stable order.
+fn backup_files(dir: &Path) -> Result<Vec<(String, PathBuf)>> {
     fn walk(dir: &Path, rel: &str, out: &mut Vec<(String, PathBuf)>) -> Result<()> {
         let mut entries: Vec<_> = fs::read_dir(dir)?.collect::<std::io::Result<_>>()?;
         entries.sort_by_key(|e| e.file_name());
@@ -71,7 +68,11 @@ pub fn backup_zip(dir: &Path, dest: &Path) -> Result<usize> {
             let name = e.file_name().to_string_lossy().into_owned();
             let path = e.path();
             let top = rel.is_empty();
-            if (top && (name == LOCK_FILE || name == BACKUPS_DIR || name.contains(".damaged-")))
+            if (top
+                && (name == LOCK_FILE
+                    || name == BACKUPS_DIR
+                    || name == AUTO_BACKUP_STATE
+                    || name.contains(".damaged-")))
                 || name.ends_with(".tmp")
             {
                 continue;
@@ -87,6 +88,37 @@ pub fn backup_zip(dir: &Path, dest: &Path) -> Result<usize> {
     }
     let mut files = Vec::new();
     walk(dir, "", &mut files)?;
+    Ok(files)
+}
+
+/// A fingerprint of everything a zip backup would hold (FNV-1a over the
+/// names and contents), so an automatic backup can tell whether anything
+/// changed since the last one.
+pub fn backup_fingerprint(dir: &Path) -> Result<String> {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut eat = |bytes: &[u8]| {
+        for b in bytes {
+            h ^= *b as u64;
+            h = h.wrapping_mul(0x0100_0000_01b3);
+        }
+    };
+    for (rel, path) in backup_files(dir)? {
+        eat(rel.as_bytes());
+        eat(&[0]);
+        let data = fs::read(path)?;
+        eat(&(data.len() as u64).to_le_bytes());
+        eat(&data);
+    }
+    Ok(format!("{h:016x}"))
+}
+
+/// Pack the project folder into one zip file at `dest`: everything a copy
+/// needs (project.json, documents, snapshots, imported files), without the
+/// lock, the rolling backups or half-written temp files. Entries sit under
+/// the folder's own name, so unzipping gives back `Title.wordloom/`.
+/// Returns the number of files packed.
+pub fn backup_zip(dir: &Path, dest: &Path) -> Result<usize> {
+    let files = backup_files(dir)?;
     let folder = dir
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -114,7 +146,7 @@ pub fn is_project(path: &Path) -> bool {
     bundle_dir(path).join(PROJECT_FILE).is_file()
 }
 
-fn write_atomic(path: &Path, data: &[u8]) -> Result<()> {
+pub(crate) fn write_atomic(path: &Path, data: &[u8]) -> Result<()> {
     let tmp = path.with_extension(format!(
         "{}.tmp",
         path.extension().and_then(|e| e.to_str()).unwrap_or("")
@@ -126,6 +158,9 @@ fn write_atomic(path: &Path, data: &[u8]) -> Result<()> {
 
 pub const FILES_DIR: &str = "files";
 pub const BACKUPS_DIR: &str = "backups";
+/// Remembers the fingerprint of the last automatic zip backup (and where it
+/// went), so closing an unchanged project doesn't make another one.
+pub const AUTO_BACKUP_STATE: &str = "autobackup.txt";
 
 /// Marks a project as open, so a second Wordloom (another window, or
 /// another computer sharing the folder) can warn before both write to it.

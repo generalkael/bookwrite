@@ -157,18 +157,80 @@ impl Session {
         {
             folder.to_path_buf()
         } else {
-            let stem = storage::new_bundle_path(folder, &self.project.meta.title);
-            let stem = stem
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned();
+            let stem = self.backup_stem();
             let when = chrono::Local::now().format("%Y-%m-%d %H%M");
             folder.join(format!("{stem} backup {when}.zip"))
         };
         let files = storage::backup_zip(&self.dir, &dest)?;
         let bytes = std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0);
         Ok(json!({"path": dest, "files": files, "bytes": bytes}))
+    }
+
+    /// The automatic backup made when a project closes: save, then, if
+    /// anything changed since the last automatic backup to `folder`, pack
+    /// the project into `Title autobackup YYYY-MM-DD HHMM.zip` there and
+    /// delete all but the newest `keep` of this project's automatic backups
+    /// in that folder (other zips, including File ▸ Back Up to Zip ones, are
+    /// left alone). Returns `{skipped: true}` when nothing changed.
+    pub fn auto_backup(&mut self, folder: &Path, keep: usize) -> Result<Value> {
+        self.save()?;
+        let state = self.dir.join(storage::AUTO_BACKUP_STATE);
+        let print = format!(
+            "{}\n{}\n",
+            storage::backup_fingerprint(&self.dir)?,
+            folder.display()
+        );
+        let stem = self.backup_stem();
+        let prefix = format!("{stem} autobackup ");
+        let ours = |name: &str| {
+            name.strip_prefix(&prefix)
+                .and_then(|r| r.strip_suffix(".zip"))
+                .is_some_and(|stamp| {
+                    stamp.len() == 15
+                        && stamp.char_indices().all(|(i, c)| match i {
+                            4 | 7 => c == '-',
+                            10 => c == ' ',
+                            _ => c.is_ascii_digit(),
+                        })
+                })
+        };
+        let list = |folder: &Path| -> Vec<PathBuf> {
+            let mut v: Vec<PathBuf> = std::fs::read_dir(folder)
+                .map(|rd| {
+                    rd.filter_map(|e| e.ok().map(|e| e.path()))
+                        .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(ours))
+                        .collect()
+                })
+                .unwrap_or_default();
+            v.sort();
+            v
+        };
+        let unchanged = std::fs::read_to_string(&state).is_ok_and(|s| s == print);
+        if unchanged && !list(folder).is_empty() {
+            return Ok(json!({"skipped": true}));
+        }
+        std::fs::create_dir_all(folder)?;
+        let when = chrono::Local::now().format("%Y-%m-%d %H%M");
+        let dest = folder.join(format!("{prefix}{when}.zip"));
+        let files = storage::backup_zip(&self.dir, &dest)?;
+        let bytes = std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0);
+        storage::write_atomic(&state, print.as_bytes())?;
+        let mut olds = list(folder);
+        let mut removed = 0;
+        while olds.len() > keep.max(1) {
+            std::fs::remove_file(olds.remove(0))?;
+            removed += 1;
+        }
+        Ok(json!({"path": dest, "files": files, "bytes": bytes, "removed": removed}))
+    }
+
+    /// The project's title made safe for a file name, as backups use it.
+    fn backup_stem(&self) -> String {
+        let stem = storage::new_bundle_path(Path::new(""), &self.project.meta.title);
+        stem.file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned()
     }
 
     /// Save a copy to a new bundle location and continue working there.
@@ -1395,6 +1457,56 @@ mod tests {
         );
         assert!(html.contains("She left. The door shut."));
         assert!(!html.contains("abrupt"));
+    }
+
+    #[test]
+    fn auto_backup_skips_unchanged_projects_and_keeps_the_newest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut s = Session::create(tmp.path(), "Auto", "").unwrap();
+        let ms = s.root_id("manuscript").unwrap();
+        let a = s.add(&ms, "text", "A", true).unwrap();
+        s.set_text(&a, "First.").unwrap();
+        let out = tempfile::tempdir().unwrap();
+        // Other zips in the folder are never touched.
+        let manual = out.path().join("Auto backup 2020-01-01 0000.zip");
+        std::fs::write(&manual, b"x").unwrap();
+        let r = s.auto_backup(out.path(), 2).unwrap();
+        let first = std::path::PathBuf::from(r["path"].as_str().unwrap());
+        let name = first.file_name().unwrap().to_string_lossy().into_owned();
+        assert!(
+            name.starts_with("Auto autobackup ") && name.ends_with(".zip"),
+            "{name}"
+        );
+        assert!(s.dir.join(storage::AUTO_BACKUP_STATE).is_file());
+        // Nothing changed: no new zip.
+        assert_eq!(s.auto_backup(out.path(), 2).unwrap()["skipped"], true);
+        // Older automatic backups (simulated) beyond `keep` are deleted.
+        for stamp in ["2021-01-01 0900", "2022-01-01 0900"] {
+            std::fs::write(
+                out.path().join(format!("Auto autobackup {stamp}.zip")),
+                b"old",
+            )
+            .unwrap();
+        }
+        s.set_text(&a, "Second.").unwrap();
+        let r = s.auto_backup(out.path(), 2).unwrap();
+        assert_eq!(r["removed"], 1);
+        assert!(!out
+            .path()
+            .join("Auto autobackup 2021-01-01 0900.zip")
+            .exists());
+        assert!(out
+            .path()
+            .join("Auto autobackup 2022-01-01 0900.zip")
+            .exists());
+        assert!(first.exists());
+        assert!(manual.exists());
+        // The state file stays out of the zip.
+        let bytes = std::fs::read(&first).unwrap();
+        assert!(!bytes.windows(14).any(|w| w == b"autobackup.txt"));
+        // A different folder gets its own first backup.
+        let other = tempfile::tempdir().unwrap();
+        assert!(s.auto_backup(other.path(), 2).unwrap()["path"].is_string());
     }
 
     #[test]

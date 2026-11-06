@@ -54,6 +54,12 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Automatic backups.** File ▸ Automatic Backups… can zip the project into a folder you choose
+  (another drive or a synced cloud folder) every time it closes: Close Project, opening or
+  creating another project, or quitting. A project that hasn't changed since its last automatic
+  backup isn't zipped again, and only the newest N (10 by default) of each project's
+  `Title autobackup YYYY-MM-DD HHMM.zip` files are kept. Other files in the folder are never
+  deleted. *Back Up Now* makes one straight away. Off until you turn it on.
 - **Current-line highlight.** View ▸ Highlight Current Line puts a bar behind the line you're
   typing on (the visual line, when a paragraph wraps). View ▸ Line Highlight Colour offers
   amber, blue, green, rose and grey presets, or *Custom Colour…* with transparency. Both are
