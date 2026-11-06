@@ -24,11 +24,15 @@ Rectangle {
     property string activeId: ""
     property int activeCursor: 0
     property bool secondary: false
+    // With the split open: this pane is the one binder picks go to.
+    property bool targeted: false
     property var activeArea: null      // the TextArea being typed in
     readonly property bool hasFile: node !== null && !!node.file
     signal openRequested(string id)
     signal swapRequested()
     signal closeRequested()
+    // The user started typing in (or clicked into) this editor.
+    signal editorFocused()
 
     readonly property int rev: Wordloom.revision
     onRevChanged: rebuild(false)
@@ -341,6 +345,14 @@ Rectangle {
             Layout.preferredHeight: 34
             visible: !ev.focusMode && ev.node !== null
             color: Theme.window
+            Rectangle {
+                visible: ev.targeted
+                width: parent.width; height: 2
+                color: Theme.accent
+                ToolTip.visible: targetHover.hovered
+                ToolTip.text: qsTr("Items you pick in the binder open here")
+                HoverHandler { id: targetHover }
+            }
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 12
@@ -629,7 +641,7 @@ Rectangle {
             topPadding: 2
             bottomPadding: 2
             onTextChanged: if (!de.loading) saveTimer.restart()
-            onActiveFocusChanged: { if (activeFocus) { ev.activeId = de.docId; ev.activeArea = area; } else de.flush(); }
+            onActiveFocusChanged: { if (activeFocus) { ev.activeId = de.docId; ev.activeArea = area; ev.editorFocused(); } else de.flush(); }
 
             // ---- right-click menu with spelling suggestions. Qt 6.9+ has a
             // built-in context menu, which we replace with ours; older Qt has

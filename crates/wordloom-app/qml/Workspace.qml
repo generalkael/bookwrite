@@ -21,6 +21,13 @@ Item {
     property var stats: null
     property string splitId: ""         // document in the split editor; "" = no split
     property var splitNode: null
+    // The split editor was the last one typed in: picking an item in the
+    // binder (or Go to…) then opens it there, and the binder highlight, the
+    // Details panel and the item commands follow its document.
+    property bool splitFocused: false
+    readonly property bool inSplit: splitFocused && splitId !== "" && viewMode === "editor" && !focusMode
+    readonly property string focusedId: inSplit ? splitId : currentId
+    readonly property var focusedNode: inSplit ? splitNode : current
     signal historyRequested()
     property var sprint: null           // SprintDialog (from Main)
 
@@ -43,7 +50,7 @@ Item {
     readonly property int rev: Wordloom.revision
     onRevChanged: refresh()
     onCurrentIdChanged: refresh()
-    onSplitIdChanged: refresh()
+    onSplitIdChanged: { if (splitId === "") splitFocused = false; refresh(); }
 
     function refresh() {
         // The selected item can vanish (undo, empty trash); drop it quietly.
@@ -54,10 +61,16 @@ Item {
         stats = Api.get("stats", null);
     }
 
-    // Select an item, in `mode` if given. Otherwise documents open in the
-    // editor (a character picked on the relationship map stays there), and a
-    // folder with no text of its own opens as a corkboard of its contents.
+    // Select an item, in `mode` if given. While the split editor has focus,
+    // items opened in the editor go there; otherwise see selectMain.
     function select(id, mode) {
+        if (inSplit && (mode === undefined || mode === "editor")) { openInSplit(id); return; }
+        selectMain(id, mode);
+    }
+    // Select an item in the main view. Documents open in the editor (a
+    // character picked on the relationship map stays there), and a folder
+    // with no text of its own opens as a corkboard of its contents.
+    function selectMain(id, mode) {
         flush();
         currentId = id;
         if (mode) { viewMode = mode; return; }
@@ -89,7 +102,7 @@ Item {
         if (splitId === "") return;
         flush();
         const other = currentId;
-        select(splitId, "editor");
+        selectMain(splitId, "editor");
         splitId = other !== "" ? other : splitId;
     }
 
@@ -122,11 +135,12 @@ Item {
     }
 
     function target() {
-        return currentId !== "" ? currentId : Api.call("rootId", "manuscript");
+        return focusedId !== "" ? focusedId : Api.call("rootId", "manuscript");
     }
     function addItem(kind) {
         const t = target();
-        const inside = current && (current.is_root || (current.kind === "folder" && kind !== "folder"));
+        const cur = focusedNode;
+        const inside = cur && (cur.is_root || (cur.kind === "folder" && kind !== "folder"));
         const id = Api.call("add", t, kind, "", !!inside);
         if (id) { select(id, kind === "folder" ? "corkboard" : "editor"); binder.startRename(id); }
     }
@@ -135,47 +149,46 @@ Item {
         const id = Api.call("add", root, "", "", true);
         if (id) { select(id, "editor"); binder.startRename(id); }
     }
-    function duplicate() { if (currentId) { const id = Api.call("duplicate", currentId); if (id) select(id); } }
+    function duplicate() { if (focusedId) { flush(); const id = Api.call("duplicate", focusedId); if (id) select(id); } }
     function trashCurrent() {
-        if (!currentId || (current && current.is_root)) return;
-        Api.call("trash", currentId);
-        currentId = "";
+        if (!focusedId || (focusedNode && focusedNode.is_root)) return;
+        flush();
+        Api.call("trash", focusedId);
+        if (inSplit) splitId = ""; else currentId = "";
     }
     function emptyTrash() {
         const n = Api.call("emptyTrash");
         if (n !== undefined) Api.say(qsTr("Deleted %1 item(s) permanently").arg(n));
     }
     function snapshot() {
-        if (!currentId) return;
+        if (!focusedId) return;
         flush();
-        if (Api.call("takeSnapshot", currentId, "") !== undefined) { Api.say(qsTr("Snapshot taken")); inspector.reloadSnapshots(); }
+        if (Api.call("takeSnapshot", focusedId, "") !== undefined) { Api.say(qsTr("Snapshot taken")); inspector.reloadSnapshots(); }
     }
     function splitAtCursor() {
-        if (viewMode !== "editor" || !editorView.activeId) return;
+        const ed = inSplit ? splitEditor : editorView;
+        if (viewMode !== "editor" || !ed.activeId) return;
         flush();
-        const id = Api.call("split", editorView.activeId, editorView.activeCursor, "");
+        const id = Api.call("split", ed.activeId, ed.activeCursor, "");
         if (id) { select(id, "editor"); binder.startRename(id); }
     }
-    function mergeNext() { if (currentId) { flush(); Api.call("mergeWithNext", currentId); } }
+    function mergeNext() { if (focusedId) { flush(); Api.call("mergeWithNext", focusedId); } }
     function focusSearch() { binder.focusSearch(); }
     // Find (and replace) in the open document: the split editor if you are
     // typing there, otherwise the main editor.
     function mainEditor() { return editorView; }
     function findInDocument(withReplace) {
-        const inSplit = splitId !== "" && splitEditor.activeArea && splitEditor.activeArea.activeFocus;
         if (!inSplit && viewMode !== "editor") viewMode = "editor";
         (inSplit ? splitEditor : editorView).openFind(withReplace);
     }
     // Edit ▸ Convert to Smart Punctuation, in the document you're in.
     function smartenDocument() {
-        const inSplit = splitId !== "" && splitEditor.activeArea && splitEditor.activeArea.activeFocus;
         if (!inSplit && viewMode !== "editor") viewMode = "editor";
         const n = (inSplit ? splitEditor : editorView).smartenAll();
         Api.say(n ? qsTr("Quotes, dashes and ellipses converted (Ctrl+Z undoes it)") : qsTr("Nothing to convert"));
     }
     // Insert a {>> comment <<} where you are typing.
     function insertComment() {
-        const inSplit = splitId !== "" && splitEditor.activeArea && splitEditor.activeArea.activeFocus;
         if (!inSplit && viewMode !== "editor") viewMode = "editor";
         (inSplit ? splitEditor : editorView).insertComment();
     }
@@ -183,16 +196,18 @@ Item {
     // in the find bar so each mention is a keypress away.
     function showMention(docId, name) {
         select(docId, "editor");
+        const ed = inSplit ? splitEditor : editorView;
         Qt.callLater(() => {
-            editorView.openFind(false);
-            editorView.findText = name;
-            editorView.findStep(0);
+            ed.openFind(false);
+            ed.findText = name;
+            ed.findStep(0);
         });
     }
     // Jump to a comment listed in the Details panel.
     function showComment(docId, n) {
         if (viewMode !== "editor") viewMode = "editor";
-        Qt.callLater(() => editorView.showComment(docId, n));
+        const ed = inSplit ? splitEditor : editorView;
+        Qt.callLater(() => ed.showComment(docId, n));
     }
     function eventDialog() { return gantt.eventDialogRef; }
     function closePopups() { gantt.closeDialogs(); compareDialog.close(); relationsView.dialogRef.close(); }
@@ -200,12 +215,14 @@ Item {
     // Compare a snapshot of the current document with its text now (the
     // first snapshot if `snapId` is empty).
     function compareSnapshot(snapId) {
-        if (!currentId) return;
+        if (!focusedId) return;
         flush();
-        compareDialog.openFor(currentId, snapId);
+        compareDialog.openFor(focusedId, snapId);
     }
     function compareDialogRef() { return compareDialog; }
     function inspectorRef() { return inspector; }
+    function splitEditorRef() { return splitEditor; }
+    function binderRef() { return binder; }
     function editAnEvent() { viewMode = "timeline"; gantt.editFirstEvent(); }
     function showLanes(on, collapsed) { viewMode = "timeline"; gantt.lanes = on; gantt.collapsed = collapsed || ({}); }
     function searchFor(q) { binder.searchText = q; }
@@ -219,6 +236,7 @@ Item {
         onTriggered: {
             ws.stats = Api.get("stats", null);
             if (ws.currentId !== "") ws.current = Api.get("nodeInfo", ws.current, ws.currentId);
+            if (ws.splitId !== "") ws.splitNode = Api.get("nodeInfo", ws.splitNode, ws.splitId);
         }
     }
 
@@ -287,8 +305,8 @@ Item {
                 }
                 Item { Layout.fillWidth: true }
                 Label {
-                    visible: ws.current !== null
-                    text: ws.current ? ws.current.breadcrumbs.concat([ws.current.title]).join("  ›  ") : ""
+                    visible: ws.focusedNode !== null
+                    text: ws.focusedNode ? ws.focusedNode.breadcrumbs.concat([ws.focusedNode.title]).join("  ›  ") : ""
                     color: Theme.subtext
                     elide: Text.ElideLeft
                     Layout.maximumWidth: 420
@@ -315,7 +333,7 @@ Item {
                 visible: ws.showBinder && !ws.focusMode
                 SplitView.preferredWidth: 270
                 SplitView.minimumWidth: 180
-                currentId: ws.currentId
+                currentId: ws.focusedId
                 onSelected: (id) => ws.select(id)
                 onActivated: (id) => ws.select(id, "editor")
                 onOpenInSplit: (id) => ws.openInSplit(id)
@@ -344,7 +362,9 @@ Item {
                         nodeId: ws.currentId
                         node: ws.current
                         focusMode: ws.focusMode
-                        onOpenRequested: (id) => ws.select(id, "editor")
+                        targeted: ws.splitId !== "" && !ws.inSplit
+                        onEditorFocused: ws.splitFocused = false
+                        onOpenRequested: (id) => ws.selectMain(id, "editor")
                     }
                     CorkboardView {
                         nodeId: ws.currentId
@@ -389,6 +409,8 @@ Item {
                     secondary: true
                     nodeId: ws.splitId
                     node: ws.splitNode
+                    targeted: ws.inSplit
+                    onEditorFocused: ws.splitFocused = true
                     onOpenRequested: (id) => ws.openInSplit(id)
                     onSwapRequested: ws.swapSplit()
                     onCloseRequested: { splitEditor.flush(); ws.splitId = ""; }
@@ -400,8 +422,8 @@ Item {
                 visible: ws.showInspector && !ws.focusMode
                 SplitView.preferredWidth: 300
                 SplitView.minimumWidth: 220
-                nodeId: ws.currentId
-                node: ws.current
+                nodeId: ws.focusedId
+                node: ws.focusedNode
                 onOpenEvent: () => ws.viewMode = "timeline"
                 onFlushRequested: ws.flush()
                 onCompareRequested: (snapId) => ws.compareSnapshot(snapId)
@@ -425,14 +447,14 @@ Item {
                 spacing: 16
                 Label {
                     color: Theme.subtext
-                    text: ws.current ? qsTr("%1 words").arg(Api.fmtNumber(ws.current.total_words))
-                        + (ws.current.target_words ? qsTr(" of %1").arg(Api.fmtNumber(ws.current.target_words)) : "")
+                    text: ws.focusedNode ? qsTr("%1 words").arg(Api.fmtNumber(ws.focusedNode.total_words))
+                        + (ws.focusedNode.target_words ? qsTr(" of %1").arg(Api.fmtNumber(ws.focusedNode.target_words)) : "")
                         : ""
                 }
                 ProgressBar {
-                    visible: ws.current !== null && !!ws.current.target_words
+                    visible: ws.focusedNode !== null && !!ws.focusedNode.target_words
                     from: 0; to: 1
-                    value: ws.current && ws.current.target_words ? Math.min(1, ws.current.total_words / ws.current.target_words) : 0
+                    value: ws.focusedNode && ws.focusedNode.target_words ? Math.min(1, ws.focusedNode.total_words / ws.focusedNode.target_words) : 0
                     Layout.preferredWidth: 100
                 }
                 Item { Layout.fillWidth: true }

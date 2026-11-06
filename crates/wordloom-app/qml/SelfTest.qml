@@ -87,6 +87,24 @@ Item {
             ed().smartenAll();
             check(a.text === "“Plain” — text…", "Convert to Smart Punctuation fixes existing text: " + JSON.stringify(a.text));
         }],
+        ["split editor follows focus", () => {
+            ws().select(rowId("Arrival"), "editor");
+            ws().openInSplit(rowId("The Keeper"));
+        }],
+        ["split editor follows focus", () => {
+            const main = ws().currentId;
+            ws().splitEditorRef().firstArea().forceActiveFocus();
+            ws().binderRef().selected(rowId("Night Watch"));    // as a click in the binder does
+            check(ws().splitId === rowId("Night Watch") && ws().currentId === main,
+                  "with the split editor focused, a binder pick opens there and the main editor keeps its document");
+            check(ws().binderRef().currentId === ws().splitId && ws().inspectorRef().nodeId === ws().splitId,
+                  "the binder highlight and Details follow the focused split editor");
+            ed().firstArea().forceActiveFocus();
+            ws().binderRef().selected(rowId("The Week Before"));
+            check(ws().currentId === rowId("The Week Before") && ws().splitId === rowId("Night Watch"),
+                  "with the main editor focused, a binder pick opens in the main editor");
+            ws().splitId = "";
+        }],
         ["find & replace", () => {
             const a = ed().firstArea();
             a.text = "the cat and then the dog";

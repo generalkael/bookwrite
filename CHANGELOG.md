@@ -91,6 +91,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   `Cargo.lock`), as Flathub requires, and the AppStream metadata has screenshots.
 
 ### Fixed
+- **Split editor follows focus.** Picking a document in the binder always replaced the main
+  editor's document, even while you were writing in the split editor. It now opens in the pane
+  you were last typing in (shown by an accent line on its header), and the binder highlight,
+  Details panel, word count and item commands follow that pane.
 - The Details panel no longer logs an error when the selected item has just been deleted.
 - **Ordinals aren't misspellings.** Spell checking no longer marks the letters in “2nd” or “10km”.
 - **Word Count History in a forced theme.** Its date boxes and menus followed the system colours,
