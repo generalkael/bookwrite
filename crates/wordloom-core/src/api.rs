@@ -185,6 +185,7 @@ fn undo_label(method: &str, a: &Args) -> Option<(String, Option<String>)> {
             return Some(("Move on Map".into(), Some(format!("map:{}", a.str(0)))));
         }
         "move" | "dropOn" | "shift" => "Move",
+        "moveMany" => return Some((format!("Move {} Items", a.strs(0).len()), None)),
         "indent" => "Indent",
         "outdent" => "Outdent",
         "trash" => "Move to Trash",
@@ -433,6 +434,7 @@ impl App {
             "shift" => unit(self.s()?.shift(a.str(0), a.int(1) as i32))?,
             "indent" => unit(self.s()?.indent(a.str(0)))?,
             "outdent" => unit(self.s()?.outdent(a.str(0)))?,
+            "moveMany" => json!(self.s()?.move_many(&a.strs(0), a.str(1), a.str(2))?),
             "trashMany" => json!(self.s()?.trash_many(&a.strs(0))?),
             "setFieldMany" => {
                 let v = match a.0.get(2) {
@@ -887,6 +889,34 @@ mod tests {
             )
             .error
             .is_some());
+        // Moving several keeps their binder order, whatever order they were picked in.
+        let c = ok(&app.call("add", &json!([ms, "text", "C", true]).to_string()));
+        let n = ok(&app.call("moveMany", &json!([[c, a], folder, "inside"]).to_string()));
+        assert_eq!(n, 2);
+        let names = |app: &mut App, id: &Value| -> Vec<String> {
+            ok(&app.call("children", &json!([id]).to_string()))
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| c["title"].as_str().unwrap().to_string())
+                .collect()
+        };
+        assert_eq!(names(&mut app, &folder), ["A", "C"]);
+        assert_eq!(app.undo_redo().0.as_deref(), Some("Move 2 Items"));
+        ok(&app.call("moveMany", &json!([[a, c], b, "before"]).to_string()));
+        assert_eq!(names(&mut app, &ms), ["Chapter 1", "Part", "A", "C", "B"]);
+        assert!(
+            app.call(
+                "moveMany",
+                &json!([[folder, b], folder, "inside"]).to_string()
+            )
+            .error
+            .is_some(),
+            "not into itself"
+        );
+        ok(&app.call("undo", ""));
+        ok(&app.call("undo", ""));
+        ok(&app.call("trash", &json!([c]).to_string()));
         // The folder and its own child: the child goes with the folder.
         let moved = ok(&app.call("trashMany", &json!([[folder, a, b, ms]]).to_string()));
         assert_eq!(

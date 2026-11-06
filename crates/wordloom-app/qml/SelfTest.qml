@@ -312,6 +312,18 @@ Item {
             Api.call("undo");
             check(Api.get("children", [], rowId("The Storm")).map(x => x.title).join(",") === "Arrival,The Keeper", "one Undo brings them both back");
         }],
+        ["binder multi-select", () => {
+            // Drag two picked scenes into The Return, by the second one.
+            const b = ws().binderRef(), at = (t) => b.rowPoint(rowId(t));
+            input.click(win, at("Arrival"));
+            input.click(win, at("Night Watch"), Qt.LeftButton, Qt.ControlModifier);
+            input.drag(win, at("Night Watch"), at("The Return"));
+            const kids = Api.get("children", [], rowId("The Return")).map(x => x.title).join(",");
+            check(kids === "Confession,Arrival,Night Watch", "dragging picked items moves them all, in binder order (" + kids + ")");
+            check(Api.call("history").undo === "Move 2 Items", "as one undo step");
+            Api.call("undo");
+            check(Api.get("children", [], rowId("The Storm")).map(x => x.title).join(",") === "Arrival,The Keeper", "Undo puts them back");
+        }],
         ["corkboard drag", () => { ws().select(rowId("The Storm"), "corkboard"); }],
         ["corkboard drag", () => {
             const c = ws().corkboardRef(), titles = () => c.cards.map(x => x.title).join(",");

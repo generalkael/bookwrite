@@ -720,6 +720,60 @@ impl Session {
         Ok(ids.len())
     }
 
+    /// Move several items together, like [`Session::drop_on`] with one:
+    /// they land before / after `target` (or inside it) in binder order.
+    /// Sections are skipped, and so is anything inside another item being
+    /// moved (it goes with it). Returns how many were moved.
+    pub fn move_many(&mut self, ids: &[String], target: &str, position: &str) -> Result<usize> {
+        let target = parse_id(target)?;
+        let p = &self.project;
+        p.node(target)?;
+        let mut picked: Vec<Uuid> = Vec::new();
+        for id in ids {
+            let id = parse_id(id)?;
+            p.node(id)?;
+            if !p.is_root(id) && !picked.contains(&id) {
+                picked.push(id);
+            }
+        }
+        // Not into (or next to) one of the items themselves.
+        if picked.contains(&target) || p.ancestors(target).iter().any(|a| picked.contains(a)) {
+            return Err(Error::Invalid("can't move items inside themselves".into()));
+        }
+        let picked: Vec<Uuid> = picked
+            .iter()
+            .copied()
+            .filter(|&id| !p.ancestors(id).iter().any(|a| picked.contains(a)))
+            .collect();
+        // Binder order, whatever order they were picked in.
+        let order: Vec<Uuid> = p.roots.iter().flat_map(|r| p.subtree(*r)).collect();
+        let mut picked = picked;
+        picked.sort_by_key(|id| order.iter().position(|o| o == id));
+        let mut prev: Option<Uuid> = None;
+        for &id in &picked {
+            let p = &mut self.project;
+            match prev {
+                Some(before) => {
+                    let parent = p.node(before)?.parent.expect("non-root");
+                    let idx = p.index_in_parent(before)? + 1;
+                    p.move_node(id, parent, idx)?;
+                }
+                None if position == "inside" || p.is_root(target) => {
+                    let len = p.node(target)?.children.len();
+                    p.move_node(id, target, len)?;
+                }
+                None => {
+                    let parent = p.node(target)?.parent.expect("non-root");
+                    let idx = p.index_in_parent(target)? + usize::from(position == "after");
+                    p.move_node(id, parent, idx)?;
+                }
+            }
+            prev = Some(id);
+        }
+        self.changed();
+        Ok(picked.len())
+    }
+
     /// Move several items to the Trash. Sections are skipped, and so is
     /// anything inside a folder that's also being trashed (it goes with
     /// the folder). Returns how many were moved.

@@ -231,6 +231,10 @@ Rectangle {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     property point pressPos
                     property bool dragging: false
+                    // A plain press on one of several picked items: it may
+                    // start dragging them all; a click without a drag goes
+                    // back to just this item.
+                    property bool pressedPicked: false
 
                     onPressed: (m) => {
                         pressPos = Qt.point(m.x, m.y);
@@ -238,6 +242,8 @@ Rectangle {
                         if (m.button !== Qt.LeftButton) return;
                         if (m.modifiers & Qt.ControlModifier) { if (!row.isRoot) pane.togglePick(row.modelData.id); return; }
                         if (m.modifiers & Qt.ShiftModifier) { pane.pickRange(row.modelData.id); return; }
+                        pressedPicked = row.isPicked && pane.pickCount > 1;
+                        if (pressedPicked) return;
                         pane.clearPicks();
                         pane.selected(row.modelData.id);
                     }
@@ -251,7 +257,10 @@ Rectangle {
                     onDoubleClicked: { if (row.isRoot) Api.call("toggleExpanded", row.modelData.id); else pane.startRename(row.modelData.id); }
                     onPositionChanged: (m) => {
                         if (row.isRoot || !(m.buttons & Qt.LeftButton)) return;
-                        if (!dragging && Math.abs(m.y - pressPos.y) > 6) { dragging = true; ghost.text = row.modelData.title; }
+                        if (!dragging && Math.abs(m.y - pressPos.y) > 6) {
+                            dragging = true;
+                            ghost.text = pressedPicked ? qsTr("%1 items").arg(pane.pickCount) : row.modelData.title;
+                        }
                         if (!dragging) return;
                         const p = mapToItem(list.contentItem, m.x, m.y);
                         const g = mapToItem(pane, m.x, m.y);
@@ -268,10 +277,13 @@ Rectangle {
                     }
                     onReleased: {
                         const target = dragging && pane.dropIndex >= 0 ? pane.rows[pane.dropIndex] : null;
-                        const pos = pane.dropPos;
-                        dragging = false; ghost.visible = false; pane.dropIndex = -1;
-                        if (target && target.id !== row.modelData.id)
-                            Api.call("dropOn", row.modelData.id, target.id, pos);
+                        const pos = pane.dropPos, wasDrag = dragging, many = pressedPicked;
+                        dragging = false; ghost.visible = false; pane.dropIndex = -1; pressedPicked = false;
+                        if (many && !wasDrag) { pane.clearPicks(); pane.selected(row.modelData.id); return; }
+                        if (!target) return;
+                        // Several picked: they all move, in binder order (one undo step).
+                        if (many) { if (!pane.picked[target.id]) Api.call("moveMany", pane.pickedIds(), target.id, pos); }
+                        else if (target.id !== row.modelData.id) Api.call("dropOn", row.modelData.id, target.id, pos);
                     }
                 }
 
