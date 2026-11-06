@@ -1,4 +1,5 @@
-//! A minimal zip writer for EPUB and DOCX packages.
+//! A minimal zip writer for EPUB and DOCX packages and zip backups, and a
+//! reader for .docx imports and restoring backups.
 //!
 //! Entries are stored uncompressed. EPUB requires that for its first entry
 //! (`mimetype`), and manuscripts are small enough that compressing the rest
@@ -96,6 +97,79 @@ fn crc32(data: &[u8]) -> u32 {
         }
     }
     !crc
+}
+
+/// Every file in a zip archive (stored or deflated), as (name, bytes), in
+/// the archive's order. `None` if it isn't a zip this reader understands.
+pub(crate) fn entries(zip: &[u8]) -> Option<Vec<(String, Vec<u8>)>> {
+    let mut out = Vec::new();
+    walk(zip, |name, data| {
+        out.push((name.to_string(), data()?));
+        Some(true)
+    })?;
+    Some(out)
+}
+
+/// The bytes of `name` in a zip archive (stored or deflated).
+pub(crate) fn entry(zip: &[u8], name: &str) -> Option<Vec<u8>> {
+    let mut found = None;
+    walk(zip, |n, data| {
+        if n == name {
+            found = Some(data()?);
+            return Some(false);
+        }
+        Some(true)
+    })?;
+    found
+}
+
+/// Visit the central directory: `f(name, read)` per entry, where `read()`
+/// unpacks it; `f` returns Some(false) to stop, None on a damaged entry.
+fn walk(
+    zip: &[u8],
+    mut f: impl FnMut(&str, &dyn Fn() -> Option<Vec<u8>>) -> Option<bool>,
+) -> Option<()> {
+    let u16le = |i: usize| {
+        zip.get(i..i + 2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]) as usize)
+    };
+    let u32le = |i: usize| {
+        zip.get(i..i + 4)
+            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)
+    };
+    // End of central directory: the last "PK\5\6".
+    let from = zip.len().saturating_sub(22 + 65_535);
+    let eocd = (from..zip.len().saturating_sub(21))
+        .rev()
+        .find(|&i| zip[i..i + 4] == *b"PK\x05\x06")?;
+    let count = u16le(eocd + 10)?;
+    let mut at = u32le(eocd + 16)?;
+    for _ in 0..count {
+        if zip.get(at..at + 4)? != b"PK\x01\x02" {
+            return None;
+        }
+        let method = u16le(at + 10)?;
+        let csize = u32le(at + 20)?;
+        let nlen = u16le(at + 28)?;
+        let elen = u16le(at + 30)?;
+        let clen = u16le(at + 32)?;
+        let local = u32le(at + 42)?;
+        let name = std::str::from_utf8(zip.get(at + 46..at + 46 + nlen)?).ok()?;
+        let read = || -> Option<Vec<u8>> {
+            let data_at = local + 30 + u16le(local + 26)? + u16le(local + 28)?;
+            let raw = zip.get(data_at..data_at + csize)?;
+            match method {
+                0 => Some(raw.to_vec()),
+                8 => miniz_oxide::inflate::decompress_to_vec(raw).ok(),
+                _ => None,
+            }
+        };
+        if !f(name, &read)? {
+            return Some(());
+        }
+        at += 46 + nlen + elen + clen;
+    }
+    Some(())
 }
 
 #[cfg(test)]

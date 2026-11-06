@@ -429,6 +429,15 @@ Item {
             check(r3 && !r3.skipped, "a change makes a new automatic backup");
             autoBackup.closeBackups = false; autoBackup.folder = ""; autoBackup.keep = 10;
         }],
+        ["restore zip", () => {
+            const meta = Api.get("meta", null), dir = meta.path.substring(0, meta.path.lastIndexOf("/"));
+            const zip = Api.call("backupZip", dir + "/selftest-restore.zip");
+            const r = zip ? win.restoreZip("file://" + zip.path, "file://" + dir + "/restored") : null;
+            check(r && r.path.indexOf("/restored/") > 0 && r.title === meta.title, "a zip backup restores into the chosen folder and opens (" + (r ? r.path : "failed") + ")");
+            check(Api.get("binder", []).some(x => x.title === "Arrival"), "the restored project has its documents");
+            win.openPath(meta.path);
+            check(Api.get("meta", null).path === meta.path, "the original opens again");
+        }],
         ["sprint", () => {
             ws().select(rowId("Arrival"), "editor");
             sprint.durationMin = 1; sprint.goal = 3; sprint.start();

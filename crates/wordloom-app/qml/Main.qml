@@ -255,6 +255,7 @@ ApplicationWindow {
             Action { text: qsTr("Save &As…"); enabled: Wordloom.projectOpen; onTriggered: saveAsDialog.open() }
             Action { text: qsTr("&Back Up to Zip…"); enabled: Wordloom.projectOpen; onTriggered: backupDialog.start() }
             Action { text: qsTr("Automatic Bac&kups…"); onTriggered: autoBackupDialog.open() }
+            Action { text: qsTr("Restore from &Zip Backup…"); onTriggered: restoreZipDialog.start() }
             Action { text: qsTr("Import &Manuscript…"); enabled: win.ws !== null; onTriggered: manuscriptDialog.open() }
             Action { text: qsTr("&Import File…"); shortcut: "Ctrl+Shift+I"; enabled: win.ws !== null; onTriggered: importDialog.open() }
             Action { text: qsTr("Clean Up &Unused Files…"); enabled: win.ws !== null; onTriggered: cleanupDialog.check() }
@@ -639,6 +640,37 @@ ApplicationWindow {
             lastFolder = f.substring(0, f.lastIndexOf("/"));
             write(f);
         }
+    }
+    // File ▸ Restore from Zip Backup…: pick the zip, then where to put the
+    // restored project (storage::restore_zip), and open it. The zip and
+    // anything already in that folder are left alone.
+    FileDialog {
+        id: restoreZipDialog
+        title: qsTr("Restore a Project from a Zip Backup")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Zip backups (*.zip)")]
+        function start() {
+            currentFolder = autoBackupDialog.closeBackups ? autoBackupDialog.where
+                : (backupDialog.lastFolder || StandardPaths.writableLocation(StandardPaths.DocumentsLocation));
+            open();
+        }
+        onAccepted: {
+            restoreWhereDialog.zip = selectedFile.toString();
+            restoreWhereDialog.currentFolder = StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/Wordloom";
+            restoreWhereDialog.open();
+        }
+    }
+    FolderDialog {
+        id: restoreWhereDialog
+        title: qsTr("Restore the project into…")
+        property string zip: ""
+        onAccepted: win.restoreZip(zip, selectedFolder.toString())
+    }
+    function restoreZip(zip, folder) {
+        if (Wordloom.projectOpen) { if (ws) ws.flush(); autoBackupDialog.beforeClose(); Api.call("close"); }
+        const r = Api.call("restoreZip", zip, folder);
+        if (r) Api.say(qsTr("Restored to %1").arg(r.path));
+        return r;
     }
     // File ▸ Automatic Backups…: a zip of the project, in a folder of your
     // choice, each time it's closed (if anything changed), keeping the

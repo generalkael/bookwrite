@@ -309,6 +309,12 @@ impl App {
                 let s = Session::open_with(&to_path(a.str(0)), a.bool(1))?;
                 self.opened(s)?
             }
+            // File ▸ Restore from Zip Backup…: unpack into a folder, then open.
+            "restoreZip" => {
+                let dir = crate::storage::restore_zip(&to_path(a.str(0)), &to_path(a.str(1)))?;
+                let s = Session::open(&dir)?;
+                self.opened(s)?
+            }
             // After "openProject" failed with a damaged project.json.
             "restoreBackup" => {
                 let path = to_path(a.str(0));

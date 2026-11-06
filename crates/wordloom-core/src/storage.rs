@@ -58,6 +58,77 @@ pub fn new_bundle_path(parent: &Path, title: &str) -> PathBuf {
     parent.join(format!("{safe}.{EXTENSION}"))
 }
 
+/// Unpack a zip backup (from [`backup_zip`], or any zip holding one
+/// project folder) into a new folder inside `parent`, and return it. The
+/// folder keeps the project's name; if that's taken, " (restored DATE
+/// TIME)" is added. Entries outside the project folder, and any path that
+/// would escape it, are skipped.
+pub fn restore_zip(zip_path: &Path, parent: &Path) -> Result<PathBuf> {
+    let bad = || {
+        Error::Invalid(format!(
+            "{} isn't a Wordloom zip backup",
+            zip_path.display()
+        ))
+    };
+    let data = fs::read(zip_path)?;
+    let entries = crate::zip::entries(&data).ok_or_else(bad)?;
+    // The project folder: where the shallowest project.json sits.
+    let root = entries
+        .iter()
+        .filter_map(|(n, _)| n.strip_suffix(PROJECT_FILE))
+        .filter(|prefix| prefix.is_empty() || prefix.ends_with('/'))
+        .min_by_key(|prefix| prefix.matches('/').count())
+        .map(str::to_string)
+        .ok_or_else(bad)?;
+    let name = root
+        .trim_end_matches('/')
+        .rsplit('/')
+        .next()
+        .filter(|n| !n.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| {
+            let stem = zip_path.file_stem().unwrap_or_default().to_string_lossy();
+            format!("{stem}.{EXTENSION}")
+        });
+    let mut dest = parent.join(&name);
+    if dest.exists() {
+        let stem = name.strip_suffix(&format!(".{EXTENSION}")).unwrap_or(&name);
+        let when = chrono::Local::now().format("%Y-%m-%d %H%M");
+        dest = parent.join(format!("{stem} (restored {when}).{EXTENSION}"));
+        if dest.exists() {
+            return Err(Error::Invalid(format!("{} already exists", dest.display())));
+        }
+    }
+    for (entry, bytes) in &entries {
+        let Some(rel) = entry.strip_prefix(&root) else {
+            continue;
+        };
+        if rel.is_empty() || rel.ends_with('/') {
+            continue;
+        }
+        // No absolute paths, "..", or backslash tricks.
+        let parts: Vec<&str> = rel.split('/').collect();
+        if rel.starts_with('/')
+            || rel.contains('\\')
+            || parts
+                .iter()
+                .any(|p| p.is_empty() || *p == "." || *p == "..")
+        {
+            continue;
+        }
+        let path = parts.iter().fold(dest.clone(), |d, p| d.join(p));
+        if let Some(dir) = path.parent() {
+            fs::create_dir_all(dir)?;
+        }
+        fs::write(&path, bytes)?;
+    }
+    if !is_project(&dest) {
+        let _ = fs::remove_dir_all(&dest);
+        return Err(bad());
+    }
+    Ok(dest)
+}
+
 /// The files a zip backup holds, as (path inside the project, path on
 /// disk), in a stable order.
 fn backup_files(dir: &Path) -> Result<Vec<(String, PathBuf)>> {

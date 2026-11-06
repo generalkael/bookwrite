@@ -191,48 +191,6 @@ fn is_chapter_line(p: &str) -> bool {
 
 // ---------------------------------------------------------------- docx
 
-/// The bytes of `name` in a zip archive (stored or deflated).
-fn zip_entry(zip: &[u8], name: &str) -> Option<Vec<u8>> {
-    let u16le = |i: usize| {
-        zip.get(i..i + 2)
-            .map(|b| u16::from_le_bytes([b[0], b[1]]) as usize)
-    };
-    let u32le = |i: usize| {
-        zip.get(i..i + 4)
-            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)
-    };
-    // End of central directory: the last "PK\5\6".
-    let from = zip.len().saturating_sub(22 + 65_535);
-    let eocd = (from..zip.len().saturating_sub(21))
-        .rev()
-        .find(|&i| zip[i..i + 4] == *b"PK\x05\x06")?;
-    let count = u16le(eocd + 10)?;
-    let mut at = u32le(eocd + 16)?;
-    for _ in 0..count {
-        if zip.get(at..at + 4)? != b"PK\x01\x02" {
-            return None;
-        }
-        let method = u16le(at + 10)?;
-        let csize = u32le(at + 20)?;
-        let nlen = u16le(at + 28)?;
-        let elen = u16le(at + 30)?;
-        let clen = u16le(at + 32)?;
-        let local = u32le(at + 42)?;
-        let entry = std::str::from_utf8(zip.get(at + 46..at + 46 + nlen)?).ok()?;
-        if entry == name {
-            let data_at = local + 30 + u16le(local + 26)? + u16le(local + 28)?;
-            let raw = zip.get(data_at..data_at + csize)?;
-            return match method {
-                0 => Some(raw.to_vec()),
-                8 => miniz_oxide::inflate::decompress_to_vec(raw).ok(),
-                _ => None,
-            };
-        }
-        at += 46 + nlen + elen + clen;
-    }
-    None
-}
-
 fn unescape(s: &str) -> String {
     if !s.contains('&') {
         return s.to_string();
@@ -301,9 +259,9 @@ fn style_names(styles: &str) -> Vec<(String, String)> {
 
 pub fn docx_paras(data: &[u8]) -> Result<Vec<Para>> {
     let bad = || Error::Invalid("This doesn't look like a Word document (.docx)".into());
-    let doc = zip_entry(data, "word/document.xml").ok_or_else(bad)?;
+    let doc = crate::zip::entry(data, "word/document.xml").ok_or_else(bad)?;
     let doc = String::from_utf8_lossy(&doc);
-    let styles = zip_entry(data, "word/styles.xml")
+    let styles = crate::zip::entry(data, "word/styles.xml")
         .map(|s| style_names(&String::from_utf8_lossy(&s)))
         .unwrap_or_default();
     let body = doc.split("<w:body>").nth(1).unwrap_or(&doc);

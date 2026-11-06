@@ -1552,6 +1552,63 @@ mod tests {
     }
 
     #[test]
+    fn a_zip_backup_restores_to_a_working_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut s = Session::create(tmp.path(), "Round Trip", "").unwrap();
+        let ms = s.root_id("manuscript").unwrap();
+        let a = s.add(&ms, "text", "A", true).unwrap();
+        s.set_text(&a, "Kept safe.").unwrap();
+        s.take_snapshot(&a, "v1").unwrap();
+        let out = tempfile::tempdir().unwrap();
+        let zip =
+            std::path::PathBuf::from(s.backup_zip(out.path()).unwrap()["path"].as_str().unwrap());
+        let into = tempfile::tempdir().unwrap();
+        let dir = storage::restore_zip(&zip, into.path()).unwrap();
+        assert_eq!(dir.file_name().unwrap(), "Round Trip.wordloom");
+        let back = Session::open(&dir).unwrap();
+        assert_eq!(back.text(&a).unwrap(), "Kept safe.");
+        assert_eq!(
+            storage::list_snapshots(&dir, uuid::Uuid::parse_str(&a).unwrap())
+                .unwrap()
+                .len(),
+            1
+        );
+        drop(back);
+        // Restoring again doesn't overwrite: a dated copy beside it.
+        let again = storage::restore_zip(&zip, into.path()).unwrap();
+        let name = again.file_name().unwrap().to_string_lossy().into_owned();
+        assert!(
+            name.starts_with("Round Trip (restored ") && name.ends_with(".wordloom"),
+            "{name}"
+        );
+    }
+
+    #[test]
+    fn restore_skips_paths_outside_the_project_and_rejects_other_zips() {
+        let into = tempfile::tempdir().unwrap();
+        let mut z = crate::zip::ZipWriter::new(chrono::Utc::now());
+        z.add("Evil.wordloom/project.json", b"{}");
+        z.add("Evil.wordloom/../escaped.txt", b"x");
+        z.add("Evil.wordloom//abs.txt", b"x");
+        z.add("elsewhere.txt", b"x");
+        let zip = into.path().join("evil.zip");
+        std::fs::write(&zip, z.finish()).unwrap();
+        let dir = storage::restore_zip(&zip, &into.path().join("out")).unwrap();
+        assert!(dir.join("project.json").is_file());
+        assert!(!into.path().join("out/escaped.txt").exists());
+        assert!(!into.path().join("escaped.txt").exists());
+        assert!(!into.path().join("out/elsewhere.txt").exists());
+        // Not a project at all.
+        let mut z = crate::zip::ZipWriter::new(chrono::Utc::now());
+        z.add("notes.txt", b"hello");
+        let other = into.path().join("other.zip");
+        std::fs::write(&other, z.finish()).unwrap();
+        assert!(storage::restore_zip(&other, into.path()).is_err());
+        std::fs::write(&other, b"not a zip").unwrap();
+        assert!(storage::restore_zip(&other, into.path()).is_err());
+    }
+
+    #[test]
     fn zip_backup_has_the_project_but_not_the_lock() {
         let tmp = tempfile::tempdir().unwrap();
         let mut s = Session::create(tmp.path(), "Zip Me", "").unwrap();
