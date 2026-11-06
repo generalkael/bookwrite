@@ -46,6 +46,18 @@ impl Args<'_> {
     fn str(&self, i: usize) -> &str {
         self.0.get(i).and_then(Value::as_str).unwrap_or("")
     }
+    /// An array of strings (missing or not an array: empty).
+    fn strs(&self, i: usize) -> Vec<String> {
+        self.0
+            .get(i)
+            .and_then(Value::as_array)
+            .map(|v| {
+                v.iter()
+                    .filter_map(|x| x.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
     fn int(&self, i: usize) -> i64 {
         match self.0.get(i) {
             Some(Value::Number(n)) => n.as_f64().map(|f| f.round() as i64).unwrap_or(0),
@@ -176,6 +188,17 @@ fn undo_label(method: &str, a: &Args) -> Option<(String, Option<String>)> {
         "indent" => "Indent",
         "outdent" => "Outdent",
         "trash" => "Move to Trash",
+        "trashMany" => {
+            return Some((format!("Move {} Items to Trash", a.strs(0).len()), None));
+        }
+        "setFieldMany" => {
+            let label = match a.str(1) {
+                "label" => "Change Label",
+                "status" => "Change Status",
+                _ => "Include in Compile",
+            };
+            return Some((format!("{label} ({} items)", a.strs(0).len()), None));
+        }
         "emptyTrash" => "Empty Trash",
         "duplicate" => "Duplicate",
         "split" => "Split",
@@ -410,6 +433,15 @@ impl App {
             "shift" => unit(self.s()?.shift(a.str(0), a.int(1) as i32))?,
             "indent" => unit(self.s()?.indent(a.str(0)))?,
             "outdent" => unit(self.s()?.outdent(a.str(0)))?,
+            "trashMany" => json!(self.s()?.trash_many(&a.strs(0))?),
+            "setFieldMany" => {
+                let v = match a.0.get(2) {
+                    Some(Value::String(s)) => s.clone(),
+                    Some(Value::Bool(b)) => b.to_string(),
+                    _ => String::new(),
+                };
+                json!(self.s()?.set_field_many(&a.strs(0), a.str(1), &v)?)
+            }
             "trash" => unit(self.s()?.trash(a.str(0)))?,
             "emptyTrash" => json!(self.s()?.empty_trash()),
             "duplicate" => json!(self.s()?.duplicate(a.str(0))?),
@@ -800,6 +832,81 @@ mod tests {
         assert_eq!(ok(&app.call("redo", "")), "Import File");
         let info = ok(&app.call("nodeInfo", &json!([id]).to_string()));
         assert_eq!(info["file"]["exists"], true);
+    }
+
+    #[test]
+    fn several_items_at_once_are_one_undo_step() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut app = App::new(tmp.path().join("recent.json"));
+        let url = url::Url::from_file_path(tmp.path()).unwrap().to_string();
+        ok(&app.call("newProject", &json!([url, "Book", "Me"]).to_string()));
+        let ms = ok(&app.call("rootId", r#"["manuscript"]"#));
+        let folder = ok(&app.call("add", &json!([ms, "folder", "Part", true]).to_string()));
+        let a = ok(&app.call("add", &json!([folder, "text", "A", true]).to_string()));
+        let b = ok(&app.call("add", &json!([ms, "text", "B", true]).to_string()));
+        let status = ok(&app.call("labels", ""))["statuses"][1]["id"].clone();
+        let n = ok(&app.call(
+            "setFieldMany",
+            &json!([[a, b], "status", status]).to_string(),
+        ));
+        assert_eq!(n, 2);
+        assert_eq!(
+            app.undo_redo().0.as_deref(),
+            Some("Change Status (2 items)")
+        );
+        assert_eq!(
+            ok(&app.call("nodeInfo", &json!([b]).to_string()))["status"],
+            status
+        );
+        ok(&app.call("undo", ""));
+        assert_eq!(
+            ok(&app.call("nodeInfo", &json!([a]).to_string()))["status"],
+            Value::Null
+        );
+        assert_eq!(
+            ok(&app.call("nodeInfo", &json!([b]).to_string()))["status"],
+            Value::Null
+        );
+        ok(&app.call(
+            "setFieldMany",
+            &json!([[a, b], "include_in_compile", false]).to_string(),
+        ));
+        assert_eq!(
+            ok(&app.call("nodeInfo", &json!([a]).to_string()))["include_in_compile"],
+            false
+        );
+        // Titles aren't a bulk field; a bad id changes nothing.
+        assert!(app
+            .call("setFieldMany", &json!([[a], "title", "X"]).to_string())
+            .error
+            .is_some());
+        assert!(app
+            .call(
+                "setFieldMany",
+                &json!([[a, "nope"], "label", ""]).to_string()
+            )
+            .error
+            .is_some());
+        // The folder and its own child: the child goes with the folder.
+        let moved = ok(&app.call("trashMany", &json!([[folder, a, b, ms]]).to_string()));
+        assert_eq!(
+            moved, 2,
+            "folder and B; A goes inside its folder; the section is skipped"
+        );
+        let kids = ok(&app.call("children", &json!([folder]).to_string()));
+        assert_eq!(kids.as_array().unwrap().len(), 1);
+        assert_eq!(app.undo_redo().0.as_deref(), Some("Move 4 Items to Trash"));
+        ok(&app.call("undo", ""));
+        let top: Vec<String> = ok(&app.call("children", &json!([ms]).to_string()))
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["title"].as_str().unwrap().to_string())
+            .collect();
+        assert!(
+            top.contains(&"Part".to_string()) && top.contains(&"B".to_string()),
+            "{top:?}"
+        );
     }
 
     #[test]

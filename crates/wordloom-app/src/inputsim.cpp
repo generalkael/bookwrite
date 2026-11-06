@@ -43,13 +43,14 @@ void InputSim::key(QQuickWindow *window, int key, int modifiers)
     QGuiApplication::sendEvent(window, &release);
 }
 
-void InputSim::click(QQuickWindow *window, QPointF at, int button)
+void InputSim::click(QQuickWindow *window, QPointF at, int button, int modifiers)
 {
     if (!window)
         return;
     const auto b = Qt::MouseButton(button);
-    const auto send = [window](QEvent::Type type, QPointF pos, Qt::MouseButton btn, Qt::MouseButtons buttons) {
-        QMouseEvent e(type, pos, pos, window->mapToGlobal(pos), btn, buttons, Qt::NoModifier, QPointingDevice::primaryPointingDevice());
+    const auto mods = Qt::KeyboardModifiers(modifiers);
+    const auto send = [window, mods](QEvent::Type type, QPointF pos, Qt::MouseButton btn, Qt::MouseButtons buttons) {
+        QMouseEvent e(type, pos, pos, window->mapToGlobal(pos), btn, buttons, mods, QPointingDevice::primaryPointingDevice());
         QGuiApplication::sendEvent(window, &e);
     };
     send(QEvent::MouseMove, at, Qt::NoButton, Qt::NoButton);

@@ -702,6 +702,54 @@ impl Session {
         Ok(())
     }
 
+    /// Set the same label, status or include-in-compile on several items
+    /// (the binder's multi-selection). All the ids are checked first, so
+    /// either every item changes or none does.
+    pub fn set_field_many(&mut self, ids: &[String], field: &str, value: &str) -> Result<usize> {
+        if !matches!(field, "label" | "status" | "include_in_compile") {
+            return Err(Error::Invalid(format!(
+                "{field} can't be set on several items at once"
+            )));
+        }
+        for id in ids {
+            self.project.node(parse_id(id)?)?;
+        }
+        for id in ids {
+            self.set_field(id, field, value)?;
+        }
+        Ok(ids.len())
+    }
+
+    /// Move several items to the Trash. Sections are skipped, and so is
+    /// anything inside a folder that's also being trashed (it goes with
+    /// the folder). Returns how many were moved.
+    pub fn trash_many(&mut self, ids: &[String]) -> Result<usize> {
+        let picked: Vec<Uuid> = ids.iter().map(|i| parse_id(i)).collect::<Result<_>>()?;
+        // Sections never move, so they don't count as a folder going too.
+        let picked: Vec<Uuid> = picked
+            .into_iter()
+            .filter(|&id| !self.project.is_root(id))
+            .collect();
+        let mut moved = 0;
+        for &id in &picked {
+            let mut up = self.project.node(id)?.parent;
+            let mut inside_picked = false;
+            while let Some(p) = up {
+                if picked.contains(&p) {
+                    inside_picked = true;
+                    break;
+                }
+                up = self.project.nodes.get(&p).and_then(|n| n.parent);
+            }
+            if !inside_picked {
+                self.project.trash(id)?;
+                moved += 1;
+            }
+        }
+        self.changed();
+        Ok(moved)
+    }
+
     pub fn empty_trash(&mut self) -> usize {
         let n = self.project.empty_trash().len();
         self.changed();

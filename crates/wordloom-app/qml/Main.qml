@@ -141,7 +141,7 @@ ApplicationWindow {
         property string dir: ""
         property bool dark: false
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "carddrag", "outliner", "styled", "complete", "linebar", "repeats", "footnote", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "newproject", "reader", "focus", "start"]
+        readonly property var views: ["editor", "multiselect", "corkboard", "carddrag", "outliner", "styled", "complete", "linebar", "repeats", "footnote", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "newproject", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -165,6 +165,7 @@ ApplicationWindow {
                 Theme.lineHighlight = v === "linebar";
                 Theme.highlightRepeats = v === "repeats";
                 if (v !== "split") win.ws.splitId = "";
+                win.ws.binderRef().clearPicks();
                 // The last research item: an imported file in the sample.
                 const research = Api.get("children", [], Api.call("rootId", "research"));
                 const fileItem = research.length ? research[research.length - 1].id : "";
@@ -211,6 +212,11 @@ ApplicationWindow {
                     const row = Api.get("binder", []).find(r => r.title === "Arrival");
                     if (row) win.ws.select(row.id, "editor");
                     Qt.callLater(() => { const a = win.ws.mainEditor().firstArea(); if (a) { a.forceActiveFocus(); a.cursorPosition = a.text.indexOf("lighthouse turned"); } });
+                }
+                else if (v === "multiselect") {
+                    const rows = Api.get("binder", []), id = (t) => rows.find(r => r.title === t).id;
+                    win.ws.select(id("Arrival"), "editor");
+                    Qt.callLater(() => { const b = win.ws.binderRef(); b.togglePick(id("The Keeper")); b.togglePick(id("Night Watch")); });
                 }
                 else if (v === "carddrag") {
                     win.ws.select(Api.get("binder", []).find(r => r.title === "The Storm").id, "corkboard");

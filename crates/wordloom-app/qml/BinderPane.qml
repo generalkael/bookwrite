@@ -24,7 +24,50 @@ Rectangle {
     onRevChanged: reload()
     Component.onCompleted: reload()
 
-    function reload() { rows = Api.get("binder", []); }
+    function reload() {
+        rows = Api.get("binder", []);
+        // Forget picks that went away (trashed, undone, collapsed out of view).
+        const keep = {};
+        for (const r of rows) if (picked[r.id]) keep[r.id] = true;
+        if (Object.keys(keep).length !== pickCount) picked = keep;
+    }
+
+    // ---- Multi-selection: Ctrl+click adds or removes an item, Shift+click
+    // picks a range. Right-click on a picked item, or Delete, acts on all
+    // of them (one undo step); a plain click or Esc goes back to one.
+    property var picked: ({})
+    readonly property int pickCount: Object.keys(picked).length
+    function pickedIds() { return rows.filter(r => picked[r.id]).map(r => r.id); }
+    function clearPicks() { if (pickCount) picked = {}; }
+    function togglePick(id) {
+        const p = Object.assign({}, picked);
+        // Starting a multi-selection includes the item already selected.
+        if (!pickCount && currentId && currentId !== id) p[currentId] = true;
+        if (p[id]) delete p[id]; else p[id] = true;
+        picked = p;
+    }
+    function pickRange(id) {
+        const a = rowIndex(currentId), b = rowIndex(id);
+        if (a < 0 || b < 0) { togglePick(id); return; }
+        const p = {};
+        for (let i = Math.min(a, b); i <= Math.max(a, b); ++i) p[rows[i].id] = true;
+        picked = p;
+    }
+    function trashPicked() {
+        const ids = pickedIds();
+        if (!ids.length) return;
+        const n = Api.call("trashMany", ids);
+        if (n !== undefined) { picked = {}; Api.say(qsTr("Moved %1 item(s) to the Trash").arg(n)); }
+    }
+    // The middle of item `id`'s row, in window coordinates (self-test).
+    function rowPoint(id) {
+        const i = rowIndex(id);
+        if (i < 0) return null;
+        list.positionViewAtIndex(i, ListView.Contain);
+        const it = list.itemAtIndex(i);
+        return it ? it.mapToItem(null, it.width / 2, it.height / 2) : null;
+    }
+    function setPicked(field, value) { Api.call("setFieldMany", pickedIds(), field, value); }
     function rowIndex(id) { for (let i = 0; i < rows.length; ++i) if (rows[i].id === id) return i; return -1; }
     function startRename(id) { renamingId = id; const i = rowIndex(id); if (i >= 0) list.positionViewAtIndex(i, ListView.Contain); }
     function focusSearch() { searchField.forceActiveFocus(); searchField.selectAll(); }
@@ -79,7 +122,8 @@ Rectangle {
                 if (r && r.has_children && r.expanded) Api.call("toggleExpanded", r.id);
             }
             Keys.onReturnPressed: if (pane.currentId) pane.activated(pane.currentId)
-            Keys.onDeletePressed: if (pane.currentId) { Api.call("trash", pane.currentId); }
+            Keys.onDeletePressed: { if (pane.pickCount > 1) pane.trashPicked(); else if (pane.currentId) Api.call("trash", pane.currentId); }
+            Keys.onEscapePressed: pane.clearPicks()
             Keys.onPressed: (e) => { if (e.key === Qt.Key_F2 && pane.currentId) { pane.startRename(pane.currentId); e.accepted = true; } }
 
             delegate: Item {
@@ -89,6 +133,7 @@ Rectangle {
                 width: ListView.view.width
                 height: 28
                 readonly property bool isCurrent: modelData.id === pane.currentId
+                readonly property bool isPicked: pane.pickCount > 0 && !!pane.picked[modelData.id]
                 readonly property bool isRoot: modelData.role !== null && modelData.role !== undefined
 
                 Rectangle {
@@ -96,7 +141,9 @@ Rectangle {
                     anchors.leftMargin: 4
                     anchors.rightMargin: 4
                     radius: 4
-                    color: row.isCurrent ? Theme.selection : (hover.hovered ? Qt.rgba(0.5, 0.5, 0.5, 0.12) : "transparent")
+                    color: row.isCurrent || row.isPicked ? Theme.selection : (hover.hovered ? Qt.rgba(0.5, 0.5, 0.5, 0.12) : "transparent")
+                    border.width: row.isPicked ? 1 : 0
+                    border.color: Theme.accent
                 }
                 // drop indicator
                 Rectangle {
@@ -185,8 +232,22 @@ Rectangle {
                     property point pressPos
                     property bool dragging: false
 
-                    onPressed: (m) => { pressPos = Qt.point(m.x, m.y); list.forceActiveFocus(); if (m.button === Qt.LeftButton) pane.selected(row.modelData.id); }
-                    onClicked: (m) => { if (m.button === Qt.RightButton) { pane.selected(row.modelData.id); menu.popup(); } }
+                    onPressed: (m) => {
+                        pressPos = Qt.point(m.x, m.y);
+                        list.forceActiveFocus();
+                        if (m.button !== Qt.LeftButton) return;
+                        if (m.modifiers & Qt.ControlModifier) { if (!row.isRoot) pane.togglePick(row.modelData.id); return; }
+                        if (m.modifiers & Qt.ShiftModifier) { pane.pickRange(row.modelData.id); return; }
+                        pane.clearPicks();
+                        pane.selected(row.modelData.id);
+                    }
+                    onClicked: (m) => {
+                        if (m.button !== Qt.RightButton) return;
+                        if (row.isPicked && pane.pickCount > 1) { pickMenu.popup(); return; }
+                        pane.clearPicks();
+                        pane.selected(row.modelData.id);
+                        menu.popup();
+                    }
                     onDoubleClicked: { if (row.isRoot) Api.call("toggleExpanded", row.modelData.id); else pane.startRename(row.modelData.id); }
                     onPositionChanged: (m) => {
                         if (row.isRoot || !(m.buttons & Qt.LeftButton)) return;
@@ -244,6 +305,42 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // The right-click menu for several picked items.
+    Menu {
+        id: pickMenu
+        property var meta: ({ labels: [], statuses: [] })
+        onAboutToShow: meta = Api.get("labels", { labels: [], statuses: [] })
+        MenuItem { text: qsTr("%1 items selected").arg(pane.pickCount); enabled: false }
+        MenuSeparator {}
+        Menu {
+            id: pickLabels
+            title: qsTr("Label")
+            MenuItem { text: qsTr("No Label"); onTriggered: pane.setPicked("label", "") }
+            Instantiator {
+                model: pickMenu.meta.labels
+                delegate: MenuItem { required property var modelData; text: modelData.name; onTriggered: pane.setPicked("label", modelData.id) }
+                onObjectAdded: (i, o) => pickLabels.insertItem(1 + i, o)
+                onObjectRemoved: (i, o) => pickLabels.removeItem(o)
+            }
+        }
+        Menu {
+            id: pickStatuses
+            title: qsTr("Status")
+            MenuItem { text: qsTr("No Status"); onTriggered: pane.setPicked("status", "") }
+            Instantiator {
+                model: pickMenu.meta.statuses
+                delegate: MenuItem { required property var modelData; text: modelData.name; onTriggered: pane.setPicked("status", modelData.id) }
+                onObjectAdded: (i, o) => pickStatuses.insertItem(1 + i, o)
+                onObjectRemoved: (i, o) => pickStatuses.removeItem(o)
+            }
+        }
+        MenuItem { text: qsTr("Include in Compile"); onTriggered: pane.setPicked("include_in_compile", true) }
+        MenuItem { text: qsTr("Exclude from Compile"); onTriggered: pane.setPicked("include_in_compile", false) }
+        MenuSeparator {}
+        MenuItem { text: qsTr("Move to Trash"); onTriggered: pane.trashPicked() }
+        MenuItem { text: qsTr("Select Just One"); onTriggered: pane.clearPicks() }
     }
 
     // Files dragged in from the desktop are imported as research items.

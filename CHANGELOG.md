@@ -54,6 +54,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Binder multi-selection.** Ctrl+click and Shift+click pick several items; right-click to set
+  their label or status, include or exclude them from compile, or trash them (also Delete), each
+  as one undo step. Esc or a plain click goes back to one.
 - **Faster with big books.** The editor no longer lays out what's selected while another view is
   showing: picking the Manuscript on the corkboard of a 168,000-word novel took nearly 4 seconds
   and now takes a few milliseconds, as does opening a chapter from the reader.

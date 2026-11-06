@@ -289,6 +289,29 @@ Item {
             check(!ed().stale && ed().docs.length > 0 && ed().docs[0].id === ms, "it catches up when shown (" + (ed().docs.length ? ed().docs[0].title : "none") + ")");
             ws().select(rowId("Arrival"), "editor");
         }],
+        ["binder multi-select", () => {
+            const b = ws().binderRef(), click = (t, m) => input.click(win, b.rowPoint(rowId(t)), Qt.LeftButton, m || 0);
+            click("Arrival");
+            click("The Keeper", Qt.ControlModifier);
+            click("Night Watch", Qt.ControlModifier);
+            check(b.pickCount === 3 && ws().current.title === "Arrival", "Ctrl+click picks items and keeps the open one (" + b.pickCount + ")");
+            const done = Api.get("labels", null).statuses.find(x => x.name === "Done");
+            b.setPicked("status", done.id);
+            check(["Arrival", "The Keeper", "Night Watch"].every(t => Api.get("nodeInfo", {}, rowId(t)).status === done.id), "a status is set on all of them");
+            Api.call("undo");
+            check(["Arrival", "The Keeper", "Night Watch"].every(t => Api.get("nodeInfo", {}, rowId(t)).status !== done.id), "and one Undo takes it off all of them");
+            click("Arrival");
+            check(b.pickCount === 0, "a plain click goes back to one item");
+            click("Night Watch", Qt.ShiftModifier);
+            check(b.pickedIds().map(id => b.rows[b.rowIndex(id)].title).join(",") === "Arrival,The Keeper,The Log,Night Watch", "Shift+click picks a range (" + b.pickedIds().length + ")");
+            input.key(win, Qt.Key_Escape);
+            check(b.pickCount === 0, "Esc clears it");
+            click("Arrival"); click("The Keeper", Qt.ControlModifier);
+            input.key(win, Qt.Key_Delete);
+            check(Api.get("children", [], rowId("The Storm")).length === 0, "Delete moves all the picked items to the Trash");
+            Api.call("undo");
+            check(Api.get("children", [], rowId("The Storm")).map(x => x.title).join(",") === "Arrival,The Keeper", "one Undo brings them both back");
+        }],
         ["corkboard drag", () => { ws().select(rowId("The Storm"), "corkboard"); }],
         ["corkboard drag", () => {
             const c = ws().corkboardRef(), titles = () => c.cards.map(x => x.title).join(",");
