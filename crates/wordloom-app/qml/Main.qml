@@ -82,7 +82,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "styled", "complete", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "complete", "linebar", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -102,6 +102,7 @@ ApplicationWindow {
                 compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); analysisDialog.close(); goTo.close(); win.ws.closePopups();
                 win.ws.searchFor(v === "search" ? "lighthouse" : "");
                 win.ws.focusMode = v === "focus";
+                Theme.lineHighlight = v === "linebar";
                 if (v !== "split") win.ws.splitId = "";
                 // The last research item: an imported file in the sample.
                 const research = Api.get("children", [], Api.call("rootId", "research"));
@@ -135,6 +136,11 @@ ApplicationWindow {
                     const row = Api.get("binder", []).find(r => r.title === "Night Watch");
                     if (row) win.ws.select(row.id, "editor");
                     Qt.callLater(() => { const a = win.ws.mainEditor().firstArea(); if (a) { a.forceActiveFocus(); a.cursorPosition = a.length; a.insert(a.length, "\n\nShe thought of Tob"); } });
+                }
+                else if (v === "linebar") {
+                    const row = Api.get("binder", []).find(r => r.title === "Arrival");
+                    if (row) win.ws.select(row.id, "editor");
+                    Qt.callLater(() => { const a = win.ws.mainEditor().firstArea(); if (a) { a.forceActiveFocus(); a.cursorPosition = a.text.indexOf("lighthouse turned"); } });
                 }
                 else if (v === "styled") { const row = Api.get("binder", []).find(r => r.title === "Night Watch"); if (row) win.ws.select(row.id, "editor"); }
                 else if (v === "start") win.closeProject();
@@ -264,6 +270,28 @@ ApplicationWindow {
             Action { text: qsTr("Show &Binder"); checkable: true; checked: win.ws ? win.ws.showBinder : true; onTriggered: win.ws.showBinder = !win.ws.showBinder }
             Action { text: qsTr("Show &Details"); shortcut: "Ctrl+Alt+I"; checkable: true; checked: win.ws ? win.ws.showInspector : true; onTriggered: win.ws.showInspector = !win.ws.showInspector }
             MenuSeparator {}
+            Action { text: qsTr("&Highlight Current Line"); checkable: true; checked: Theme.lineHighlight; onTriggered: Theme.lineHighlight = !Theme.lineHighlight }
+            Menu {
+                title: qsTr("Line Highlight &Colour")
+                // Presets (translucent, so text stays readable in either theme).
+                Repeater {
+                    model: [
+                        { name: qsTr("Amber"), c: "#40f2c14e" }, { name: qsTr("Blue"), c: "#3d5b9bd5" },
+                        { name: qsTr("Green"), c: "#3d6abf69" }, { name: qsTr("Rose"), c: "#3de57399" },
+                        { name: qsTr("Grey"), c: "#30808080" }
+                    ]
+                    delegate: MenuItem {
+                        required property var modelData
+                        text: modelData.name
+                        checkable: true
+                        checked: Qt.colorEqual(Theme.lineHighlightColor, modelData.c)
+                        indicator: Rectangle { x: 8; anchors.verticalCenter: parent.verticalCenter; width: 14; height: 14; radius: 3; color: modelData.c; border.color: Theme.border; border.width: parent.checked ? 2 : 1 }
+                        onTriggered: { Theme.lineHighlightColor = modelData.c; Theme.lineHighlight = true; }
+                    }
+                }
+                MenuSeparator {}
+                Action { text: qsTr("Custom Colour…"); onTriggered: { lineColourDialog.selectedColor = Theme.lineHighlightColor; lineColourDialog.open(); } }
+            }
             Action { text: qsTr("Complete &Names"); checkable: true; checked: Theme.completeNames; onTriggered: Theme.completeNames = !Theme.completeNames }
             Action { text: qsTr("Smart &Punctuation"); checkable: true; checked: Theme.smartPunctuation; onTriggered: Theme.smartPunctuation = !Theme.smartPunctuation }
             Action { text: qsTr("Check &Spelling"); shortcut: "F7"; checkable: true; checked: Theme.spellCheck; onTriggered: Theme.spellCheck = !Theme.spellCheck }
@@ -396,6 +424,12 @@ ApplicationWindow {
 
     CompileDialog { id: compileDialog; anchors.centerIn: parent }
     NameDialog { id: nameDialog; anchors.centerIn: parent }
+    ColorDialog {
+        id: lineColourDialog
+        title: qsTr("Line Highlight Colour")
+        options: ColorDialog.ShowAlphaChannel
+        onAccepted: { Theme.lineHighlightColor = selectedColor; Theme.lineHighlight = true; }
+    }
     GoToPopup {
         id: goTo
         onChosen: (id) => { Api.call("reveal", id); win.ws.select(id); }

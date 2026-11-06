@@ -41,6 +41,10 @@ QtObject {
     property bool smartPunctuation: true
     // Suggest character and place names as you type (EditorView).
     property bool completeNames: true
+    // A bar behind the line being edited (EditorView), in a colour of your
+    // choice; translucent by default so it suits light and dark themes.
+    property bool lineHighlight: false
+    property color lineHighlightColor: "#40f2c14e"
 
     // Remembered between runs (~/.config/Wordloom/Wordloom.conf on Linux).
     property Settings prefs: Settings {
@@ -53,6 +57,8 @@ QtObject {
         property alias spellCheck: theme.spellCheck
         property alias smartPunctuation: theme.smartPunctuation
         property alias completeNames: theme.completeNames
+        property alias lineHighlight: theme.lineHighlight
+        property alias lineHighlightColor: theme.lineHighlightColor
     }
 
     readonly property int gap: 8

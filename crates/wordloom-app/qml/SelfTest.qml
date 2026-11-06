@@ -76,6 +76,27 @@ Item {
             a.cursorPosition = 0;
             check(ed().showComment(id, 0) && a.selectedText === "{>> fix <<}", "clicking it selects the comment in the editor");
         }],
+        ["line highlight", () => {
+            const a = ed().firstArea();
+            a.text = "First line\nSecond line\nThird line";
+            Theme.lineHighlight = true;
+            Theme.lineHighlightColor = "#40112233";
+            a.forceActiveFocus(); ed().activeArea = a;
+            a.cursorPosition = a.text.indexOf("Third");
+        }],
+        ["line highlight", () => {
+            const a = ed().firstArea(), bar = ed().lineBarRef();
+            const caretY = a.mapToItem(bar.parent, 0, a.cursorRectangle.y).y;
+            check(bar.visible && Math.abs(bar.y - caretY) < 1 && bar.height === a.cursorRectangle.height,
+                  "the bar sits on the caret's line (bar " + Math.round(bar.y) + ", caret " + Math.round(caretY) + ")");
+            check(Qt.colorEqual(bar.color, "#40112233"), "the bar uses the chosen colour");
+            a.cursorPosition = 0;
+            check(Math.abs(bar.y - a.mapToItem(bar.parent, 0, a.cursorRectangle.y).y) < 1, "it follows the caret to another line");
+            Theme.lineHighlight = false;
+            check(!bar.visible, "it can be switched off");
+            Theme.lineHighlightColor = "#40f2c14e";
+            a.text = "";
+        }],
         ["name completion", () => {
             const a = ed().firstArea();
             a.forceActiveFocus(); ed().activeArea = a;

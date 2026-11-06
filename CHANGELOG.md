@@ -54,6 +54,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Current-line highlight.** View ▸ Highlight Current Line puts a bar behind the line you're
+  typing on (the visual line, when a paragraph wraps). View ▸ Line Highlight Colour offers
+  amber, blue, green, rose and grey presets, or *Custom Colour…* with transparency. Both are
+  remembered.
 - **Name completion.** Type the start of a character's or place's name (“Tob”) and the editor
   offers the full name (“Tobias”, “Tobias Wren”) under the caret: Tab takes it, ↑ ↓ choose, Esc
   dismisses. Names include first names and *Also known as*. View ▸ Complete Names turns it off.

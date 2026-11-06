@@ -264,6 +264,7 @@ Rectangle {
 
     // ---- hooks for `--selftest` ----
     function firstArea() { const e = editors(); return e.length ? e[0] : null; }
+    function lineBarRef() { return lineBar; }
     function testInfo() {
         const f = scroller.contentItem, a = activeArea;
         return {
@@ -593,6 +594,20 @@ Rectangle {
                     radius: 3
                     visible: ev.node !== null
 
+                    // The current-line bar (View ▸ Highlight Current Line): behind
+                    // the text, across the page, on the caret's visual line.
+                    Rectangle {
+                        id: lineBar
+                        readonly property var a: ev.activeArea
+                        visible: Theme.lineHighlight && !ev.preview && a !== null && a.activeFocus && a.visible
+                        x: 1
+                        width: page.width - 2
+                        // mapToItem isn't a live binding: depend on col.height so the bar
+                        // moves when text above it (another composite part) grows.
+                        y: { col.height; return a ? a.mapToItem(page, 0, a.cursorRectangle.y).y : 0; }
+                        height: a ? a.cursorRectangle.height : 0
+                        color: Theme.lineHighlightColor
+                    }
                     Column {
                         id: col
                         x: page.pad
