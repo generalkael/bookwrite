@@ -54,6 +54,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Text Analysis** (Project ▸ Text Analysis…, Ctrl+Shift+A), for the whole manuscript or the
+  selected item: your most used words (leaving out common ones), repeated three-word phrases, -ly
+  adverbs, the longest sentences, average sentence length and the share of dialogue. Click a word
+  or phrase to search the project for it, or a long sentence to open it in the editor.
 - **Where characters and places appear.** Select a character or place and the Details panel lists
   the manuscript documents that mention it, with a count; click one to open it with the name in
   the find bar. Names are matched as whole words with matching case: the title, a first name

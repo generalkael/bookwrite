@@ -87,6 +87,7 @@ const READ_ONLY: &[&str] = &[
     "text",
     "comments",
     "appearances",
+    "analyse",
     "labels",
     "meta",
     "search",
@@ -355,6 +356,7 @@ impl App {
             "text" => json!(self.s()?.text(a.str(0))?),
             "comments" => self.s()?.comments(a.str(0))?,
             "appearances" => self.s()?.appearances(a.str(0))?,
+            "analyse" => self.s()?.analyse(a.str(0))?,
             "setText" => unit(self.s()?.set_text(a.str(0), a.str(1)))?,
             "setField" => {
                 let v = match a.0.get(2) {

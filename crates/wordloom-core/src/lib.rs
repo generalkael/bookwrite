@@ -10,6 +10,7 @@
 //! [`Session`] bundles an open project with its location and offers the
 //! string/JSON API that the Qt front end calls.
 
+pub mod analysis;
 pub mod api;
 pub mod comments;
 pub mod compile;

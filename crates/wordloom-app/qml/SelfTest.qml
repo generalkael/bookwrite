@@ -9,6 +9,7 @@ Item {
     property var win                     // the ApplicationWindow
     property var history                 // HistoryWindow
     property var sprint                  // SprintDialog
+    property var analysis                // AnalysisDialog
     property int step: 0
     property int failures: 0
     property int passes: 0
@@ -123,6 +124,16 @@ Item {
         ["appearances", () => {
             check(ws().viewMode === "editor" && ed().findOpen && ed().matchCount > 0, "clicking one opens the scene with the name found (" + ed().matchCount + ")");
             ed().closeFind();
+        }],
+        ["text analysis", () => {
+            analysis.wholeBook = true;
+            analysis.open();
+        }],
+        ["text analysis", () => {
+            const r = analysis.r;
+            check(r !== null && r.words === Api.get("stats", null).manuscript_words, "Text Analysis counts the same words as the statistics (" + (r ? r.words : "none") + ")");
+            check(r !== null && r.top_words.length > 0 && r.top_words.every(w => w.text !== "the"), "most used words leave out common words");
+            analysis.close();
         }],
         ["zip backup", () => {
             const dir = Api.get("meta", null).path;

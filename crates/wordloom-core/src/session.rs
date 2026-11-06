@@ -383,6 +383,19 @@ impl Session {
         Ok(json!(cards))
     }
 
+    /// Text analysis of `id` and the documents under it (the manuscript if
+    /// `id` is empty).
+    pub fn analyse(&self, id: &str) -> Result<Value> {
+        let root = if id.is_empty() {
+            self.project.root(crate::model::RootRole::Manuscript)
+        } else {
+            let id = parse_id(id)?;
+            self.project.node(id)?;
+            id
+        };
+        Ok(json!(crate::analysis::analyse(&self.project, root)))
+    }
+
     /// The manuscript documents that mention character / place `id`.
     pub fn appearances(&self, id: &str) -> Result<Value> {
         let id = parse_id(id)?;

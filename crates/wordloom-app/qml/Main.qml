@@ -75,14 +75,14 @@ ApplicationWindow {
         if (selfTest.pending) Qt.callLater(selfTest.start);
     }
 
-    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog }
+    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog; analysis: analysisDialog }
 
     // Developer aid: visit every view, save a PNG of each, then quit.
     Timer {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -93,13 +93,13 @@ ApplicationWindow {
                 loader.grabToImage(r => r.saveToFile(file));
                 // Popups render in the window overlay, which can't be grabbed;
                 // capture the dialog's own content instead.
-                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog }[v];
+                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog }[v];
                 if (dlg && dlg.contentChildren.length) dlg.contentChildren[0].grabToImage(r => r.saveToFile(file.replace(".png", "-dialog.png")));
                 if (v === "history") historyWindow.contentItem.grabToImage(r => r.saveToFile(file.replace(".png", "-window.png")));
             } else if (v === undefined) {
                 stop(); Qt.quit(); return;
             } else if (win.ws) {
-                compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); win.ws.closePopups();
+                compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); analysisDialog.close(); win.ws.closePopups();
                 win.ws.searchFor(v === "search" ? "lighthouse" : "");
                 win.ws.focusMode = v === "focus";
                 if (v !== "split") win.ws.splitId = "";
@@ -111,6 +111,7 @@ ApplicationWindow {
                 else if (v === "names") nameDialog.open();
                 else if (v === "history") historyWindow.show(3);
                 else if (v === "sprint") sprintDialog.open();
+                else if (v === "analysis") analysisDialog.open();
                 else if (v === "reader") win.ws.viewMode = "reader";
                 else if (v === "stats") statsDialog.open();
                 else if (v === "settings") settingsDialog.open();
@@ -235,6 +236,7 @@ ApplicationWindow {
             Action { text: qsTr("&Find in Project"); shortcut: "Ctrl+Shift+F"; onTriggered: win.ws.focusSearch() }
             Action { text: qsTr("Writing &Statistics…"); shortcut: "Ctrl+Shift+T"; onTriggered: statsDialog.open() }
             Action { text: qsTr("Word Count &History…"); shortcut: "Ctrl+Shift+H"; onTriggered: historyWindow.show() }
+            Action { text: qsTr("Text &Analysis…"); shortcut: "Ctrl+Shift+A"; onTriggered: analysisDialog.open() }
             Action { text: qsTr("Writing Sp&rint…"); shortcut: "Ctrl+Shift+R"; onTriggered: sprintDialog.open() }
         }
         Menu {
@@ -382,6 +384,13 @@ ApplicationWindow {
 
     CompileDialog { id: compileDialog; anchors.centerIn: parent }
     NameDialog { id: nameDialog; anchors.centerIn: parent }
+    AnalysisDialog {
+        id: analysisDialog
+        anchors.centerIn: parent
+        node: win.ws ? win.ws.current : null
+        onSearchRequested: (text) => win.ws.searchFor(text)
+        onSentenceRequested: (docId, text) => win.ws.showMention(docId, text)
+    }
     HistoryWindow { id: historyWindow; transientParent: win }
     SprintDialog { id: sprintDialog; anchors.centerIn: parent; flush: () => { if (win.ws) win.ws.flush(); } }
 
