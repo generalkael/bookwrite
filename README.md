@@ -31,7 +31,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Focus mode** | F11 hides everything except the page. |
 | **Reading mode** | ❦ Read (Ctrl+7) shows the whole manuscript, or just the selected chapter, as a read-only book page: title page, centred chapter headings, scene breaks and book-style indents, built from the same compile step as export. Adjust the text size and column width, page with Page Up / Down or Space, and double-click (or *Edit*) to go back to writing. |
 | **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card, resize cards, reorder them from the context menu. |
-| **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place, with folders that fold and optional keyword and custom-field columns (POV, Setting, …). See [Using the outliner](#using-the-outliner). |
+| **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place, with folders that fold, a filter by text, label and status, and optional keyword and custom-field columns (POV, Setting, …). See [Using the outliner](#using-the-outliner). |
 | **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes and inline comments, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
 | **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The Details panel lists each character's relationships. |
@@ -65,7 +65,15 @@ Research and Notes sections work the same way.
 
 **Folding.** Click the ▸ / ▾ beside a folder to hide or show what's inside it, so you can look at
 a book chapter by chapter. **Collapse All** and **Expand All**, above the table, do every folder
-at once. The line above the table also counts the items and words below the selected folder.
+at once. The line under the table counts the items and words below the selected folder.
+
+**Filtering.** The bar above the table narrows it down: type in **Filter…** to show only items
+whose title, synopsis, keywords or custom fields contain that text (“mara” finds every scene with
+POV Mara), and pick a label or status (or *No Label* / *No Status*) to show only those. The
+filters combine, so *To Do* plus “mara” lists Mara's unwritten scenes. Each match is shown under
+its folders, which are dimmed when they don't match themselves. The line under the table counts
+the matches and their words. ✕ or Esc clears the filter. Folding is set aside while a filter is
+on.
 
 **More columns.** **Columns ▾** adds *Keywords* and any custom field used by an item below the
 selected folder (*POV*, *Setting*, *Time*, a character's *Role*…) as extra columns you can edit.
@@ -101,7 +109,7 @@ in the outliner can be undone with Edit ▸ Undo (“Undo Edit Synopsis”, “U
    or add a *POV* custom field and show it with Columns ▾.
    Its colour shows on corkboard cards and as a dot on binder rows, so you can see the balance at a
    glance.
-5. As you draft, the Words and Progress columns fill in. Change Status as scenes move from first
+5. As you draft, the Words and Progress columns fill in. Filter by *To Do* to see what's left. Change Status as scenes move from first
    draft to revised. Double-click any title to jump in and write.
 
 The **corkboard** (Ctrl+2) shows the same synopses, labels and statuses as index cards for one
@@ -327,7 +335,7 @@ Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog i
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, outliner folding and columns, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, outliner folding, columns and filter, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

@@ -143,6 +143,7 @@ ApplicationWindow {
                     const o = win.ws.outlinerRef(), log = o.rows.find(x => x.title === "The Log");
                     if (!o.hasColumn("keywords")) o.toggleColumn("keywords");
                     if (log && !o.collapsed[log.id]) o.toggle(log.id);
+                    o.filterStatus = (o.meta.statuses.find(x => x.name === "To Do") || { id: "" }).id;
                 });
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
                 else if (v === "timeline") win.ws.showLanes(false);

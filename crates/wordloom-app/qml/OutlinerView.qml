@@ -54,8 +54,52 @@ Rectangle {
         allRows = out;
         refilter();
     }
-    // Hide everything inside a collapsed folder.
+    // Filter: rows matching all of these are shown, with the folders they
+    // sit in (dimmed) for context. Folding is ignored while filtering.
+    property string filterText: ""
+    property string filterLabel: ""     // label id, "none" for no label, "" for any
+    property string filterStatus: ""    // likewise for status
+    readonly property bool filtering: isFiltering()
+    // A function, so refilter() (run from the change handlers below) never
+    // sees a stale value of the binding.
+    function isFiltering() { return filterText.trim() !== "" || filterLabel !== "" || filterStatus !== ""; }
+    property int matchCount: 0
+    property int matchWords: 0
+    onFilterTextChanged: refilter()
+    onFilterLabelChanged: refilter()
+    onFilterStatusChanged: refilter()
+    function clearFilter() { filterText = ""; filterLabel = ""; filterStatus = ""; }
+    function matches(r) {
+        const want = (f, v) => f === "" || (f === "none" ? !v : v === f);
+        if (!want(filterLabel, r.label) || !want(filterStatus, r.status)) return false;
+        const q = filterText.trim().toLowerCase();
+        if (q === "") return true;
+        const hay = [r.title, r.synopsis].concat(r.keywords || []).concat(Object.values(r.fields || {}));
+        return hay.some(h => String(h).toLowerCase().indexOf(q) >= 0);
+    }
+    // Hide everything inside a collapsed folder, or apply the filter.
     function refilter() {
+        if (isFiltering()) {
+            const shown = [], stack = [];
+            let count = 0, words = 0;
+            for (const r of allRows) {
+                stack.length = r.depth;
+                if (matches(r)) {
+                    // Folders above it that aren't shown yet, as context.
+                    for (const a of stack) if (!a.shown) { a.shown = true; shown.push(Object.assign({}, a.row, { context: true })); }
+                    shown.push(r);
+                    count++;
+                    words += r.words;
+                    stack.push({ row: r, shown: true });
+                } else {
+                    stack.push({ row: r, shown: false });
+                }
+            }
+            matchCount = count;
+            matchWords = words;
+            rows = shown;
+            return;
+        }
         const shown = [];
         let hideBelow = -1;
         for (const r of allRows) {
@@ -115,14 +159,39 @@ Rectangle {
                 anchors.leftMargin: 10
                 anchors.rightMargin: 6
                 spacing: 4
-                Label {
-                    Layout.fillWidth: true
-                    elide: Text.ElideRight
-                    color: Theme.subtext
-                    text: (ov.allRows.length === 1 ? qsTr("1 item") : qsTr("%1 items").arg(ov.allRows.length)) + " · " + qsTr("%1 words").arg(Api.fmtNumber(ov.allRows.filter(x => x.depth === 0).reduce((t, x) => t + x.total_words, 0)))
+                TextField {
+                    id: filterField
+                    Layout.preferredWidth: 170
+                    Layout.minimumWidth: 90
+                    Layout.fillWidth: false
+                    placeholderText: qsTr("Filter…")
+                    text: ov.filterText
+                    onTextEdited: ov.filterText = text
+                    selectByMouse: true
+                    Keys.onEscapePressed: ov.clearFilter()
+                    ToolTip.visible: hovered && !activeFocus
+                    ToolTip.text: qsTr("Show only items whose title, synopsis, keywords or custom fields contain this")
                 }
-                ToolButton { text: qsTr("Collapse All"); font.pixelSize: 12; onClicked: ov.setAllCollapsed(true) }
-                ToolButton { text: qsTr("Expand All"); font.pixelSize: 12; onClicked: ov.setAllCollapsed(false) }
+                ComboBox {
+                    id: labelFilter
+                    Layout.preferredWidth: 130
+                    readonly property var ids: ["", "none"].concat(ov.meta.labels.map(l => l.id))
+                    model: [qsTr("Any Label"), qsTr("No Label")].concat(ov.meta.labels.map(l => l.name))
+                    currentIndex: Math.max(0, ids.indexOf(ov.filterLabel))
+                    onActivated: (i) => ov.filterLabel = ids[i]
+                }
+                ComboBox {
+                    id: statusFilter
+                    Layout.preferredWidth: 130
+                    readonly property var ids: ["", "none"].concat(ov.meta.statuses.map(s => s.id))
+                    model: [qsTr("Any Status"), qsTr("No Status")].concat(ov.meta.statuses.map(s => s.name))
+                    currentIndex: Math.max(0, ids.indexOf(ov.filterStatus))
+                    onActivated: (i) => ov.filterStatus = ids[i]
+                }
+                ToolButton { text: "✕"; visible: ov.filtering; font.pixelSize: 12; onClicked: ov.clearFilter(); ToolTip.visible: hovered; ToolTip.text: qsTr("Clear the filter (Esc)") }
+                Item { Layout.fillWidth: true }
+                ToolButton { text: qsTr("Collapse All"); enabled: !ov.filtering; font.pixelSize: 12; onClicked: ov.setAllCollapsed(true) }
+                ToolButton { text: qsTr("Expand All"); enabled: !ov.filtering; font.pixelSize: 12; onClicked: ov.setAllCollapsed(false) }
                 ToolButton {
                     text: qsTr("Columns ▾")
                     font.pixelSize: 12
@@ -195,6 +264,8 @@ Rectangle {
                 height: Math.max(34, syn.implicitHeight + 10)
                 color: index % 2 ? Theme.panel : Theme.base
                 RowLayout {
+                    // A folder shown only because something inside it matches.
+                    opacity: r.modelData.context ? 0.5 : 1
                     anchors.fill: parent
                     anchors.leftMargin: 10
                     anchors.rightMargin: 10
@@ -208,10 +279,10 @@ Rectangle {
                         // ▸ / ▾ for folders with something inside.
                         Label {
                             Layout.preferredWidth: 14
-                            text: r.modelData.child_count > 0 ? (ov.collapsed[r.modelData.id] ? "▸" : "▾") : ""
+                            text: r.modelData.child_count > 0 && !ov.filtering ? (ov.collapsed[r.modelData.id] ? "▸" : "▾") : ""
                             color: Theme.subtext
                             horizontalAlignment: Text.AlignHCenter
-                            MouseArea { anchors.fill: parent; enabled: r.modelData.child_count > 0; cursorShape: Qt.PointingHandCursor; onClicked: ov.toggle(r.modelData.id) }
+                            MouseArea { anchors.fill: parent; enabled: r.modelData.child_count > 0 && !ov.filtering; cursorShape: Qt.PointingHandCursor; onClicked: ov.toggle(r.modelData.id) }
                         }
                         KindIcon { kind: r.modelData.kind }
                         Label {
@@ -280,6 +351,25 @@ Rectangle {
                 }
             }
         }
+        // Counts for the item, or for what the filter shows.
+        Label {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.topMargin: 4
+            Layout.bottomMargin: 4
+            elide: Text.ElideRight
+            color: Theme.subtext
+            font.pixelSize: 12
+            text: ov.filtering
+                ? qsTr("%1 of %2 items match · %3 words in them").arg(ov.matchCount).arg(ov.allRows.length).arg(Api.fmtNumber(ov.matchWords))
+                : (ov.allRows.length === 1 ? qsTr("1 item") : qsTr("%1 items").arg(ov.allRows.length)) + " · " + qsTr("%1 words").arg(Api.fmtNumber(ov.allRows.filter(x => x.depth === 0).reduce((t, x) => t + x.total_words, 0)))
+        }
+    }
+    Label {
+        anchors.centerIn: parent
+        visible: ov.allRows.length > 0 && ov.filtering && ov.matchCount === 0
+        text: qsTr("Nothing here matches the filter.")
+        color: Theme.subtext
     }
     Label {
         anchors.centerIn: parent

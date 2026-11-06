@@ -54,9 +54,12 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Outliner filter.** Filter… (title, synopsis, keywords, custom fields), a label and a status
+  narrow the outline; matches are shown under their (dimmed) folders, with a count of matches and
+  words. ✕ or Esc clears it.
 - **Outliner: folding and more columns.** Folders fold with ▸ / ▾ (or Collapse All / Expand
   All). Columns ▾ adds Keywords and any custom field used below the item (POV, Setting, Time…)
-  as editable columns, remembered between runs. A line above the table counts items and words.
+  as editable columns, remembered between runs. A line under the table counts items and words.
   When the table is wider than the pane it scrolls sideways instead of cutting off the Target and
   Progress columns.
 - README: a *Using the outliner* guide (opening it, every column, planning a book with it).

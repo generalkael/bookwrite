@@ -278,6 +278,23 @@ Item {
             check(Api.get("nodeInfo", {}, rowId("The Keeper")).keywords.join("|") === "storm|arrival", "keywords are edited comma separated");
             o.toggleColumn("field:POV");
             check(!o.hasColumn("field:POV"), "the column can be hidden again");
+            o.filterText = "mara";
+            const titles = o.rows.map(x => x.title + (x.context ? "*" : ""));
+            check(titles.indexOf("Arrival") >= 0 && titles.indexOf("The Storm*") >= 0 && titles.indexOf("The Keeper") < 0,
+                  "a text filter shows matching items under their folders (" + titles + ")");
+            o.clearFilter();
+            Api.call("setField", rowId("Confession"), "field:POV", "Zed");
+            o.filterText = "zed";
+            check(o.matchCount === 1 && o.rows.some(x => x.title === "Confession" && !x.context), "it matches custom field values (" + o.rows.map(x => x.title) + ")");
+            Api.call("setField", rowId("Confession"), "field:POV", "");
+            o.clearFilter();
+            const todo = o.meta.statuses.find(x => x.name === "To Do");
+            o.filterStatus = todo.id;
+            check(o.rows.filter(x => !x.context).every(x => x.status === todo.id) && o.matchCount >= 2, "a status filter shows only those items (" + o.matchCount + ")");
+            o.filterLabel = "none";
+            check(o.rows.filter(x => !x.context).every(x => !x.label && x.status === todo.id), "label and status filters combine");
+            o.clearFilter();
+            check(!o.filtering && o.rows.length === all, "clearing the filter shows everything again");
             Api.call("setField", rowId("Arrival"), "field:POV", ""); Api.call("setField", rowId("The Keeper"), "field:POV", ""); Api.call("setField", rowId("The Keeper"), "keywords", "");
         }],
         ["story bible", () => {
