@@ -33,7 +33,8 @@ void MarkdownHighlighter::underlineMisspellings(const QString &text, const std::
             --end;
         const QChar before = i > 0 ? text[i - 1] : QChar();
         const QChar after = j < n ? text[j] : QChar();
-        const bool address = before == QLatin1Char('/') || before == QLatin1Char('@') || before == QLatin1Char('.')
+        // Letters straight after a digit are an ordinal or unit (2nd, 10km).
+        const bool address = before.isDigit() || before == QLatin1Char('/') || before == QLatin1Char('@') || before == QLatin1Char('.')
             || after == QLatin1Char('@') || after == QLatin1Char(':') || after.isDigit()
             || (after == QLatin1Char('.') && j + 1 < n && text[j + 1].isLetter());
         if (end - i > 1 && !address) {
@@ -140,10 +141,27 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         body = n;
     }
 
+    // Inline comments, {>> … <<} on one line (as in comments.rs): no
+    // emphasis inside, tinted, with faded markers.
+    const int n = int(text.size());
+    std::vector<char> comment(n, 0);
+    static const QString cOpen = QStringLiteral("{>>"), cClose = QStringLiteral("<<}");
+    std::vector<std::pair<int, int>> comments;
+    for (int from = 0;;) {
+        const int s = int(text.indexOf(cOpen, from));
+        if (s < 0)
+            break;
+        const int c = int(text.indexOf(cClose, s + 3));
+        if (c < 0)
+            break;
+        comments.push_back({ s, c + 3 });
+        std::fill(comment.begin() + s, comment.begin() + c + 3, 1);
+        from = c + 3;
+    }
+
     // Inline emphasis: same pairing rules as compile::spans. Runs of up to
     // three * or _ open a style; the same run length closes it; unclosed
     // markers style to the end of the line; _ inside a word is literal.
-    const int n = int(text.size());
     std::vector<char> bold(n, 0), italic(n, 0), marker(n, 0);
     struct Open { int run; int pos; };
     std::vector<Open> open;
@@ -152,12 +170,12 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         open.push_back({ r, body - r });
     for (int i = body; i < n;) {
         const QChar c = text[i];
-        if (c != QLatin1Char('*') && c != QLatin1Char('_')) {
+        if (comment[i] || (c != QLatin1Char('*') && c != QLatin1Char('_'))) {
             ++i;
             continue;
         }
         int run = 0;
-        while (i + run < n && text[i + run] == c && run < 3)
+        while (i + run < n && text[i + run] == c && run < 3 && !comment[i + run])
             ++run;
         const bool insideWord = c == QLatin1Char('_') && i > 0 && text[i - 1].isLetterOrNumber()
             && i + run < n && text[i + run].isLetterOrNumber();
@@ -171,6 +189,7 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
             const Open o = open.back();
             open.pop_back();
             for (int k = std::max(body, o.pos + o.run); k < i; ++k) {
+                if (comment[k]) continue;
                 if (run >= 2) bold[k] = 1;
                 if (run != 2) italic[k] = 1;
             }
@@ -183,6 +202,7 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
     for (const Open &o : open) {
         stillOpen.push_back(o.run);
         for (int k = std::max(body, o.pos + o.run); k < n; ++k) {
+            if (comment[k]) continue;
             if (o.run >= 2) bold[k] = 1;
             if (o.run != 2) italic[k] = 1;
         }
@@ -201,6 +221,22 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
             setFormat(i, j - i, f);
         }
         i = j;
+    }
+
+    for (const auto &[s, e] : comments) {
+        for (int k = s; k < e; ++k) {
+            QTextCharFormat f = format(k);
+            f.setBackground(commentTint);
+            f.setFontItalic(false);
+            f.setFontWeight(QFont::Normal);
+            if (k < s + 3 || k >= e - 3) {
+                f.setForeground(markColor);
+                marker[k] = 1;
+            } else {
+                f.clearForeground();
+            }
+            setFormat(k, 1, f);
+        }
     }
 
     // Last, so the styling above doesn't overwrite the marks.
@@ -258,6 +294,15 @@ void MarkdownStyler::setSpellCheck(bool on)
     Q_EMIT spellCheckChanged();
 }
 
+void MarkdownStyler::setCommentColor(const QColor &c)
+{
+    if (m_commentColor == c)
+        return;
+    m_commentColor = c;
+    attach();
+    Q_EMIT commentColorChanged();
+}
+
 void MarkdownStyler::rehighlight()
 {
     if (m_highlighter)
@@ -283,6 +328,7 @@ void MarkdownStyler::attach()
     m_highlighter->spellCheck = m_spellCheck;
     m_highlighter->markColor = m_markColor;
     m_highlighter->quoteColor = m_quoteColor;
+    m_highlighter->commentTint = m_commentColor;
     m_highlighter->rehighlight();
 }
 

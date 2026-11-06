@@ -359,6 +359,23 @@ impl Session {
         Ok(json!(cards))
     }
 
+    /// Inline comments in `id` and everything under it, in binder order.
+    pub fn comments(&self, id: &str) -> Result<Value> {
+        let p = &self.project;
+        let root = parse_id(id)?;
+        p.node(root)?;
+        let mut out = Vec::new();
+        for n in p.subtree(root) {
+            for c in crate::comments::list(p.text(n)) {
+                out.push(json!({
+                    "node": n, "title": p.nodes[&n].title,
+                    "start": c.start, "end": c.end, "text": c.text,
+                }));
+            }
+        }
+        Ok(json!(out))
+    }
+
     pub fn text(&self, id: &str) -> Result<String> {
         Ok(self.project.text(parse_id(id)?).to_string())
     }
@@ -1250,5 +1267,29 @@ mod tests {
         assert_eq!(kids, vec!["Chapter 1", "B", "A"]);
         s.drop_on(&b, &a, "inside").unwrap();
         assert_eq!(s.node_info(&a).unwrap()["child_count"], 1);
+    }
+
+    #[test]
+    fn comments_are_listed_and_not_compiled() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut s = Session::create(tmp.path(), "C", "").unwrap();
+        let ms = s.root_id("manuscript").unwrap();
+        let a = s.add(&ms, "text", "A", true).unwrap();
+        s.set_text(&a, "She left. {>>Too abrupt?<<} The door shut.")
+            .unwrap();
+        let list = s.comments(&ms).unwrap();
+        assert_eq!(list[0]["text"], "Too abrupt?");
+        assert_eq!(list[0]["title"], "A");
+        assert_eq!(list[0]["start"], 10);
+        assert_eq!(s.node_info(&a).unwrap()["words"], 5);
+        let html = crate::compile::compile(
+            &s.project,
+            &crate::compile::CompileOptions {
+                format: crate::compile::Format::Html,
+                ..Default::default()
+            },
+        );
+        assert!(html.contains("She left. The door shut."));
+        assert!(!html.contains("abrupt"));
     }
 }

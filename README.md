@@ -21,12 +21,13 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | Area | What you get |
 |---|---|
 | **Binder** | A project tree with fixed sections (Manuscript, Characters, Places, Research, Notes, Trash). Drag and drop, inline rename (F2), keyboard moves (Ctrl+↑/↓ to move, Ctrl+←/→ to outdent/indent), duplicate, split at cursor, merge, convert type, trash/empty trash. Clicking a document opens it in the editor; clicking a folder with no text of its own shows its contents on the corkboard. Items with a word target (set in the Details panel) show a small progress bar, green once reached; hover it for the numbers. |
-| **Editor** | A distraction-light paper page that fills the window (or a fixed column width: ⇔ cycles Fit, 560 … 1100 px), adjustable font size, Markdown preview, and typewriter scrolling. The page scrolls to keep the caret in view as you type. In a narrow pane the editor's view and format buttons move into a ⋯ menu. **Styled Markdown**: headings, **bold**, *italic*, block quotes and scene breaks are shown styled as you type, with their Markdown markers faded, while the file on disk stays plain Markdown. The format bar (B, I, H, “, * * *) and Ctrl+B / Ctrl+I add or remove the markers for you (Ctrl+Z undoes them), and View ▸ Styled Markdown turns styling off. **Composite mode**: select a folder and every document inside it appears as one continuous manuscript you can edit, with each part saving separately. **Split editor** (◫ or Ctrl+\\, or *Open in Split Editor* in the binder): keep one document beside the main view while you work elsewhere; ⇄ swaps the two. The same document can be open in both panes. |
+| **Editor** | A distraction-light paper page that fills the window (or a fixed column width: ⇔ cycles Fit, 560 … 1100 px), adjustable font size, Markdown preview, and typewriter scrolling. The page scrolls to keep the caret in view as you type. In a narrow pane the editor's view and format buttons move into a ⋯ menu. **Styled Markdown**: headings, **bold**, *italic*, block quotes and scene breaks are shown styled as you type, with their Markdown markers faded, while the file on disk stays plain Markdown. The format bar (B, I, H, “, * * *, { } for a comment) and Ctrl+B / Ctrl+I add or remove the markers for you (Ctrl+Z undoes them), and View ▸ Styled Markdown turns styling off. **Composite mode**: select a folder and every document inside it appears as one continuous manuscript you can edit, with each part saving separately. **Split editor** (◫ or Ctrl+\\, or *Open in Split Editor* in the binder): keep one document beside the main view while you work elsewhere; ⇄ swaps the two. The same document can be open in both panes. |
+| **Inline comments** | Notes to yourself inside the text, written `{>> like this <<}`. Edit ▸ Insert Comment (Ctrl+Alt+M) or { } on the format bar adds one at the caret. They're highlighted in the editor and left out of word counts, compile, reading mode and the preview, so you can leave “check this date” right where it matters. The Details panel's Notes tab lists every comment in the item (or the folder's items); click one to jump to it. |
 | **Focus mode** | F11 hides everything except the page. |
 | **Reading mode** | ❦ Read (Ctrl+7) shows the whole manuscript, or just the selected chapter, as a read-only book page: title page, centred chapter headings, scene breaks and book-style indents, built from the same compile step as export. Adjust the text size and column width, page with Page Up / Down or Space, and double-click (or *Edit*) to go back to writing. |
 | **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card, resize cards, reorder them from the context menu. |
 | **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place. |
-| **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes, snapshots, and the timeline events linked to the item. |
+| **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes and inline comments, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
 | **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The Details panel lists each character's relationships. |
 | **Spell checking** | Misspelled words are marked in red as you type (View ▸ Check Spelling, F7). Right-click one for suggestions or *Add to Dictionary*. The names of your characters, places and timeline tracks are always accepted. Wordloom uses your system's Hunspell dictionary for your language (`/usr/share/hunspell`), or a built-in US English one; added words are kept in `~/.config/wordloom/dictionary.txt`. |
@@ -147,6 +148,7 @@ Ctrl is ⌘ on macOS.
 | Focus mode (leave with Esc) | F11 |
 | Show / hide the Details panel | Ctrl+Alt+I |
 | Bold · italic (in the editor) | Ctrl+B · Ctrl+I |
+| Insert an inline comment | Ctrl+Alt+M |
 | Larger / smaller editor text | Ctrl++ · Ctrl+− |
 | Zoom an image in the viewer | Ctrl+scroll |
 | **Binder:** move between items · expand/collapse | ↑ ↓ · → ← |
@@ -201,6 +203,7 @@ crates/
     timeline.rs    Gantt engine: tracks, events, participants, dependencies,
                    cycle rejection, cascade, conflict detection, chronology
     storage.rs     bundle format, atomic writes, backups, snapshots, imported files
+    comments.rs    inline {>> comments <<}: finding, listing, stripping for counts and compile
     compile.rs     manuscript → Markdown / HTML / plain text
     epub.rs        EPUB 3 package
     docx.rs        Word document
@@ -230,7 +233,7 @@ Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog i
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, find & replace, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, find & replace, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

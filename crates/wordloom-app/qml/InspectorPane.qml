@@ -18,10 +18,20 @@ Rectangle {
     signal openRelations()
     signal flushRequested()
     signal compareRequested(string snapId)
+    // Jump to the `n`th inline comment of document `docId`.
+    signal commentRequested(string docId, int n)
+    // {>> comments <<} in this item and the items under it.
+    property var comments: []
+    function reloadComments() {
+        const list = nodeId ? Api.get("comments", [], nodeId) : [];
+        const seen = {};
+        for (const c of list) { c.n = seen[c.node] || 0; seen[c.node] = c.n + 1; }
+        comments = list;
+    }
 
     readonly property int rev: Wordloom.revision
-    onRevChanged: meta = Api.get("labels", meta)
-    onNodeIdChanged: { reloadSnapshots(); meta = Api.get("labels", meta); }
+    onRevChanged: { meta = Api.get("labels", meta); reloadComments(); }
+    onNodeIdChanged: { reloadSnapshots(); reloadComments(); meta = Api.get("labels", meta); }
     Component.onCompleted: meta = Api.get("labels", meta)
 
     function reloadSnapshots() { snaps = nodeId ? Api.get("snapshots", [], nodeId) : []; snapIndex = -1; }
@@ -48,7 +58,7 @@ Rectangle {
             id: tabs
             Layout.fillWidth: true
             TabButton { text: qsTr("Info") }
-            TabButton { text: qsTr("Notes") }
+            TabButton { text: ip.comments.length ? qsTr("Notes (%1)").arg(ip.comments.length) : qsTr("Notes") }
             TabButton { text: qsTr("Snapshots") }
             TabButton { text: qsTr("Timeline") }
         }
@@ -220,6 +230,38 @@ Rectangle {
             // ---------------- Notes ----------------
             ColumnLayout {
                 spacing: 4
+                Label { text: qsTr("Comments in the text"); color: Theme.subtext; Layout.leftMargin: 8; Layout.topMargin: 8 }
+                ListView {
+                    id: commentList
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.min(220, contentHeight)
+                    visible: ip.comments.length > 0
+                    clip: true
+                    model: ip.comments
+                    delegate: ItemDelegate {
+                        required property var modelData
+                        width: ListView.view.width
+                        onClicked: ip.commentRequested(modelData.node, modelData.n)
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Show it in the editor")
+                        contentItem: ColumnLayout {
+                            spacing: 0
+                            Label { text: modelData.text || qsTr("(empty comment)"); textFormat: Text.PlainText; color: Theme.text; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight; Layout.fillWidth: true }
+                            Label { visible: modelData.node !== ip.nodeId; text: modelData.title; color: Theme.subtext; font.pixelSize: 11; elide: Text.ElideRight; Layout.fillWidth: true }
+                        }
+                    }
+                }
+                Label {
+                    visible: ip.comments.length === 0
+                    text: qsTr("None. Ctrl+Alt+M (or { } on the format bar) adds one: {>> like this <<}. Comments aren't counted or exported.")
+                    textFormat: Text.PlainText
+                    color: Theme.subtext
+                    font.pixelSize: 11
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 8
+                    Layout.rightMargin: 8
+                }
                 Label { text: qsTr("Document notes"); color: Theme.subtext; Layout.margins: 8 }
                 ScrollView {
                     Layout.fillWidth: true

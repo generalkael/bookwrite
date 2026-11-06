@@ -2,7 +2,7 @@
 //
 // Documents stay plain Markdown on disk; MarkdownStyler attaches a syntax
 // highlighter to a QML TextEdit's document so headings, **bold**, *italic*,
-// > quotes and scene breaks look styled while the markers themselves are
+// > quotes, scene breaks and {>> comments <<} look styled while the markers themselves are
 // faded. The rules mirror wordloom-core's compile (compile.rs), so what you
 // see is what compiles.
 #pragma once
@@ -25,6 +25,7 @@ public:
     bool styling = true;
     QColor spellColor{ 190, 50, 50 };
     QColor spellTint{ 214, 69, 69, 40 };
+    QColor commentTint{ 240, 200, 60, 70 };
 
 protected:
     void highlightBlock(const QString &text) override;
@@ -41,6 +42,7 @@ class MarkdownStyler : public QObject
     Q_PROPERTY(QColor quoteColor READ quoteColor WRITE setQuoteColor NOTIFY quoteColorChanged)
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
     Q_PROPERTY(bool spellCheck READ spellCheck WRITE setSpellCheck NOTIFY spellCheckChanged)
+    Q_PROPERTY(QColor commentColor READ commentColor WRITE setCommentColor NOTIFY commentColorChanged)
 
 public:
     explicit MarkdownStyler(QObject *parent = nullptr);
@@ -55,6 +57,8 @@ public:
     void setEnabled(bool on);
     bool spellCheck() const { return m_spellCheck; }
     void setSpellCheck(bool on);
+    QColor commentColor() const { return m_commentColor; }
+    void setCommentColor(const QColor &c);
     // Redraw, e.g. after a word was added to the personal dictionary.
     Q_INVOKABLE void rehighlight();
 
@@ -64,6 +68,7 @@ Q_SIGNALS:
     void quoteColorChanged();
     void enabledChanged();
     void spellCheckChanged();
+    void commentColorChanged();
 
 private:
     void attach();
@@ -74,6 +79,7 @@ private:
     QColor m_quoteColor{ 110, 110, 110 };
     bool m_enabled = true;
     bool m_spellCheck = false;
+    QColor m_commentColor{ 240, 200, 60, 70 };
 };
 
 // Registers MarkdownStyler as `import com.wordloom.styling` (called from main).

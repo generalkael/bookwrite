@@ -166,6 +166,17 @@ Item {
         if (!inSplit && viewMode !== "editor") viewMode = "editor";
         (inSplit ? splitEditor : editorView).openFind(withReplace);
     }
+    // Insert a {>> comment <<} where you are typing.
+    function insertComment() {
+        const inSplit = splitId !== "" && splitEditor.activeArea && splitEditor.activeArea.activeFocus;
+        if (!inSplit && viewMode !== "editor") viewMode = "editor";
+        (inSplit ? splitEditor : editorView).insertComment();
+    }
+    // Jump to a comment listed in the Details panel.
+    function showComment(docId, n) {
+        if (viewMode !== "editor") viewMode = "editor";
+        Qt.callLater(() => editorView.showComment(docId, n));
+    }
     function eventDialog() { return gantt.eventDialogRef; }
     function closePopups() { gantt.closeDialogs(); compareDialog.close(); relationsView.dialogRef.close(); }
     function relationDialogRef() { return relationsView.dialogRef; }
@@ -377,6 +388,7 @@ Item {
                 onFlushRequested: ws.flush()
                 onCompareRequested: (snapId) => ws.compareSnapshot(snapId)
                 onOpenRelations: ws.viewMode = "relations"
+                onCommentRequested: (docId, n) => ws.showComment(docId, n)
             }
         }
 

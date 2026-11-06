@@ -7,8 +7,10 @@ use serde::{Deserialize, Serialize};
 
 /// Count words the way writers expect: runs of letters/digits, with
 /// apostrophes and hyphens inside a word not splitting it. Markdown markup
-/// characters on their own are not words.
+/// characters on their own are not words, and neither are inline
+/// `{>> comments <<}`.
 pub fn count_words(text: &str) -> usize {
+    let text = crate::comments::strip(text);
     let mut count = 0;
     let mut in_word = false;
     for c in text.chars() {
@@ -27,7 +29,10 @@ pub fn count_words(text: &str) -> usize {
 }
 
 pub fn count_chars(text: &str) -> usize {
-    text.chars().filter(|c| !c.is_whitespace()).count()
+    crate::comments::strip(text)
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .count()
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
@@ -352,6 +357,7 @@ mod tests {
         assert_eq!(count_words("don't stop — well-known"), 3);
         assert_eq!(count_words("# Heading\n\n* item *two*"), 3);
         assert_eq!(count_words("Ünïcödé façade 42"), 3);
+        assert_eq!(count_words("Two {>>not counted at all<<} words"), 2);
     }
 
     #[test]

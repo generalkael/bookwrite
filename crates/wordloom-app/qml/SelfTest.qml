@@ -59,6 +59,20 @@ Item {
             a.cursorPosition = 2; ed().cycleHeading();
             check(a.text.startsWith("# "), "the heading button adds #");
         }],
+        ["comments", () => {
+            const a = ed().firstArea();
+            a.text = "one two";
+            a.cursorPosition = 7; ed().activeArea = a; ed().insertComment();
+            a.insert(a.cursorPosition, "fix");
+            check(a.text === "one two {>> fix <<}", "the comment button inserts {>> <<} with the caret inside: " + JSON.stringify(a.text));
+            ed().flush();
+            const id = ws().currentId;
+            check(Api.get("nodeInfo", null, id).words === 2, "a comment isn't counted as words");
+            const cs = Api.get("comments", [], id);
+            check(cs.length === 1 && cs[0].text === "fix", "Details lists the comment");
+            a.cursorPosition = 0;
+            check(ed().showComment(id, 0) && a.selectedText === "{>> fix <<}", "clicking it selects the comment in the editor");
+        }],
         ["find & replace", () => {
             const a = ed().firstArea();
             a.text = "the cat and then the dog";

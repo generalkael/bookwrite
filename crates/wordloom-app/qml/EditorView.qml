@@ -94,6 +94,39 @@ Rectangle {
         a.insert(p, before + "* * *\n\n");
     }
 
+    // ---- Inline comments, {>> like this <<}: notes left in the text that
+    // word counts, compile and reading mode ignore (core: comments.rs).
+    readonly property var commentPattern: /\{>>[^\n]*?<<\}/g
+    function insertComment() {
+        const a = activeArea;
+        if (!a) return;
+        const p = a.selectionEnd, t = a.text;
+        const lead = p > 0 && !/\s/.test(t[p - 1]) ? " " : "";
+        a.insert(p, lead + "{>>  <<}");
+        a.select(p + lead.length + 4, p + lead.length + 4);
+        a.forceActiveFocus();
+    }
+    // Select the `n`th comment of document `docId` (as listed in Details).
+    function showComment(docId, n) {
+        for (let i = 0; i < rep.count; ++i) {
+            const it = rep.itemAt(i);
+            if (!it || it.docId !== docId) continue;
+            const a = it.editor;
+            const re = new RegExp(commentPattern.source, "g");
+            let m, k = 0;
+            while ((m = re.exec(a.text)) !== null) {
+                if (k++ === n) {
+                    activeArea = a;
+                    a.forceActiveFocus();
+                    a.select(m.index, m.index + m[0].length);
+                    Qt.callLater(revealCursor, a, true);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // Scroll so the caret in `a` is visible (or centred, in typewriter mode).
     function revealCursor(a, force) {
         if (!a || (!a.activeFocus && !force)) return;
@@ -276,7 +309,8 @@ Rectangle {
                         { label: "I", tip: qsTr("Italic (Ctrl+I)"), act: () => ev.toggleEmphasis(1), italic: true },
                         { label: "H", tip: qsTr("Heading: none → # → ## → ###"), act: () => ev.cycleHeading(), bold: true },
                         { label: "“", tip: qsTr("Block quote"), act: () => ev.toggleQuote() },
-                        { label: "* * *", tip: qsTr("Scene break"), act: () => ev.sceneBreak() }
+                        { label: "* * *", tip: qsTr("Scene break"), act: () => ev.sceneBreak() },
+                        { label: "{ }", tip: qsTr("Comment: a note to yourself that isn't exported or counted (Ctrl+Alt+M)"), act: () => ev.insertComment() }
                     ]
                     delegate: ToolButton {
                         required property var modelData
@@ -317,6 +351,7 @@ Rectangle {
                         MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Heading"); enabled: ev.activeArea !== null; onTriggered: ev.cycleHeading() }
                         MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Block Quote"); enabled: ev.activeArea !== null; onTriggered: ev.toggleQuote() }
                         MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Scene Break"); enabled: ev.activeArea !== null; onTriggered: ev.sceneBreak() }
+                        MenuItem { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0; text: qsTr("Comment"); enabled: ev.activeArea !== null; onTriggered: ev.insertComment() }
                         MenuSeparator { visible: header.tiny && !ev.preview; height: visible ? implicitHeight : 0 }
                         MenuItem { text: qsTr("Preview"); checkable: true; checked: ev.preview; onTriggered: { ev.flush(); ev.preview = !ev.preview; } }
                         MenuItem { text: qsTr("Typewriter Scrolling"); checkable: true; checked: ev.typewriter; onTriggered: ev.typewriter = !ev.typewriter }
@@ -625,6 +660,7 @@ Rectangle {
                 spellCheck: Theme.spellCheck
                 markColor: Theme.dark ? "#6f6d68" : "#b3afa6"
                 quoteColor: Theme.subtext
+                commentColor: Theme.dark ? Qt.rgba(0.85, 0.68, 0.2, 0.24) : Qt.rgba(0.96, 0.78, 0.2, 0.34)
             }
             onCursorPositionChanged: if (activeFocus) ev.activeCursor = cursorPosition
             // Keep the caret on screen as you type, move or the text reflows.
@@ -635,7 +671,7 @@ Rectangle {
         Text {
             visible: ev.preview
             Layout.fillWidth: true
-            text: area.text
+            text: area.text.replace(ev.commentPattern, "")
             textFormat: Text.MarkdownText
             wrapMode: Text.Wrap
             font.family: Theme.editorFont

@@ -61,7 +61,7 @@ impl Default for CompileOptions {
 /// One unit of compiled output, before it is rendered to a format.
 pub(crate) enum Piece<'a> {
     Heading(usize, String),
-    Body(&'a str),
+    Body(std::borrow::Cow<'a, str>),
     Separator,
 }
 
@@ -134,7 +134,11 @@ fn collect<'a>(
     } else if !is_folder && matches!(out.last(), Some(Piece::Body(_))) {
         out.push(Piece::Separator);
     }
-    let text = p.text(id).trim();
+    // Inline comments are notes for the writer, not part of the book.
+    let text = match crate::comments::strip(p.text(id)) {
+        std::borrow::Cow::Borrowed(t) => std::borrow::Cow::Borrowed(t.trim()),
+        std::borrow::Cow::Owned(t) => std::borrow::Cow::Owned(t.trim().to_string()),
+    };
     if !text.is_empty() {
         out.push(Piece::Body(text));
     }

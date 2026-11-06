@@ -11,6 +11,7 @@
 //! string/JSON API that the Qt front end calls.
 
 pub mod api;
+pub mod comments;
 pub mod compile;
 pub mod demo;
 pub mod diff;
