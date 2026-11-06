@@ -54,6 +54,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Footnotes.** Edit ▸ Insert Footnote (Ctrl+Alt+F), or Markdown's `[^label]` with a
+  `[^label]: note` paragraph in the same document. Compile numbers them through the book: real
+  footnotes in Word, linked superscripts and a Notes section in HTML and EPUB, a Notes chapter in
+  PDF, `[^n]` in Markdown and `[n]` in plain text. The editor fades references and greys notes.
 - **Drag and drop on the corkboard.** Drag a card by any part that isn't text to move it before or
   after another card (a bar marks the spot), or onto the middle of a folder card to move it
   inside. Undo puts it back. Dragging across a card's text still selects the text.

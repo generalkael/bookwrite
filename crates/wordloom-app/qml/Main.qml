@@ -93,7 +93,7 @@ ApplicationWindow {
         property string dir: ""
         property bool dark: false
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "carddrag", "outliner", "styled", "complete", "linebar", "repeats", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "carddrag", "outliner", "styled", "complete", "linebar", "repeats", "footnote", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -165,6 +165,18 @@ ApplicationWindow {
                 else if (v === "carddrag") {
                     win.ws.select(Api.get("binder", []).find(r => r.title === "The Storm").id, "corkboard");
                     Qt.callLater(() => { const c = win.ws.corkboardRef(); const k = c.cards.find(x => x.title === "The Keeper"); if (k) { c.startDrag(k.id, k.title); c.updateDrag(c.cardPoint(0, 0.25)); } });
+                }
+                else if (v === "footnote") {
+                    const row = Api.get("binder", []).find(r => r.title === "Arrival");
+                    if (row) win.ws.select(row.id, "editor");
+                    Qt.callLater(() => {
+                        const a = win.ws.mainEditor().firstArea();
+                        if (!a) return;
+                        a.forceActiveFocus(); win.ws.mainEditor().activeArea = a;
+                        a.cursorPosition = a.text.indexOf("soft.") + 5;
+                        win.ws.insertFootnote();
+                        a.insert(a.length, "Her father's last letter, posted from the mainland in *October*.");
+                    });
                 }
                 else if (v === "repeats") {
                     const row = Api.get("binder", []).find(r => r.title === "Arrival");
@@ -264,6 +276,7 @@ ApplicationWindow {
             MenuSeparator {}
             Action { text: qsTr("Con&vert to Smart Punctuation"); enabled: win.ws !== null; onTriggered: win.ws.smartenDocument() }
             Action { text: qsTr("Insert &Comment"); shortcut: "Ctrl+Alt+M"; enabled: win.ws !== null; onTriggered: win.ws.insertComment() }
+            Action { text: qsTr("Insert &Footnote"); shortcut: "Ctrl+Alt+F"; enabled: win.ws !== null; onTriggered: win.ws.insertFootnote() }
         }
         Menu {
             title: qsTr("&Project")

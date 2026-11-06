@@ -96,6 +96,19 @@ Item {
             check(a.tintAt(a.text.indexOf("window") + 1).a === 0, "it can be switched off (" + a.tintAt(a.text.indexOf("window") + 1) + ")");
             a.text = "";
         }],
+        ["footnotes", () => {
+            const a = ed().firstArea();
+            a.text = "The log lied.\n\n";
+            a.forceActiveFocus(); ed().activeArea = a;
+            a.cursorPosition = a.text.indexOf(".") + 1;
+            ws().insertFootnote();
+            check(a.text === "The log lied.[^1]\n\n[^1]: " && a.cursorPosition === a.length, "Insert Footnote adds [^1] and its note at the end (" + JSON.stringify(a.text) + ")");
+            a.insert(a.length, "Pages were cut.");
+            a.cursorPosition = a.text.indexOf("lied") + 4;
+            ws().insertFootnote();
+            check(a.text === "The log lied[^2].[^1]\n\n[^1]: Pages were cut.\n\n[^2]: ", "the next one is numbered 2 (" + JSON.stringify(a.text) + ")");
+            a.text = "";
+        }],
         ["line highlight", () => {
             const a = ed().firstArea();
             a.text = "First line\nSecond line\nThird line";

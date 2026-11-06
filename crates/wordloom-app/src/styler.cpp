@@ -261,6 +261,28 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         }
     }
 
+    // Footnotes (footnotes.rs): a definition line "[^label]: …" is shown in
+    // the quote colour; every "[^label]" is faded and not spell-checked.
+    static const QRegularExpression noteDef(QStringLiteral("^\\[\\^[^\\]\\s\\[^]+\\]:"));
+    if (noteDef.match(text).hasMatch()) {
+        for (int k = 0; k < n; ++k) {
+            QTextCharFormat f = format(k);
+            f.setForeground(quoteColor);
+            setFormat(k, 1, f);
+        }
+    }
+    static const QRegularExpression noteRef(QStringLiteral("\\[\\^[^\\]\\s\\[^]+\\]"));
+    for (auto it = noteRef.globalMatch(text); it.hasNext();) {
+        const auto m = it.next();
+        for (int k = int(m.capturedStart()); k < int(m.capturedEnd()); ++k) {
+            if (comment[k]) continue;
+            QTextCharFormat f = format(k);
+            f.setForeground(markColor);
+            setFormat(k, 1, f);
+            marker[k] = 1;
+        }
+    }
+
     // Last, so the styling above doesn't overwrite the marks.
     if (repeats)
         tintRepeats(text);

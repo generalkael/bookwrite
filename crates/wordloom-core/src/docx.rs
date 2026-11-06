@@ -17,6 +17,7 @@ const CONTENT_TYPES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
 <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 </Types>
 "#;
@@ -31,6 +32,7 @@ const RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 const DOC_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
 </Relationships>
 "#;
 
@@ -50,6 +52,8 @@ const STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:basedOn w:val="Normal"/><w:next w:val="FirstParagraph"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="360" w:after="120"/><w:ind w:firstLine="0"/><w:outlineLvl w:val="2"/></w:pPr><w:rPr><w:b/><w:i/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Separator"><w:name w:val="Scene Separator"/><w:basedOn w:val="Normal"/><w:next w:val="FirstParagraph"/><w:qFormat/><w:pPr><w:spacing w:before="240" w:after="240"/><w:ind w:firstLine="0"/><w:jc w:val="center"/></w:pPr></w:style>
 <w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:next w:val="FirstParagraph"/><w:qFormat/><w:pPr><w:spacing w:before="120" w:after="120"/><w:ind w:left="720" w:right="720" w:firstLine="0"/></w:pPr><w:rPr><w:i/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="FootnoteText"><w:name w:val="footnote text"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:line="240" w:lineRule="auto"/><w:ind w:firstLine="0"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
+<w:style w:type="character" w:styleId="FootnoteReference"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>
 </w:styles>
 "#;
 
@@ -66,8 +70,11 @@ pub(crate) fn build(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> Vec
                 .push_str("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>\n");
         }
     }
+    let mut notes: &[String] = &[];
     for piece in pieces {
         match piece {
+            // Real footnotes, at the foot of the page (footnotes.xml).
+            Piece::Notes(n) => notes = n,
             Piece::Heading(d, t) => body.heading(*d, t),
             Piece::Separator => body.para("Separator", &opts.scene_separator, false),
             Piece::Body(md) => {
@@ -125,6 +132,7 @@ pub(crate) fn build(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> Vec
     z.add("word/_rels/document.xml.rels", DOC_RELS.as_bytes());
     z.add("word/styles.xml", STYLES.as_bytes());
     z.add("word/document.xml", document.as_bytes());
+    z.add("word/footnotes.xml", footnotes_xml(notes).as_bytes());
     z.finish()
 }
 
@@ -157,7 +165,47 @@ impl Body {
     }
 }
 
+/// The footnotes part: Word's two separators, then one footnote per note
+/// (ids match the numbers in the text).
+fn footnotes_xml(notes: &[String]) -> String {
+    let mut x = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:footnotes xmlns:w=\"{W}\">\n\
+         <w:footnote w:type=\"separator\" w:id=\"-1\"><w:p><w:pPr><w:spacing w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/></w:pPr><w:r><w:separator/></w:r></w:p></w:footnote>\n\
+         <w:footnote w:type=\"continuationSeparator\" w:id=\"0\"><w:p><w:pPr><w:spacing w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/></w:pPr><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>\n"
+    );
+    for (i, note) in notes.iter().enumerate() {
+        x.push_str(&format!(
+            "<w:footnote w:id=\"{}\"><w:p><w:pPr><w:pStyle w:val=\"FootnoteText\"/></w:pPr>\
+             <w:r><w:rPr><w:rStyle w:val=\"FootnoteReference\"/></w:rPr><w:footnoteRef/></w:r>",
+            i + 1
+        ));
+        run(&mut x, " ", false, false);
+        for s in spans(note) {
+            run(&mut x, &s.text, s.bold, s.italic);
+        }
+        x.push_str("</w:p></w:footnote>\n");
+    }
+    x.push_str("</w:footnotes>\n");
+    x
+}
+
+/// A run of text; note markers in it become footnote references.
 fn run(xml: &mut String, text: &str, bold: bool, italic: bool) {
+    if text.contains(crate::footnotes::OPEN) {
+        for (t, n) in crate::footnotes::split(text) {
+            plain_run(xml, &t, bold, italic);
+            if let Some(n) = n {
+                xml.push_str(&format!(
+                    "<w:r><w:rPr><w:rStyle w:val=\"FootnoteReference\"/></w:rPr><w:footnoteReference w:id=\"{n}\"/></w:r>"
+                ));
+            }
+        }
+        return;
+    }
+    plain_run(xml, text, bold, italic);
+}
+
+fn plain_run(xml: &mut String, text: &str, bold: bool, italic: bool) {
     if text.is_empty() {
         return;
     }

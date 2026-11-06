@@ -74,6 +74,7 @@ pub fn print_html(p: &Project, opts: &CompileOptions, style: PdfStyle) -> String
     // style; manuscripts indent every paragraph).
     let mut first = true;
     let mut started = false;
+    let mut ended = false;
     let heading = |body: &mut String, d: usize, t: &str, started: &mut bool| {
         if d <= 1 {
             // A chapter: the app starts it on a new page.
@@ -87,6 +88,24 @@ pub fn print_html(p: &Project, opts: &CompileOptions, style: PdfStyle) -> String
     };
     for piece in pieces(p, opts) {
         match piece {
+            // Endnotes: a chapter of their own, numbered.
+            Piece::Notes(notes) => {
+                // A manuscript's END goes after the story, before the notes.
+                if style == PdfStyle::Manuscript && started && !ended {
+                    body.push_str(&format!("<p style=\"{}\">END</p>\n", look.sep));
+                    ended = true;
+                }
+                heading(&mut body, 1, "Notes", &mut started);
+                for (i, n) in notes.iter().enumerate() {
+                    body.push_str(&format!(
+                        "<p style=\"{}\">{}. {}</p>\n",
+                        look.first,
+                        i + 1,
+                        inline_html(n)
+                    ));
+                }
+                first = true;
+            }
             Piece::Heading(d, t) => {
                 heading(&mut body, d, &t, &mut started);
                 first = true;
@@ -130,9 +149,11 @@ pub fn print_html(p: &Project, opts: &CompileOptions, style: PdfStyle) -> String
             }
         }
     }
-    if style == PdfStyle::Manuscript && started {
+    if style == PdfStyle::Manuscript && started && !ended {
         body.push_str(&format!("<p style=\"{}\">END</p>\n", look.sep));
     }
+    // The notes are in the same document.
+    let body = body.replace(crate::footnotes::NOTES_FILE, "");
     format!("<html><body>\n{body}</body></html>\n")
 }
 

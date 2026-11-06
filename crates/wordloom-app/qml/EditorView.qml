@@ -223,6 +223,25 @@ Rectangle {
         a.select(p + lead.length + 4, p + lead.length + 4);
         a.forceActiveFocus();
     }
+    // Edit ▸ Insert Footnote: "[^n]" at the caret (n = the next number not
+    // used in this document) and "[^n]: " at the end of the document, with
+    // the caret there to type the note (footnotes.rs).
+    function insertFootnote() {
+        const a = activeArea;
+        if (!a) return;
+        let n = 1;
+        // (No String.matchAll in QML's JavaScript.)
+        const used = /\[\^(\d+)\]/g;
+        for (let m = used.exec(a.text); m; m = used.exec(a.text)) n = Math.max(n, Number(m[1]) + 1);
+        const p = a.selectionEnd;
+        a.insert(p, "[^" + n + "]");
+        const tail = a.text.replace(/\s+$/, "");
+        const gap = tail.length ? "\n\n" : "";
+        a.remove(tail.length, a.length);
+        a.insert(a.length, gap + "[^" + n + "]: ");
+        a.cursorPosition = a.length;
+        a.forceActiveFocus();
+    }
     // Select the `n`th comment of document `docId` (as listed in Details).
     function showComment(docId, n) {
         for (let i = 0; i < rep.count; ++i) {

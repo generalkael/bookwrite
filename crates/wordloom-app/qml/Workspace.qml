@@ -194,6 +194,11 @@ Item {
         if (!inSplit && viewMode !== "editor") viewMode = "editor";
         (inSplit ? splitEditor : editorView).insertComment();
     }
+    // Insert a footnote reference where you are typing, and its note at the end.
+    function insertFootnote() {
+        if (!inSplit && viewMode !== "editor") viewMode = "editor";
+        (inSplit ? splitEditor : editorView).insertFootnote();
+    }
     // Open a document from a character's "Appears in" list, with the name
     // in the find bar so each mention is a keypress away.
     function showMention(docId, name) {

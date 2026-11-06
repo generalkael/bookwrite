@@ -24,6 +24,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Editor** | A distraction-light paper page that fills the window (or a fixed column width: ⇔ cycles Fit, 560 … 1100 px), adjustable font size, Markdown preview, and typewriter scrolling. The page scrolls to keep the caret in view as you type. In a narrow pane the editor's view and format buttons move into a ⋯ menu. **Styled Markdown**: headings, **bold**, *italic*, block quotes and scene breaks are shown styled as you type, with their Markdown markers faded, while the file on disk stays plain Markdown. The format bar (B, I, H, “, * * *, { } for a comment) and Ctrl+B / Ctrl+I add or remove the markers for you (Ctrl+Z undoes them), and View ▸ Styled Markdown turns styling off. **Composite mode**: select a folder and every document inside it appears as one continuous manuscript you can edit, with each part saving separately. **Split editor** (◫ or Ctrl+\\, or *Open in Split Editor* in the binder): keep one document beside the main view while you work elsewhere; ⇄ swaps the two. The same document can be open in both panes. Picking an item in the binder (or with Go to…) opens it in whichever pane you were last typing in, marked by a thin accent line on that pane's header; the binder highlight, the Details panel, the word count and commands like Snapshot and Duplicate follow that pane's document. |
 | **Appearances** | Select a character or place and the Details panel shows **Appears in**: every manuscript document that mentions it, with how many times, in manuscript order. Click one to open it with the name in the find bar (F3 steps through the mentions). Wordloom looks for the title, the first name of a multi-word name (“Mara” for “Mara Quinn”) and the names in the *Also known as* field (comma-separated), as whole words with matching case, so “Rose” isn't found in “rose from her chair”. Text in comments doesn't count. |
 | **Inline comments** | Notes to yourself inside the text, written `{>> like this <<}`. Edit ▸ Insert Comment (Ctrl+Alt+M) or { } on the format bar adds one at the caret. They're highlighted in the editor and left out of word counts, compile, reading mode and the preview, so you can leave “check this date” right where it matters. The Details panel's Notes tab lists every comment in the item (or the folder's items); click one to jump to it. |
+| **Footnotes** | Edit ▸ Insert Footnote (Ctrl+Alt+F) puts `[^1]` at the caret and `[^1]: ` at the end of the document, ready for the note; or type them yourself in the usual Markdown way (any label works: `[^log]`). The note goes in its own paragraph in the same document as the reference. The editor fades references and shows notes in grey. Compile numbers the notes through the whole book in reading order and takes them out of the text. Word gets real footnotes at the foot of the page; PDF, HTML and EPUB get superscript numbers (linked in HTML and EPUB) and a **Notes** section at the end (after END in a manuscript); Markdown keeps `[^n]` with the notes at the end; plain text uses `[n]`. A reference with no note is left as typed. |
 | **Repeated words** | View ▸ Highlight Repeated Words tints a word in soft blue when it's used again within about 40 words in the same paragraph (“she climbed toward the lamp room, and the lamp room…”), so echoes stand out while you revise. Both uses are marked. Words shorter than four letters, common words (“that”, “said”, “would”, “through”), capitalised words (names, sentence starts) and text inside comments are ignored; case and curly or straight apostrophes don't matter. It updates as you type and is off by default. |
 | **Current-line highlight** | View ▸ Highlight Current Line shows a bar across the page behind the line you're typing on, following the caret (on the line as wrapped on screen). Choose its colour in View ▸ Line Highlight Colour: amber, blue, green, rose or grey, or *Custom Colour…* for any colour and transparency. The presets are translucent, so they work in light and dark themes. |
 | **Name completion** | Start typing a character's or place's name with a capital letter (“Tob”) and the editor offers the names it could be (“Tobias”, “Tobias Wren”) just under the caret. Tab takes the highlighted one, ↑ ↓ choose another, Esc (or just carrying on typing) dismisses them. It knows titles, first names and the *Also known as* field, and completes names of more than one word (“Mara Q” → “Mara Quinn”). View ▸ Complete Names turns it off. |
@@ -226,6 +227,7 @@ Ctrl is ⌘ on macOS.
 | Show / hide the Details panel | Ctrl+Alt+I |
 | Bold · italic (in the editor) | Ctrl+B · Ctrl+I |
 | Insert an inline comment | Ctrl+Alt+M |
+| Insert a footnote | Ctrl+Alt+F |
 | Larger / smaller editor text | Ctrl++ · Ctrl+− |
 | Zoom an image in the viewer | Ctrl+scroll |
 | **Binder:** move between items · expand/collapse | ↑ ↓ · → ← |
@@ -308,6 +310,7 @@ crates/
     goto.rs        Go to…: ranking binder items by title
     import.rs      Import Manuscript: .docx / Markdown / text → chapters and scenes
     smart.rs       smart quotes, dashes and ellipses
+    footnotes.rs   numbering footnotes for compile
     bible.rs       the story bible: characters and places as one document
     repeats.rs     repeated words nearby in a paragraph (the editor's echo tint)
     relations.rs   character relationships and map positions
@@ -337,7 +340,7 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 to take them in the dark theme.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, outliner folding, columns and filter, corkboard drag and drop, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, footnotes, line highlight, repeated words, outliner folding, columns and filter, corkboard drag and drop, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

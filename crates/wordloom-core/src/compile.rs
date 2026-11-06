@@ -69,6 +69,8 @@ pub(crate) enum Piece<'a> {
     Heading(usize, String),
     Body(std::borrow::Cow<'a, str>),
     Separator,
+    /// The book's footnotes, numbered from 1 (footnotes.rs), at the end.
+    Notes(Vec<String>),
 }
 
 /// Compile to text. EPUB and DOCX return an HTML preview of their content;
@@ -111,10 +113,14 @@ pub(crate) fn pieces<'a>(p: &'a Project, opts: &CompileOptions) -> Vec<Piece<'a>
     let root = opts.root.unwrap_or_else(|| p.root(RootRole::Manuscript));
     let mut pieces = Vec::new();
     let mut chapter = 0;
+    let mut notes = Vec::new();
     if let Some(n) = p.nodes.get(&root) {
         for c in &n.children {
-            collect(p, *c, 1, opts, &mut pieces, &mut chapter);
+            collect(p, *c, 1, opts, &mut pieces, &mut chapter, &mut notes);
         }
+    }
+    if !notes.is_empty() {
+        pieces.push(Piece::Notes(notes));
     }
     pieces
 }
@@ -126,6 +132,7 @@ fn collect<'a>(
     opts: &CompileOptions,
     out: &mut Vec<Piece<'a>>,
     chapter: &mut usize,
+    notes: &mut Vec<String>,
 ) {
     let n = &p.nodes[&id];
     if !n.include_in_compile {
@@ -159,11 +166,16 @@ fn collect<'a>(
         std::borrow::Cow::Borrowed(t) => std::borrow::Cow::Borrowed(t.trim()),
         std::borrow::Cow::Owned(t) => std::borrow::Cow::Owned(t.trim().to_string()),
     };
+    // Footnote definitions come out; references become numbered markers.
+    let text = match crate::footnotes::number(&text, notes) {
+        Some(t) => std::borrow::Cow::Owned(t.trim().to_string()),
+        None => text,
+    };
     if !text.is_empty() {
         out.push(Piece::Body(text));
     }
     for c in &n.children {
-        collect(p, *c, depth + 1, opts, out, chapter);
+        collect(p, *c, depth + 1, opts, out, chapter, notes);
     }
 }
 
@@ -176,10 +188,15 @@ fn render_markdown(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> Stri
         match piece {
             Piece::Heading(d, t) => s.push_str(&format!("{} {}\n\n", "#".repeat(*d), t)),
             Piece::Body(b) => {
-                s.push_str(b);
+                s.push_str(&crate::footnotes::render(b, |n| format!("[^{n}]")));
                 s.push_str("\n\n");
             }
             Piece::Separator => s.push_str(&format!("{}\n\n", opts.scene_separator)),
+            Piece::Notes(notes) => {
+                for (i, n) in notes.iter().enumerate() {
+                    s.push_str(&format!("[^{}]: {n}\n\n", i + 1));
+                }
+            }
         }
     }
     s.trim_end().to_string() + "\n"
@@ -204,10 +221,18 @@ fn render_plain(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> String 
                 }
             }
             Piece::Body(b) => {
-                s.push_str(&strip_markdown(b));
+                s.push_str(&crate::footnotes::render(&strip_markdown(b), |n| {
+                    format!("[{n}]")
+                }));
                 s.push_str("\n\n");
             }
             Piece::Separator => s.push_str(&format!("{:^60}\n\n", opts.scene_separator)),
+            Piece::Notes(notes) => {
+                s.push_str("\nNOTES\n\n");
+                for (i, n) in notes.iter().enumerate() {
+                    s.push_str(&format!("{}. {}\n\n", i + 1, strip_markdown(n)));
+                }
+            }
         }
     }
     s.trim_end().to_string() + "\n"
@@ -233,9 +258,12 @@ fn render_html(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> String {
          .title-page{{text-align:center;margin:30vh 0;page-break-after:always}}\n\
          h2{{page-break-before:always;text-align:center;margin-top:3em}}\n\
          blockquote{{margin:1em 2em;font-style:italic}}\n\
+         sup.fnref{{line-height:0}} sup.fnref a{{text-decoration:none}}\n\
+         ol.notes{{font-size:.9em}} ol.notes li{{margin:.4em 0}}\n\
          </style></head><body>\n{}</body></html>\n",
         esc(&p.meta.title),
-        body
+        // One file: the notes are on the same page.
+        body.replace(crate::footnotes::NOTES_FILE, "")
     )
 }
 
@@ -249,7 +277,22 @@ pub(crate) fn piece_html(piece: &Piece, opts: &CompileOptions) -> String {
         }
         Piece::Body(b) => markdown_to_html(b),
         Piece::Separator => format!("<p class=\"sep\">{}</p>\n", esc(&opts.scene_separator)),
+        Piece::Notes(notes) => notes_html(notes),
     }
+}
+
+/// The Notes section: a heading and the numbered notes.
+pub(crate) fn notes_html(notes: &[String]) -> String {
+    let mut s = String::from("<h2 id=\"notes\">Notes</h2>\n<ol class=\"notes\">\n");
+    for (i, n) in notes.iter().enumerate() {
+        s.push_str(&format!(
+            "<li id=\"fn-{}\">{}</li>\n",
+            i + 1,
+            inline_html(n)
+        ));
+    }
+    s.push_str("</ol>\n");
+    s
 }
 
 /// Escape for HTML and XML. Control characters (other than tab and
@@ -330,7 +373,7 @@ pub(crate) fn inline_html(s: &str) -> String {
             (false, false) => out.push_str(&esc(&sp.text)),
         }
     }
-    out
+    crate::footnotes::render(&out, crate::footnotes::html_ref)
 }
 
 /// A block of a document body: the small Markdown subset suited to prose.

@@ -19,6 +19,7 @@ pub mod demo;
 pub mod diff;
 mod docx;
 mod epub;
+mod footnotes;
 pub mod goto;
 pub mod history;
 pub mod import;

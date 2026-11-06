@@ -36,7 +36,14 @@ pub(crate) fn build(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> Vec
     let uid = format!("urn:uuid:{}", p.root(RootRole::Manuscript));
     let modified = p.meta.modified.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
-    let chapters = split(pieces, opts, &title);
+    let mut chapters = split(pieces, opts, &title);
+    // Note references link to the Notes chapter (always the last).
+    if matches!(pieces.last(), Some(Piece::Notes(_))) {
+        let file = format!("c{}.xhtml", chapters.len());
+        for c in &mut chapters {
+            c.body = c.body.replace(crate::footnotes::NOTES_FILE, &file);
+        }
+    }
 
     let mut z = ZipWriter::new(p.meta.modified);
     z.add("mimetype", b"application/epub+zip");
@@ -144,6 +151,14 @@ fn split(pieces: &[Piece], opts: &CompileOptions, book_title: &str) -> Vec<Chapt
     let mut out: Vec<Chapter> = Vec::new();
     let mut current: Option<Chapter> = None;
     for piece in pieces {
+        // The notes are a chapter of their own, so references can link to it.
+        if let Piece::Notes(_) = piece {
+            out.extend(current.take());
+            current = Some(Chapter {
+                title: "Notes".into(),
+                body: String::new(),
+            });
+        }
         if let Piece::Heading(1, t) = piece {
             out.extend(current.take());
             let n = out.len() + 1;
