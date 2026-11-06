@@ -37,6 +37,8 @@ QtObject {
     property bool styledMarkdown: true
     // Underline misspelled words in the editor.
     property bool spellCheck: true
+    // “Smart” quotes, dashes and ellipses as you type (EditorView.smartKey).
+    property bool smartPunctuation: true
 
     // Remembered between runs (~/.config/Wordloom/Wordloom.conf on Linux).
     property Settings prefs: Settings {
@@ -47,6 +49,7 @@ QtObject {
         property alias pageWidth: theme.pageWidth
         property alias styledMarkdown: theme.styledMarkdown
         property alias spellCheck: theme.spellCheck
+        property alias smartPunctuation: theme.smartPunctuation
     }
 
     readonly property int gap: 8

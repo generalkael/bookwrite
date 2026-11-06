@@ -166,6 +166,13 @@ Item {
         if (!inSplit && viewMode !== "editor") viewMode = "editor";
         (inSplit ? splitEditor : editorView).openFind(withReplace);
     }
+    // Edit ▸ Convert to Smart Punctuation, in the document you're in.
+    function smartenDocument() {
+        const inSplit = splitId !== "" && splitEditor.activeArea && splitEditor.activeArea.activeFocus;
+        if (!inSplit && viewMode !== "editor") viewMode = "editor";
+        const n = (inSplit ? splitEditor : editorView).smartenAll();
+        Api.say(n ? qsTr("Quotes, dashes and ellipses converted (Ctrl+Z undoes it)") : qsTr("Nothing to convert"));
+    }
     // Insert a {>> comment <<} where you are typing.
     function insertComment() {
         const inSplit = splitId !== "" && splitEditor.activeArea && splitEditor.activeArea.activeFocus;

@@ -76,6 +76,17 @@ Item {
             a.cursorPosition = 0;
             check(ed().showComment(id, 0) && a.selectedText === "{>> fix <<}", "clicking it selects the comment in the editor");
         }],
+        ["smart punctuation", () => {
+            const a = ed().firstArea();
+            a.text = "";
+            a.forceActiveFocus(); ed().activeArea = a;
+            const type = (s) => { for (const ch of s) if (!ed().smartKey(a, { text: ch, modifiers: 0 })) a.insert(a.cursorPosition, ch); };
+            type("\"Don't--\" she said... \"Wait.\"\n\n---");
+            check(a.text === "“Don’t—” she said… “Wait.”\n\n---", "typing gives curly quotes, dashes and ellipses, and keeps --- as a scene break: " + JSON.stringify(a.text));
+            a.text = "\"Plain\" -- text...";
+            ed().smartenAll();
+            check(a.text === "“Plain” — text…", "Convert to Smart Punctuation fixes existing text: " + JSON.stringify(a.text));
+        }],
         ["find & replace", () => {
             const a = ed().firstArea();
             a.text = "the cat and then the dog";

@@ -94,6 +94,53 @@ Rectangle {
         a.insert(p, before + "* * *\n\n");
     }
 
+    // ---- Smart punctuation as you type: the rules of wordloom-core's
+    // smart.rs. Returns true if it handled the key.
+    function opensQuote(prev, next) {
+        if (prev === "") return true;
+        // After a dash it opens only before a letter or digit ("Wait—" closes).
+        if (prev === "—" || prev === "–" || prev === "-") return next !== "" && (/[0-9]/.test(next) || next.toLowerCase() !== next.toUpperCase());
+        return /[\s(\[{“‘\/]/.test(prev);
+    }
+    function smartKey(a, e) {
+        if (!Theme.smartPunctuation || (e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) return false;
+        const t = e.text;
+        if (t !== '"' && t !== "'" && t !== "-" && t !== ".") return false;
+        const s = a.selectionStart, end = a.selectionEnd;
+        const prev = s > 0 ? a.getText(s - 1, s) : "";
+        const next = end < a.length ? a.getText(end, end + 1) : "";
+        // Not inside a {>> comment <<} on this line.
+        const ls = lineStart(a.text, s), lineBefore = a.text.substring(ls, s);
+        if (lineBefore.lastIndexOf("{>>") > lineBefore.lastIndexOf("<<}")) return false;
+        let ins = null, back = 0;
+        if (t === '"') ins = opensQuote(prev, next) ? "“" : "”";
+        else if (t === "'") ins = opensQuote(prev, next) ? "‘" : "’";
+        else if (t === "-" && prev === "-") {
+            // "--" in prose is an em dash; a line of dashes is a scene break.
+            if (/^\s*-+$/.test(lineBefore)) return false;
+            ins = "—"; back = 1;
+        } else if (t === "-" && prev === "—") {
+            return true;   // "---" stays one dash
+        } else if (t === "." && s >= 2 && a.getText(s - 2, s) === "..") {
+            ins = "…"; back = 2;
+        }
+        if (ins === null) return false;
+        if (end > s) a.remove(s, end);
+        if (back) a.remove(s - back, s);
+        a.insert(s - back, ins);
+        a.cursorPosition = s - back + ins.length;
+        return true;
+    }
+    // Edit ▸ Convert to Smart Punctuation: every part of this document.
+    function smartenAll() {
+        let changed = 0;
+        for (const a of editors()) {
+            const t = Api.get("smarten", a.text, a.text);
+            if (t !== a.text) { a.remove(0, a.length); a.insert(0, t); ++changed; }
+        }
+        return changed;
+    }
+
     // ---- Inline comments, {>> like this <<}: notes left in the text that
     // word counts, compile and reading mode ignore (core: comments.rs).
     readonly property var commentPattern: /\{>>[^\n]*?<<\}/g
@@ -648,6 +695,7 @@ Rectangle {
             }
             Connections { target: Api; function onSpellingChanged() { styler.rehighlight(); } }
             Keys.onPressed: (e) => {
+                if (ev.smartKey(area, e)) { e.accepted = true; return; }
                 if ((e.modifiers & Qt.ControlModifier) && !(e.modifiers & (Qt.ShiftModifier | Qt.AltModifier))) {
                     if (e.key === Qt.Key_B) { ev.activeArea = area; ev.toggleEmphasis(2); e.accepted = true; }
                     else if (e.key === Qt.Key_I) { ev.activeArea = area; ev.toggleEmphasis(1); e.accepted = true; }

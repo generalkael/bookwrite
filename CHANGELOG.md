@@ -54,6 +54,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Smart punctuation.** As you type, straight quotes become “curly” ones and apostrophes ’, two
+  hyphens become an em dash — and three dots an ellipsis …; a line of dashes (a scene break) and
+  text in comments stay as typed. View ▸ Smart Punctuation turns it off. Edit ▸ Convert to Smart
+  Punctuation converts a whole document, e.g. pasted text (Ctrl+Z undoes it).
 - **Go to…** (Project ▸ Go to…, Ctrl+P): type part of any item's title, even with its letters
   spread out (“nght wtch”), and press Enter to open it. Items inside collapsed folders are found
   too, and their folders open in the binder. With nothing typed, it lists your recent changes.
