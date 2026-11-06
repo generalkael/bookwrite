@@ -258,6 +258,13 @@ Item {
             const r = Api.call("backupZip", dir.substring(0, dir.lastIndexOf("/")) + "/selftest-backup.zip");
             check(r && r.files >= 5 && r.bytes > 1000, "Back Up to Zip packs the project (" + (r ? r.files + " files, " + r.bytes + " bytes" : "failed") + ")");
         }],
+        ["story bible", () => {
+            const dir = Api.get("meta", null).path, base = "file://" + dir.substring(0, dir.lastIndexOf("/")) + "/selftest-bible";
+            const bible = win.bibleRef();
+            check(bible.target(base, 1) === base + ".html" && bible.target(base + ".md", 0) === base + ".md", "the file type picks the extension");
+            const docx = bible.write(base + ".docx"), md = bible.write(base + ".md");
+            check(docx && docx.endsWith(".docx") && md && md.endsWith(".md"), "the story bible exports as Word and Markdown (" + docx + ", " + md + ")");
+        }],
         ["automatic backup", () => {
             const dir = Api.get("meta", null).path, folder = dir.substring(0, dir.lastIndexOf("/")) + "/selftest-auto";
             autoBackup.folder = folder; autoBackup.keep = 2; autoBackup.closeBackups = true;

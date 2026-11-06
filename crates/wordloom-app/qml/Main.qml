@@ -19,6 +19,10 @@ ApplicationWindow {
         property alias height: win.height
     }
     Settings {
+        category: "bible"
+        property alias folder: bibleDialog.lastFolder
+    }
+    Settings {
         category: "backup"
         property alias folder: backupDialog.lastFolder
         property alias autoOnClose: autoBackupDialog.closeBackups
@@ -219,6 +223,7 @@ ApplicationWindow {
             Action { text: qsTr("Take &Snapshot"); shortcut: "Ctrl+5"; enabled: win.ws !== null; onTriggered: win.ws.snapshot() }
             MenuSeparator {}
             Action { text: qsTr("&Compile / Export…"); shortcut: "Ctrl+Shift+E"; enabled: Wordloom.projectOpen; onTriggered: compileDialog.open() }
+            Action { text: qsTr("Export Story &Bible…"); enabled: Wordloom.projectOpen; onTriggered: bibleDialog.start() }
             Action { text: qsTr("Project Se&ttings…"); enabled: Wordloom.projectOpen; onTriggered: settingsDialog.open() }
             MenuSeparator {}
             Action { text: qsTr("&Close Project"); enabled: Wordloom.projectOpen; onTriggered: win.closeProject() }
@@ -518,6 +523,40 @@ ApplicationWindow {
             if (r) Api.say(qsTr("Backed up %1 files (%2) to %3").arg(r.files).arg(Api.fmtBytes(r.bytes)).arg(r.path));
         }
     }
+    // File ▸ Export Story Bible…: every character and place in one document
+    // (wordloom-core's bible.rs). The format follows the chosen file type.
+    FileDialog {
+        id: bibleDialog
+        title: qsTr("Export Story Bible")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "docx"
+        nameFilters: [qsTr("Word document (*.docx)"), qsTr("Web page (*.html)"), qsTr("Markdown (*.md)"), qsTr("Plain text (*.txt)")]
+        property string lastFolder: ""
+        function start() {
+            if (win.ws) win.ws.flush();
+            const folder = lastFolder || StandardPaths.writableLocation(StandardPaths.DocumentsLocation);
+            const safe = Wordloom.title.replace(/[^\w \-]/g, "_").trim() || "Untitled";
+            currentFolder = folder;
+            selectedFile = folder.toString().replace(/\/$/, "") + "/" + encodeURIComponent(safe + " story bible.docx");
+            open();
+        }
+        // The file to write: the chosen type's extension unless the name
+        // already ends in one Wordloom can write.
+        function target(file, filterIndex) {
+            if (/\.(docx|html?|md|markdown|txt)$/i.test(file)) return file;
+            return file.replace(/\.[A-Za-z0-9]{1,5}$/, "") + "." + ["docx", "html", "md", "txt"][Math.max(0, filterIndex)];
+        }
+        function write(file) {
+            const r = Api.call("exportBible", file);
+            if (r !== undefined) Api.say(qsTr("Story bible saved to %1").arg(r));
+            return r;
+        }
+        onAccepted: {
+            const f = target(selectedFile.toString(), selectedNameFilter.index);
+            lastFolder = f.substring(0, f.lastIndexOf("/"));
+            write(f);
+        }
+    }
     // File ▸ Automatic Backups…: a zip of the project, in a folder of your
     // choice, each time it's closed (if anything changed), keeping the
     // newest few (Session::auto_backup).
@@ -596,6 +635,7 @@ ApplicationWindow {
         nameFilters: [qsTr("Manuscripts (*.docx *.md *.markdown *.txt)"), qsTr("All files (*)")]
         onAccepted: win.importManuscript(selectedFile.toString())
     }
+    function bibleRef() { return bibleDialog; }
     function importManuscript(file) {
         if (win.ws) win.ws.flush();
         const r = Api.call("importManuscript", file);

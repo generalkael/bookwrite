@@ -12,6 +12,7 @@
 
 pub mod analysis;
 pub mod api;
+pub mod bible;
 pub mod comments;
 pub mod compile;
 pub mod demo;

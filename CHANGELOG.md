@@ -54,6 +54,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Story bible export.** File ▸ Export Story Bible… writes all characters and places into one
+  Word, HTML, Markdown or plain-text document: synopsis, custom fields, sheet text, notes,
+  relationships and the scenes each appears in. Trashed items are left out.
 - **Repeated-word highlighting.** View ▸ Highlight Repeated Words tints both uses of a word
   repeated within about 40 words in one paragraph (“the lamp room, and the lamp room”). Short and
   common words, capitalised words and comments are skipped. Off by default.

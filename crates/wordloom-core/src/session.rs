@@ -921,6 +921,34 @@ impl Session {
         Ok(path)
     }
 
+    /// Write the story bible (characters and places, bible.rs) to `path`.
+    /// The format follows the extension: .docx, .html, .md or .txt (.docx
+    /// when there is none).
+    pub fn export_bible(&self, path: &Path) -> Result<PathBuf> {
+        let mut path = path.to_path_buf();
+        let ext = path
+            .extension()
+            .map(|e| e.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        let format = match ext.as_str() {
+            "html" | "htm" => compile::Format::Html,
+            "md" | "markdown" => compile::Format::Markdown,
+            "txt" => compile::Format::PlainText,
+            "docx" => compile::Format::Docx,
+            "" => {
+                path.set_extension("docx");
+                compile::Format::Docx
+            }
+            other => {
+                return Err(Error::Invalid(format!(
+                    "can't write a story bible as .{other}: use .docx, .html, .md or .txt"
+                )))
+            }
+        };
+        std::fs::write(&path, crate::bible::build(&self.project, format))?;
+        Ok(path)
+    }
+
     // ----- snapshots --------------------------------------------------------
 
     pub fn snapshots(&self, id: &str) -> Result<Value> {

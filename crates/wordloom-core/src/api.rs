@@ -117,6 +117,7 @@ const READ_ONLY: &[&str] = &[
     "rootId",
     "isOpen",
     "export",
+    "exportBible",
     "takeSnapshot",
     "deleteSnapshot",
     "history",
@@ -414,6 +415,7 @@ impl App {
             "autoBackup" => self
                 .s()?
                 .auto_backup(&to_path(a.str(0)), a.int(1).max(1) as usize)?,
+            "exportBible" => json!(self.s()?.export_bible(&to_path(a.str(0)))?),
             "export" => {
                 let p = self.s()?.export(&to_path(a.str(0)), &a.json(1))?;
                 json!(p)

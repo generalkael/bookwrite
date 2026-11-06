@@ -92,6 +92,19 @@ pub fn compile_file(p: &Project, opts: &CompileOptions) -> Vec<u8> {
     }
 }
 
+/// Render already-collected pieces (the manuscript, or another document
+/// such as the story bible) as a file in `opts.format`. PDF falls back to
+/// HTML: the app writes PDFs.
+pub(crate) fn render_file(p: &Project, opts: &CompileOptions, pieces: &[Piece]) -> Vec<u8> {
+    match opts.format {
+        Format::Epub => crate::epub::build(p, opts, pieces),
+        Format::Docx => crate::docx::build(p, opts, pieces),
+        Format::Markdown => render_markdown(p, opts, pieces).into_bytes(),
+        Format::PlainText => render_plain(p, opts, pieces).into_bytes(),
+        Format::Html | Format::Pdf => render_html(p, opts, pieces).into_bytes(),
+    }
+}
+
 /// The manuscript (or `opts.root`) flattened into headings, bodies and
 /// separators, honouring "include in compile".
 pub(crate) fn pieces<'a>(p: &'a Project, opts: &CompileOptions) -> Vec<Piece<'a>> {
