@@ -36,6 +36,7 @@ pub mod smart;
 pub mod spell;
 pub mod stats;
 pub mod storage;
+pub mod templates;
 pub mod timeline;
 mod zip;
 

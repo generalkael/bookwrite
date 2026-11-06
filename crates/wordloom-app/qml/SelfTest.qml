@@ -354,6 +354,19 @@ Item {
             check(!o.filtering && o.rows.length === all, "clearing the filter shows everything again");
             Api.call("setField", rowId("Arrival"), "field:POV", ""); Api.call("setField", rowId("The Keeper"), "field:POV", ""); Api.call("setField", rowId("The Keeper"), "keywords", "");
         }],
+        ["templates", () => {
+            const t = Api.call("templates") || [];
+            check(t.map(x => x.id).join(",") === "blank,novel,short-story,nonfiction", "New Project offers the templates (" + t.map(x => x.name) + ")");
+            // Build one beside the sample and look at its shape, then go back.
+            const meta = Api.get("meta", null), dir = meta.path.substring(0, meta.path.lastIndexOf("/"));
+            Api.call("close");
+            const made = Api.call("newProject", "file://" + dir, "Template Test", "", "novel");
+            const acts = made !== undefined ? Api.get("children", [], Api.call("rootId", "manuscript")).map(x => x.title).join(",") : "";
+            check(acts === "Act I,Act II,Act III", "a Novel starts with three acts (" + acts + ")");
+            Api.call("close");
+            win.openPath(meta.path);
+            check(Api.get("meta", null).title === meta.title, "the sample opens again");
+        }],
         ["story bible", () => {
             const dir = Api.get("meta", null).path, base = "file://" + dir.substring(0, dir.lastIndexOf("/")) + "/selftest-bible";
             const bible = win.bibleRef();

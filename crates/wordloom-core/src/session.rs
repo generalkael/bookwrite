@@ -43,11 +43,24 @@ fn opt_id(s: &str) -> Result<Option<Uuid>> {
 impl Session {
     /// Create a new project bundle named after `title` inside `parent`.
     pub fn create(parent: &Path, title: &str, author: &str) -> Result<Self> {
+        Self::create_from(parent, title, author, "blank")
+    }
+
+    /// A new project shaped by a template (templates.rs).
+    pub fn create_from(parent: &Path, title: &str, author: &str, template: &str) -> Result<Self> {
         let dir = storage::new_bundle_path(parent, title);
         if dir.exists() {
             return Err(Error::Invalid(format!("{} already exists", dir.display())));
         }
-        let project = Project::new(title, author);
+        let mut project = Project::new(title, author);
+        crate::templates::apply(
+            &mut project,
+            if template.is_empty() {
+                "blank"
+            } else {
+                template
+            },
+        )?;
         storage::save(&project, &dir)?;
         storage::write_lock(&dir)?;
         Ok(Self {

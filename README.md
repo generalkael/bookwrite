@@ -20,6 +20,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 
 | Area | What you get |
 |---|---|
+| **Project templates** | File ▸ New Project… offers a starting shape. **Blank**: one chapter with one scene. **Novel**: Acts I–III with eight chapters, each with a first scene and a synopsis saying what that part of the story does (inciting incident, midpoint, climax…), Protagonist and Antagonist sheets, a Main Setting, and a *Premise* note. **Short Story**: five scenes from Opening to Resolution, without chapters. **Non-fiction**: Front Matter (Introduction), three chapters of sections, Back Matter (Conclusion, Acknowledgements), an *Outline* note and a *Sources* research note. Templates add no text, so word counts start at zero; rename, delete or add anything. |
 | **Binder** | A project tree with fixed sections (Manuscript, Characters, Places, Research, Notes, Trash). Drag and drop, inline rename (F2), keyboard moves (Ctrl+↑/↓ to move, Ctrl+←/→ to outdent/indent), duplicate, split at cursor, merge, convert type, trash/empty trash. Clicking a document opens it in the editor; clicking a folder with no text of its own shows its contents on the corkboard. Items with a word target (set in the Details panel) show a small progress bar, green once reached; hover it for the numbers. |
 | **Editor** | A distraction-light paper page that fills the window (or a fixed column width: ⇔ cycles Fit, 560 … 1100 px), adjustable font size, Markdown preview, and typewriter scrolling. The page scrolls to keep the caret in view as you type. In a narrow pane the editor's view and format buttons move into a ⋯ menu. **Styled Markdown**: headings, **bold**, *italic*, block quotes and scene breaks are shown styled as you type, with their Markdown markers faded, while the file on disk stays plain Markdown. The format bar (B, I, H, “, * * *, { } for a comment) and Ctrl+B / Ctrl+I add or remove the markers for you (Ctrl+Z undoes them), and View ▸ Styled Markdown turns styling off. **Composite mode**: select a folder and every document inside it appears as one continuous manuscript you can edit, with each part saving separately. **Split editor** (◫ or Ctrl+\\, or *Open in Split Editor* in the binder): keep one document beside the main view while you work elsewhere; ⇄ swaps the two. The same document can be open in both panes. Picking an item in the binder (or with Go to…) opens it in whichever pane you were last typing in, marked by a thin accent line on that pane's header; the binder highlight, the Details panel, the word count and commands like Snapshot and Duplicate follow that pane's document. |
 | **Appearances** | Select a character or place and the Details panel shows **Appears in**: every manuscript document that mentions it, with how many times, in manuscript order. Click one to open it with the name in the find bar (F3 steps through the mentions). Wordloom looks for the title, the first name of a multi-word name (“Mara” for “Mara Quinn”) and the names in the *Also known as* field (comma-separated), as whole words with matching case, so “Rose” isn't found in “rose from her chair”. Text in comments doesn't count. |
@@ -311,6 +312,7 @@ crates/
     import.rs      Import Manuscript: .docx / Markdown / text → chapters and scenes
     smart.rs       smart quotes, dashes and ellipses
     footnotes.rs   numbering footnotes for compile
+    templates.rs   New Project templates (Novel, Short Story, Non-fiction)
     bible.rs       the story bible: characters and places as one document
     repeats.rs     repeated words nearby in a paragraph (the editor's echo tint)
     relations.rs   character relationships and map positions
@@ -340,7 +342,7 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 to take them in the dark theme.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, footnotes, line highlight, repeated words, outliner folding, columns and filter, corkboard drag and drop, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, footnotes, line highlight, repeated words, outliner folding, columns and filter, project templates, corkboard drag and drop, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

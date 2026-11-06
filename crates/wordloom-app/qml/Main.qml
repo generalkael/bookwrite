@@ -93,7 +93,7 @@ ApplicationWindow {
         property string dir: ""
         property bool dark: false
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "carddrag", "outliner", "styled", "complete", "linebar", "repeats", "footnote", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "carddrag", "outliner", "styled", "complete", "linebar", "repeats", "footnote", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "newproject", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -104,13 +104,13 @@ ApplicationWindow {
                 loader.grabToImage(r => r.saveToFile(file));
                 // Popups render in the window overlay, which can't be grabbed;
                 // capture the dialog's own content instead.
-                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, pdf: compileDialog, goto: goTo, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog, autobackup: autoBackupDialog }[v];
+                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, pdf: compileDialog, goto: goTo, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog, autobackup: autoBackupDialog, newproject: newDialog }[v];
                 if (dlg && dlg.contentChildren.length) dlg.contentChildren[0].grabToImage(r => r.saveToFile(file.replace(".png", "-dialog.png")));
                 if (v === "history") historyWindow.contentItem.grabToImage(r => r.saveToFile(file.replace(".png", "-window.png")));
             } else if (v === undefined) {
                 stop(); Qt.quit(); return;
             } else if (win.ws) {
-                compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); analysisDialog.close(); autoBackupDialog.close(); goTo.close(); win.ws.closePopups();
+                compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); analysisDialog.close(); autoBackupDialog.close(); newDialog.close(); goTo.close(); win.ws.closePopups();
                 win.ws.searchFor(v === "search" ? "lighthouse" : "");
                 { const c = win.ws.corkboardRef(); c.dragId = ""; c.dropIndex = -1; c.dropMode = ""; }
                 win.ws.focusMode = v === "focus";
@@ -129,6 +129,7 @@ ApplicationWindow {
                 else if (v === "sprint") sprintDialog.open();
                 else if (v === "analysis") analysisDialog.open();
                 else if (v === "autobackup") autoBackupDialog.open();
+                else if (v === "newproject") { newDialog.open(); newTemplate.currentIndex = 1; }
                 else if (v === "reader") win.ws.viewMode = "reader";
                 else if (v === "stats") statsDialog.open();
                 else if (v === "settings") settingsDialog.open();
@@ -410,7 +411,11 @@ ApplicationWindow {
         width: 460
         standardButtons: Dialog.Ok | Dialog.Cancel
         property url folder: ""
-        onAboutToShow: { newTitle.text = ""; newAuthor.text = ""; newTitle.forceActiveFocus(); }
+        // Project templates (wordloom-core's templates.rs).
+        // (Api.call, not Api.get: this works with no project open.)
+        property var templates: []
+        readonly property string template: templates.length ? templates[Math.max(0, newTemplate.currentIndex)].id : "blank"
+        onAboutToShow: { templates = Api.call("templates") || []; newTitle.text = ""; newAuthor.text = ""; newTitle.forceActiveFocus(); }
         GridLayout {
             anchors.fill: parent
             columns: 2
@@ -418,6 +423,20 @@ ApplicationWindow {
             TextField { id: newTitle; Layout.fillWidth: true; placeholderText: qsTr("My Novel") }
             Label { text: qsTr("Author") }
             TextField { id: newAuthor; Layout.fillWidth: true }
+            Label { text: qsTr("Template") }
+            ComboBox {
+                id: newTemplate
+                Layout.fillWidth: true
+                model: newDialog.templates.map(t => t.name)
+            }
+            Item { width: 1; height: 1 }
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Theme.subtext
+                font.pixelSize: 12
+                text: newDialog.templates.length ? newDialog.templates[Math.max(0, newTemplate.currentIndex)].description : ""
+            }
             Label { text: qsTr("Location") }
             RowLayout {
                 Layout.fillWidth: true
@@ -434,7 +453,7 @@ ApplicationWindow {
             if (folder.toString() === "") { Api.say(qsTr("Choose where to create the project.")); return; }
             const t = newTitle.text.trim() || "Untitled";
             if (Wordloom.projectOpen) { if (ws) ws.flush(); autoBackupDialog.beforeClose(); }
-            Api.call("newProject", folder.toString(), t, newAuthor.text);
+            Api.call("newProject", folder.toString(), t, newAuthor.text, template);
         }
     }
     FolderDialog {

@@ -80,6 +80,7 @@ impl Args<'_> {
 
 /// Methods that only read state.
 const READ_ONLY: &[&str] = &[
+    "templates",
     "binder",
     "nodeInfo",
     "exists",
@@ -282,9 +283,13 @@ impl App {
             }
             "isOpen" => json!(self.session.is_some()),
             "newProject" => {
-                let s = Session::create(&to_path(a.str(0)), a.str(1), a.str(2))?;
+                let s = Session::create_from(&to_path(a.str(0)), a.str(1), a.str(2), a.str(3))?;
                 self.opened(s)?
             }
+            "templates" => json!(crate::templates::TEMPLATES
+                .iter()
+                .map(|(id, name, about)| json!({"id": id, "name": name, "description": about}))
+                .collect::<Vec<_>>()),
             "newDemoProject" => {
                 let parent = to_path(a.str(0));
                 let existing =
