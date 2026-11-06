@@ -22,6 +22,7 @@ pub mod history;
 pub mod mentions;
 pub mod model;
 pub mod names;
+pub mod print;
 pub mod recent;
 pub mod relations;
 pub mod search;

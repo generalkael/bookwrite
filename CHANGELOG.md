@@ -54,6 +54,11 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **PDF export**, in two styles. *Book*: a title page, justified text with book-style indents,
+  each chapter on a new page, and page numbers. *Manuscript*: standard submission format, double
+  spaced in Courier or Times, with your contact details and “about N words” on the title page,
+  chapters a third of the way down a new page, “Surname / TITLE / page” at the top of each page,
+  and END at the close. Letter or A4; fonts are embedded.
 - **Text Analysis** (Project ▸ Text Analysis…, Ctrl+Shift+A), for the whole manuscript or the
   selected item: your most used words (leaving out common ones), repeated three-word phrases, -ly
   adverbs, the longest sentences, average sentence length and the share of dialogue. Click a word

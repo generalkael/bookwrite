@@ -88,6 +88,7 @@ const READ_ONLY: &[&str] = &[
     "comments",
     "appearances",
     "analyse",
+    "wordEstimate",
     "labels",
     "meta",
     "search",
@@ -357,6 +358,9 @@ impl App {
             "comments" => self.s()?.comments(a.str(0))?,
             "appearances" => self.s()?.appearances(a.str(0))?,
             "analyse" => self.s()?.analyse(a.str(0))?,
+            "wordEstimate" => json!(crate::print::word_estimate(
+                a.0.first().and_then(Value::as_u64).unwrap_or(0) as usize
+            )),
             "setText" => unit(self.s()?.set_text(a.str(0), a.str(1)))?,
             "setField" => {
                 let v = match a.0.get(2) {

@@ -3,6 +3,8 @@
 #include "wordloom/src/styler.h"
 #include "wordloom/src/styling.cxx.h" // spell_ok(), implemented in Rust
 
+#include "pdfexport.h"
+
 #include <QRegularExpression>
 #include <QTextCharFormat>
 #include <QTextDocument>
@@ -335,4 +337,5 @@ void MarkdownStyler::attach()
 void register_styler_types()
 {
     qmlRegisterType<MarkdownStyler>("com.wordloom.styling", 1, 0, "MarkdownStyler");
+    qmlRegisterType<PdfExporter>("com.wordloom.styling", 1, 0, "PdfExporter");
 }

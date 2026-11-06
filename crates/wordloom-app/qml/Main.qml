@@ -75,14 +75,14 @@ ApplicationWindow {
         if (selfTest.pending) Qt.callLater(selfTest.start);
     }
 
-    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog; analysis: analysisDialog }
+    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog; analysis: analysisDialog; compile: compileDialog }
 
     // Developer aid: visit every view, save a PNG of each, then quit.
     Timer {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "compile", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -93,7 +93,7 @@ ApplicationWindow {
                 loader.grabToImage(r => r.saveToFile(file));
                 // Popups render in the window overlay, which can't be grabbed;
                 // capture the dialog's own content instead.
-                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog }[v];
+                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, pdf: compileDialog, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog }[v];
                 if (dlg && dlg.contentChildren.length) dlg.contentChildren[0].grabToImage(r => r.saveToFile(file.replace(".png", "-dialog.png")));
                 if (v === "history") historyWindow.contentItem.grabToImage(r => r.saveToFile(file.replace(".png", "-window.png")));
             } else if (v === undefined) {
@@ -107,7 +107,8 @@ ApplicationWindow {
                 const research = Api.get("children", [], Api.call("rootId", "research"));
                 const fileItem = research.length ? research[research.length - 1].id : "";
                 if (v === "event") win.ws.editAnEvent();
-                else if (v === "compile") compileDialog.open();
+                else if (v === "compile") { compileDialog.open(); compileDialog.selectFormat("markdown", 0); }
+                else if (v === "pdf") { compileDialog.open(); compileDialog.selectFormat("pdf", 1); }
                 else if (v === "names") nameDialog.open();
                 else if (v === "history") historyWindow.show(3);
                 else if (v === "sprint") sprintDialog.open();

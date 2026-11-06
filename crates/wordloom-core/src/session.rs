@@ -791,6 +791,11 @@ impl Session {
         } else {
             serde_json::from_str(opts_json)?
         };
+        if opts.format == compile::Format::Pdf {
+            return Err(Error::Invalid(
+                "PDF is written by the app, not the core".into(),
+            ));
+        }
         let mut path = path.to_path_buf();
         if path.extension().is_none() {
             path.set_extension(opts.format.extension());

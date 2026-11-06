@@ -10,6 +10,7 @@ Item {
     property var history                 // HistoryWindow
     property var sprint                  // SprintDialog
     property var analysis                // AnalysisDialog
+    property var compile                 // CompileDialog
     property int step: 0
     property int failures: 0
     property int passes: 0
@@ -134,6 +135,23 @@ Item {
             check(r !== null && r.words === Api.get("stats", null).manuscript_words, "Text Analysis counts the same words as the statistics (" + (r ? r.words : "none") + ")");
             check(r !== null && r.top_words.length > 0 && r.top_words.every(w => w.text !== "the"), "most used words leave out common words");
             analysis.close();
+        }],
+        ["pdf export", () => {
+            const dir = Api.get("meta", null).path;
+            const base = "file://" + dir.substring(0, dir.lastIndexOf("/"));
+            compile.selectFormat("pdf", 0);
+            const book = compile.writePdf(base + "/selftest-book.pdf");
+            check(book.ok && book.pages >= 3, "a book PDF is written (" + book.pages + " pages)");
+            compile.selectFormat("pdf", 1);
+            const ms = compile.writePdf(base + "/selftest-manuscript.pdf");
+            check(ms.ok && ms.pages >= 4, "a manuscript PDF is written (" + ms.pages + " pages)");
+            check(compile.shortTitle() === "Lighthouse Keeper", "the header uses a short title: " + compile.shortTitle());
+            // A long chapter runs on over many pages.
+            const para = "The keeper climbed the hundred and twelve steps again, counting each one under his breath, and the lamp waited at the top as it always had. ";
+            Api.call("setText", rowId("Arrival"), Array(60).fill(para + para).join("\n\n"));
+            const long = compile.writePdf(base + "/selftest-long.pdf");
+            check(long.ok && long.pages >= ms.pages + 10, "a long chapter continues over many pages (" + long.pages + ")");
+            compile.selectFormat("markdown", 0);
         }],
         ["zip backup", () => {
             const dir = Api.get("meta", null).path;

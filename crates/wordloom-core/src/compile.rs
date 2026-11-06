@@ -13,6 +13,8 @@ pub enum Format {
     PlainText,
     Epub,
     Docx,
+    /// Written by the app from [`crate::print::print_html`].
+    Pdf,
 }
 
 impl Format {
@@ -23,6 +25,7 @@ impl Format {
             Self::PlainText => "txt",
             Self::Epub => "epub",
             Self::Docx => "docx",
+            Self::Pdf => "pdf",
         }
     }
 }
@@ -42,6 +45,8 @@ pub struct CompileOptions {
     pub root: Option<NodeId>,
     /// Number top-level folders as "Chapter N" when they have no title.
     pub number_chapters: bool,
+    /// The look of a PDF.
+    pub pdf_style: crate::print::PdfStyle,
 }
 
 impl Default for CompileOptions {
@@ -54,6 +59,7 @@ impl Default for CompileOptions {
             scene_separator: "* * *".into(),
             root: None,
             number_chapters: false,
+            pdf_style: Default::default(),
         }
     }
 }
@@ -73,6 +79,7 @@ pub fn compile(p: &Project, opts: &CompileOptions) -> String {
         Format::Markdown => render_markdown(p, opts, &pieces),
         Format::PlainText => render_plain(p, opts, &pieces),
         Format::Html | Format::Epub | Format::Docx => render_html(p, opts, &pieces),
+        Format::Pdf => crate::print::print_html(p, opts, opts.pdf_style),
     }
 }
 
@@ -300,7 +307,7 @@ pub(crate) fn spans(s: &str) -> Vec<Span> {
     out
 }
 
-fn inline_html(s: &str) -> String {
+pub(crate) fn inline_html(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for sp in spans(s) {
         match (sp.bold, sp.italic) {
