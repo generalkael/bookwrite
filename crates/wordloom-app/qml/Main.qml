@@ -75,14 +75,14 @@ ApplicationWindow {
         if (selfTest.pending) Qt.callLater(selfTest.start);
     }
 
-    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog; analysis: analysisDialog; compile: compileDialog }
+    SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog; analysis: analysisDialog; compile: compileDialog; goTo: goTo }
 
     // Developer aid: visit every view, save a PNG of each, then quit.
     Timer {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -93,13 +93,13 @@ ApplicationWindow {
                 loader.grabToImage(r => r.saveToFile(file));
                 // Popups render in the window overlay, which can't be grabbed;
                 // capture the dialog's own content instead.
-                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, pdf: compileDialog, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog }[v];
+                const dlg = { event: win.ws ? win.ws.eventDialog() : null, compile: compileDialog, pdf: compileDialog, goto: goTo, stats: statsDialog, settings: settingsDialog, compare: win.ws ? win.ws.compareDialogRef() : null, relation: win.ws ? win.ws.relationDialogRef() : null, names: nameDialog, sprint: sprintDialog, analysis: analysisDialog }[v];
                 if (dlg && dlg.contentChildren.length) dlg.contentChildren[0].grabToImage(r => r.saveToFile(file.replace(".png", "-dialog.png")));
                 if (v === "history") historyWindow.contentItem.grabToImage(r => r.saveToFile(file.replace(".png", "-window.png")));
             } else if (v === undefined) {
                 stop(); Qt.quit(); return;
             } else if (win.ws) {
-                compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); analysisDialog.close(); win.ws.closePopups();
+                compileDialog.close(); statsDialog.close(); settingsDialog.close(); nameDialog.close(); historyWindow.close(); sprintDialog.close(); analysisDialog.close(); goTo.close(); win.ws.closePopups();
                 win.ws.searchFor(v === "search" ? "lighthouse" : "");
                 win.ws.focusMode = v === "focus";
                 if (v !== "split") win.ws.splitId = "";
@@ -108,6 +108,7 @@ ApplicationWindow {
                 const fileItem = research.length ? research[research.length - 1].id : "";
                 if (v === "event") win.ws.editAnEvent();
                 else if (v === "compile") { compileDialog.open(); compileDialog.selectFormat("markdown", 0); }
+                else if (v === "goto") { goTo.start(); goTo.search("wa"); }
                 else if (v === "pdf") { compileDialog.open(); compileDialog.selectFormat("pdf", 1); }
                 else if (v === "names") nameDialog.open();
                 else if (v === "history") historyWindow.show(3);
@@ -234,6 +235,7 @@ ApplicationWindow {
             Action { text: qsTr("Move to &Trash"); onTriggered: win.ws.trashCurrent() }
             Action { text: qsTr("&Empty Trash"); onTriggered: win.ws.emptyTrash() }
             MenuSeparator {}
+            Action { text: qsTr("&Go to…"); shortcut: "Ctrl+P"; onTriggered: goTo.start() }
             Action { text: qsTr("&Find in Project"); shortcut: "Ctrl+Shift+F"; onTriggered: win.ws.focusSearch() }
             Action { text: qsTr("Writing &Statistics…"); shortcut: "Ctrl+Shift+T"; onTriggered: statsDialog.open() }
             Action { text: qsTr("Word Count &History…"); shortcut: "Ctrl+Shift+H"; onTriggered: historyWindow.show() }
@@ -385,6 +387,10 @@ ApplicationWindow {
 
     CompileDialog { id: compileDialog; anchors.centerIn: parent }
     NameDialog { id: nameDialog; anchors.centerIn: parent }
+    GoToPopup {
+        id: goTo
+        onChosen: (id) => { Api.call("reveal", id); win.ws.select(id); }
+    }
     AnalysisDialog {
         id: analysisDialog
         anchors.centerIn: parent

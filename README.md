@@ -37,6 +37,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Name generator** | Project ▸ Name Generator… (Ctrl+Shift+G) suggests character names in English, Irish & Scottish, Nordic, Slavic, Italian/Spanish/French or invented fantasy styles, feminine, masculine or either. Each name has *Add as Character*. |
 | **Research files** | Import images and PDFs (File ▸ Import File…, or drop files on the binder). They're copied into the project and shown in the editor: images with fit / zoom, PDFs page by page. Other file types open in your default app. |
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
+| **Go to…** | Ctrl+P opens a quick switcher: type part of an item's title, or just some of its letters in order (“nght wtch” finds Night Watch), use ↑ ↓, and press Enter to open it. It finds items inside collapsed folders and in every section (trashed items come last), and opens the binder down to the item. With nothing typed it lists the items you changed most recently. |
 | **Search & replace** | Searches titles, text, synopses, notes and keywords across the project, with snippets. Replace-all works across every document. **In one document**: Ctrl+F opens a find bar in the editor and Ctrl+H adds replace, with next / previous (Enter, Shift+Enter, F3), a match count, *Whole words* (on by default, so “the” leaves “then” alone) and *Match case*. In a folder's composite view it searches every part; Ctrl+Z undoes replacements. |
 | **Compile** | Exports the manuscript to EPUB (with a table of contents, one file per chapter), DOCX (named styles, chapters on new pages), **PDF**, Markdown, print-styled HTML, or plain text, with a live preview. No Pandoc, Calibre or LaTeX needed. PDF comes in two styles: **Book** (title page, justified text, chapters on new pages, page numbers) and **Manuscript**, the standard format for submitting to agents and editors: double spaced in Courier or Times, your contact details and “about 80,000 words” on the title page, each chapter a third of the way down a new page, “Surname / TITLE / page” at the top right of every page, and END at the close. Choose US Letter or A4; your contact details are remembered for next time. Options cover the title page, chapter headings and numbering, scene headings, and the scene separator. |
 | **Statistics & targets** | Word counts for the manuscript and the whole project, words written today, writing streak, reading time, a 30-day history chart, a manuscript target with deadline (and the words per day needed to hit it), and a daily session target. A ring in the status bar fills as you write today and turns green, with a notice, when you reach the goal. **Word Count History** (click the ring, Project ▸ Word Count History…, or Ctrl+Shift+H) opens a window charting words written per day, week, month or year, or the manuscript / project total as a line. Presets: Daily (30 days), Weekly (26 weeks), Monthly (24 months), 90 days, Yearly and Lifetime; or pick your own From / To dates and grouping, and step the range with ‹ ›. It shows words written in the range, days written, the daily average and your best day, with the daily goal as a dashed line. |
@@ -138,6 +139,7 @@ Ctrl is ⌘ on macOS.
 | Import file into Research | Ctrl+Shift+I |
 | Take snapshot | Ctrl+5 |
 | Compile / export | Ctrl+Shift+E |
+| Go to an item by name | Ctrl+P |
 | Find in project · writing statistics | Ctrl+Shift+F · Ctrl+Shift+T |
 | Name generator | Ctrl+Shift+G |
 | Word count history | Ctrl+Shift+H |
@@ -221,6 +223,7 @@ crates/
     docx.rs        Word document
     zip.rs         minimal zip writer for EPUB and DOCX
     search.rs      search & case-insensitive replace
+    goto.rs        Go to…: ranking binder items by title
     relations.rs   character relationships and map positions
     names.rs       character name generator (name lists + fantasy syllables)
     spell.rs       spell checking (spellbook + Hunspell dictionaries; dict/ holds the built-in en_US)
@@ -246,7 +249,7 @@ Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog i
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, appearances, find & replace, text analysis, PDF export, zip backup, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, appearances, Go to, find & replace, text analysis, PDF export, zip backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

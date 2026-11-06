@@ -18,6 +18,7 @@ pub mod demo;
 pub mod diff;
 mod docx;
 mod epub;
+pub mod goto;
 pub mod history;
 pub mod mentions;
 pub mod model;

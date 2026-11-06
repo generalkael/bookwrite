@@ -89,6 +89,7 @@ const READ_ONLY: &[&str] = &[
     "appearances",
     "analyse",
     "wordEstimate",
+    "goTo",
     "labels",
     "meta",
     "search",
@@ -344,6 +345,8 @@ impl App {
             "binder" => self.s()?.binder(),
             "rootId" => json!(self.s()?.root_id(a.str(0))?),
             "toggleExpanded" => unit(self.s()?.toggle_expanded(a.str(0)))?,
+            "reveal" => unit(self.s()?.reveal(a.str(0)))?,
+            "goTo" => self.s()?.go_to(a.str(0)),
             "setAllExpanded" => {
                 self.s()?.set_all_expanded(a.bool(0));
                 json!(true)

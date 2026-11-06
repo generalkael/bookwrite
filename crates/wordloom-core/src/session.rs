@@ -396,6 +396,20 @@ impl Session {
         Ok(json!(crate::analysis::analyse(&self.project, root)))
     }
 
+    /// Binder items matching `query` for Go to… (recent items if empty).
+    pub fn go_to(&self, query: &str) -> Value {
+        json!(crate::goto::go_to(&self.project, query, 40))
+    }
+
+    /// Expand the folders above `id` so the binder shows it.
+    pub fn reveal(&mut self, id: &str) -> Result<()> {
+        let id = parse_id(id)?;
+        self.project.node(id)?;
+        crate::goto::reveal(&mut self.project, id);
+        self.dirty = true;
+        Ok(())
+    }
+
     /// The manuscript documents that mention character / place `id`.
     pub fn appearances(&self, id: &str) -> Result<Value> {
         let id = parse_id(id)?;

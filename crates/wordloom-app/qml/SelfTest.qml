@@ -11,6 +11,7 @@ Item {
     property var sprint                  // SprintDialog
     property var analysis                // AnalysisDialog
     property var compile                 // CompileDialog
+    property var goTo                    // GoToPopup
     property int step: 0
     property int failures: 0
     property int passes: 0
@@ -135,6 +136,14 @@ Item {
             check(r !== null && r.words === Api.get("stats", null).manuscript_words, "Text Analysis counts the same words as the statistics (" + (r ? r.words : "none") + ")");
             check(r !== null && r.top_words.length > 0 && r.top_words.every(w => w.text !== "the"), "most used words leave out common words");
             analysis.close();
+        }],
+        ["go to", () => {
+            goTo.start();
+            const recent = goTo.hits.length;
+            goTo.hits = Api.get("goTo", [], "nght wtch");
+            check(recent > 0 && goTo.hits.length > 0 && goTo.hits[0].title === "Night Watch", "Go to finds 'Night Watch' from 'nght wtch'");
+            goTo.choose(0);
+            check(!goTo.opened && ws().current && ws().current.title === "Night Watch" && ws().viewMode === "editor", "choosing it opens the document");
         }],
         ["pdf export", () => {
             const dir = Api.get("meta", null).path;

@@ -54,6 +54,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Go to…** (Project ▸ Go to…, Ctrl+P): type part of any item's title, even with its letters
+  spread out (“nght wtch”), and press Enter to open it. Items inside collapsed folders are found
+  too, and their folders open in the binder. With nothing typed, it lists your recent changes.
 - **PDF export**, in two styles. *Book*: a title page, justified text with book-style indents,
   each chapter on a new page, and page numbers. *Manuscript*: standard submission format, double
   spaced in Courier or Times, with your contact details and “about N words” on the title page,
