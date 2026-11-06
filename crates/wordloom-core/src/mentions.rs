@@ -157,6 +157,91 @@ pub fn appearances(p: &Project, id: NodeId) -> Appearances {
     }
 }
 
+/// One column of the presence grid: a top-level item of the Manuscript
+/// (usually a chapter).
+#[derive(Serialize, Debug)]
+pub struct Column {
+    pub id: NodeId,
+    pub title: String,
+}
+
+/// One row: a character or place, with its mentions in each column.
+#[derive(Serialize, Debug)]
+pub struct Row {
+    pub id: NodeId,
+    pub title: String,
+    pub counts: Vec<usize>,
+    /// Per column, the first document mentioning it and the name used
+    /// most there (to open it with that name in the find bar).
+    pub first: Vec<Option<(NodeId, String)>>,
+    pub total: usize,
+}
+
+/// Who appears where (Project ▸ Character Grid): every character (or
+/// place) outside the Trash against the Manuscript's top-level items, in
+/// binder order, counting mentions the way [`appearances`] does.
+pub fn presence(p: &Project, kind: NodeKind) -> (Vec<Column>, Vec<Row>) {
+    let ms = p.root(RootRole::Manuscript);
+    let columns: Vec<Column> = p.nodes[&ms]
+        .children
+        .iter()
+        .map(|&c| Column {
+            id: c,
+            title: p.nodes[&c].title.clone(),
+        })
+        .collect();
+    // Each column's documents and their text, once.
+    let texts: Vec<Vec<(NodeId, String)>> = columns
+        .iter()
+        .map(|c| {
+            p.subtree(c.id)
+                .into_iter()
+                .filter(|d| !p.text(*d).is_empty())
+                .map(|d| (d, crate::comments::strip(p.text(d)).into_owned()))
+                .collect()
+        })
+        .collect();
+    let section = match kind {
+        NodeKind::Place => RootRole::Places,
+        _ => RootRole::Characters,
+    };
+    let rows = p
+        .subtree(p.root(section))
+        .into_iter()
+        .filter(|&id| p.nodes[&id].kind == kind)
+        .map(|id| {
+            let names = names(p, id);
+            let mut counts = Vec::with_capacity(columns.len());
+            let mut first = Vec::with_capacity(columns.len());
+            for docs in &texts {
+                let mut sum = 0;
+                let mut found = None;
+                for (d, text) in docs {
+                    let c = count(text, &names);
+                    let n: usize = c.iter().sum();
+                    if n > 0 && found.is_none() {
+                        let best = (0..names.len())
+                            .max_by_key(|&k| (c[k], std::cmp::Reverse(k)))
+                            .unwrap_or(0);
+                        found = Some((*d, names[best].clone()));
+                    }
+                    sum += n;
+                }
+                counts.push(sum);
+                first.push(found);
+            }
+            Row {
+                id,
+                title: p.nodes[&id].title.clone(),
+                total: counts.iter().sum(),
+                counts,
+                first,
+            }
+        })
+        .collect();
+    (columns, rows)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,5 +341,26 @@ mod tests {
         assert_eq!(a.documents[0].name, "Tobias");
         assert_eq!(a.documents[1].title, "Three");
         assert_eq!(a.documents[1].count, 2);
+    }
+
+    #[test]
+    fn presence_grid_counts_mentions_per_chapter() {
+        let tmp = tempfile::tempdir().unwrap();
+        let s = crate::demo::create(tmp.path()).unwrap();
+        let (cols, rows) = presence(&s.project, NodeKind::Character);
+        assert_eq!(
+            cols.iter().map(|c| c.title.as_str()).collect::<Vec<_>>(),
+            ["The Storm", "The Log", "The Return"]
+        );
+        let tobias = rows.iter().find(|r| r.title == "Tobias Wren").unwrap();
+        assert_eq!(tobias.counts.len(), 3);
+        assert!(tobias.total > 0 && tobias.total == tobias.counts.iter().sum::<usize>());
+        // A chapter where he's mentioned points at a document there.
+        let i = tobias.counts.iter().position(|&n| n > 0).unwrap();
+        let (doc, name) = tobias.first[i].clone().unwrap();
+        assert!(s.project.subtree(cols[i].id).contains(&doc));
+        assert!(name == "Tobias" || name == "Tobias Wren");
+        let (_, places) = presence(&s.project, NodeKind::Place);
+        assert_eq!(places.len(), 1);
     }
 }

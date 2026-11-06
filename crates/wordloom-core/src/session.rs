@@ -459,6 +459,17 @@ impl Session {
         Ok(json!(cards))
     }
 
+    /// The presence grid for characters ("character") or places ("place").
+    pub fn presence(&self, kind: &str) -> Value {
+        let kind = if kind == "place" {
+            NodeKind::Place
+        } else {
+            NodeKind::Character
+        };
+        let (columns, rows) = crate::mentions::presence(&self.project, kind);
+        json!({"columns": columns, "rows": rows})
+    }
+
     /// Text analysis of `id` and the documents under it (the manuscript if
     /// `id` is empty).
     pub fn analyse(&self, id: &str) -> Result<Value> {

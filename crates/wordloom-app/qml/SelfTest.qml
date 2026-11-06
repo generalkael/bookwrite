@@ -14,6 +14,7 @@ Item {
     property var compile                 // CompileDialog
     property var goTo                    // GoToPopup
     property var autoBackup              // Main.qml's Automatic Backups dialog
+    property var grid                    // PresenceDialog
     property int step: 0
     InputSim { id: input }
     property int failures: 0
@@ -458,6 +459,21 @@ Item {
             check(missing && missing.dictionary.length > 0, "a language that isn't installed falls back (" + (missing ? missing.dictionary : "") + ")");
             win.setSpellLanguage("");
             check(Theme.spellLanguage === "", "Automatic follows the system again");
+        }],
+        ["character grid", () => { grid.open(); }],
+        ["character grid", () => {
+            const g = grid.grid, tobias = g.rows.find(r => r.title === "Tobias Wren");
+            check(g.columns.slice(0, 3).map(c => c.title).join(",") === "The Storm,The Log,The Return" && tobias && tobias.total > 0, "the grid has a column per chapter (the sample's three, then the book imported earlier) and counts Tobias's mentions (" + (tobias ? tobias.counts : "none") + ")");
+            const i = tobias.counts.findIndex(n => n > 0);
+            grid.mentionRequested(tobias.first[i][0], tobias.first[i][1]);
+        }],
+        ["character grid", () => {
+            check(ws().viewMode === "editor" && ed().findText.indexOf("Tobias") === 0, "clicking a cell opens the scene with the name in the find bar (" + ed().findText + ")");
+            ed().closeFind();
+            grid.kind = "place";
+            check(grid.grid.rows.length === 1 && grid.grid.rows[0].title === "Skerry Light", "and it does places too");
+            grid.kind = "character";
+            grid.close();
         }],
         ["story bible", () => {
             const dir = Api.get("meta", null).path, base = "file://" + dir.substring(0, dir.lastIndexOf("/")) + "/selftest-bible";

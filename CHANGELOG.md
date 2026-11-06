@@ -54,6 +54,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Character grid.** Project ▸ Character Grid… charts each character's (or place's) mentions per
+  chapter as shaded cells; click one to open the first scene there with the name in the find bar.
 - **Binder multi-selection.** Ctrl+click and Shift+click pick several items; right-click to set
   their label or status, include or exclude them from compile, or trash them (also Delete), or
   drag them to move them all in binder order, each as one undo step. Esc or a plain click goes

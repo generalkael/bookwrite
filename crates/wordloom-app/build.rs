@@ -24,6 +24,7 @@ const QML: &[&str] = &[
     "qml/SelfTest.qml",
     "qml/NameDialog.qml",
     "qml/AnalysisDialog.qml",
+    "qml/PresenceDialog.qml",
     "qml/GoToPopup.qml",
     "qml/ProjectSettingsDialog.qml",
     "qml/SearchPane.qml",

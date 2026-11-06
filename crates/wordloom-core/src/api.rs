@@ -100,6 +100,7 @@ const READ_ONLY: &[&str] = &[
     "text",
     "comments",
     "appearances",
+    "presence",
     "analyse",
     "wordEstimate",
     "goTo",
@@ -415,6 +416,7 @@ impl App {
             "text" => json!(self.s()?.text(a.str(0))?),
             "comments" => self.s()?.comments(a.str(0))?,
             "appearances" => self.s()?.appearances(a.str(0))?,
+            "presence" => self.s()?.presence(a.str(0)),
             "analyse" => self.s()?.analyse(a.str(0))?,
             "wordEstimate" => json!(crate::print::word_estimate(
                 a.0.first().and_then(Value::as_u64).unwrap_or(0) as usize
