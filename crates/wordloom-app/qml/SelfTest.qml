@@ -76,6 +76,20 @@ Item {
             a.cursorPosition = 0;
             check(ed().showComment(id, 0) && a.selectedText === "{>> fix <<}", "clicking it selects the comment in the editor");
         }],
+        ["name completion", () => {
+            const a = ed().firstArea();
+            a.forceActiveFocus(); ed().activeArea = a;
+            a.text = "Then ";
+            a.cursorPosition = 5;
+            a.insert(5, "Tob");
+            check(ed().completions.length > 0 && ed().completions.indexOf("Tobias Wren") >= 0, "typing 'Tob' suggests Tobias Wren (" + JSON.stringify(ed().completions) + ")");
+            ed().completionIndex = ed().completions.indexOf("Tobias Wren");
+            ed().completionKey({ key: Qt.Key_Tab });
+            check(a.text === "Then Tobias Wren" && ed().completions.length === 0, "Tab completes it: " + JSON.stringify(a.text));
+            a.insert(a.cursorPosition, " met mara");
+            check(ed().completions.length === 0, "lower-case words aren't completed");
+            a.text = "";
+        }],
         ["smart punctuation", () => {
             const a = ed().firstArea();
             a.text = "";

@@ -35,7 +35,7 @@ Rectangle {
     signal editorFocused()
 
     readonly property int rev: Wordloom.revision
-    onRevChanged: rebuild(false)
+    onRevChanged: { rebuild(false); reloadNames(); }
     onNodeIdChanged: rebuild(true)
 
     function flush() {
@@ -96,6 +96,72 @@ Rectangle {
         // Start on a fresh paragraph.
         const before = p === 0 || head.endsWith("\n\n") ? "" : head.endsWith("\n") ? "\n" : "\n\n";
         a.insert(p, before + "* * *\n\n");
+    }
+
+    // ---- Name completion: typing the start of a character or place name
+    // ("Tob") offers the whole name ("Tobias Wren"); Tab takes it, ↑ ↓
+    // choose, Esc dismisses. Names come from wordloom-core (mentions.rs).
+    property var nameList: []
+    property var completions: []
+    property int completionIndex: 0
+    property int completionStart: 0
+    property var completionArea: null
+    function reloadNames() { nameList = Theme.completeNames ? Api.get("nameList", []) : []; }
+    Component.onCompleted: reloadNames()
+    Connections { target: Theme; function onCompleteNamesChanged() { ev.reloadNames(); ev.hideCompletion(); } }
+    function isLetter(c) { return c !== undefined && c !== "" && (c.toLowerCase() !== c.toUpperCase() || c === "'" || c === "’"); }
+    function hideCompletion() { completions = []; completionArea = null; }
+    function updateCompletion(a) {
+        if (!Theme.completeNames || !a || !a.activeFocus || a.selectionStart !== a.selectionEnd || nameList.length === 0) { hideCompletion(); return; }
+        const p = a.cursorPosition, t = a.text;
+        if (isLetter(t[p])) { hideCompletion(); return; }          // in the middle of a word
+        // The last few words before the caret, on this line.
+        let s = p;
+        while (s > 0 && isLetter(t[s - 1])) --s;
+        if (p - s < 2) { hideCompletion(); return; }
+        const starts = [s];
+        let k = s;
+        for (let w = 0; w < 2; ++w) {
+            if (k < 2 || t[k - 1] !== " " || !isLetter(t[k - 2])) break;
+            k -= 1;
+            while (k > 0 && isLetter(t[k - 1])) --k;
+            starts.push(k);
+        }
+        // Longest run of words that starts a name; it must begin with a capital.
+        for (let i = starts.length - 1; i >= 0; --i) {
+            const tail = t.substring(starts[i], p), low = tail.toLowerCase();
+            if (tail[0] === tail[0].toLowerCase() || (i === 0 && tail.length < 3)) continue;
+            const hits = nameList.filter(n => n.length > tail.length && n.toLowerCase().startsWith(low));
+            if (hits.length) {
+                hits.sort((x, y) => x.length - y.length || x.localeCompare(y));
+                completions = hits.slice(0, 6);
+                completionIndex = 0;
+                completionStart = starts[i];
+                completionArea = a;
+                return;
+            }
+        }
+        hideCompletion();
+    }
+    function acceptCompletion() {
+        const a = completionArea;
+        if (!a || !completions.length) return false;
+        const name = completions[completionIndex];
+        const p = a.cursorPosition;
+        a.remove(completionStart, p);
+        a.insert(completionStart, name);
+        a.cursorPosition = completionStart + name.length;
+        hideCompletion();
+        return true;
+    }
+    // Keys the suggestion list takes while it is showing.
+    function completionKey(e) {
+        if (!completions.length) return false;
+        if (e.key === Qt.Key_Tab) return acceptCompletion();
+        if (e.key === Qt.Key_Down) { completionIndex = (completionIndex + 1) % completions.length; return true; }
+        if (e.key === Qt.Key_Up) { completionIndex = (completionIndex + completions.length - 1) % completions.length; return true; }
+        if (e.key === Qt.Key_Escape) { hideCompletion(); return true; }
+        return false;
     }
 
     // ---- Smart punctuation as you type: the rules of wordloom-core's
@@ -555,6 +621,46 @@ Rectangle {
         }
     }
 
+    // The name suggestions, just under the caret. Not a Popup, so typing
+    // carries on in the editor.
+    Rectangle {
+        id: completionBox
+        visible: ev.completions.length > 0 && ev.completionArea !== null
+        z: 50
+        readonly property point at: {
+            const a = ev.completionArea;
+            if (!a) return Qt.point(0, 0);
+            const r = a.cursorRectangle;
+            return a.mapToItem(ev, r.x, r.y + r.height + 4);
+        }
+        x: Math.max(4, Math.min(at.x, ev.width - width - 4))
+        y: at.y + height > ev.height - 4 ? at.y - height - (ev.completionArea ? ev.completionArea.cursorRectangle.height + 8 : 0) : at.y
+        TextMetrics { id: widest; font.bold: true; text: ev.completions.reduce((w, n) => n.length > w.length ? n : w, "") }
+        width: Math.max(160, widest.advanceWidth + 64)
+        height: completionCol.implicitHeight + 8
+        radius: 4
+        color: Theme.panel
+        border.color: Theme.border
+        Column {
+            id: completionCol
+            x: 4; y: 4
+            Repeater {
+                model: ev.completions
+                delegate: Rectangle {
+                    required property string modelData
+                    required property int index
+                    width: completionBox.width - 8
+                    height: 24
+                    radius: 3
+                    color: index === ev.completionIndex ? Theme.accentSoft : "transparent"
+                    Label { anchors.verticalCenter: parent.verticalCenter; x: 6; text: modelData; textFormat: Text.PlainText; color: Theme.text; font.bold: index === ev.completionIndex }
+                    Label { visible: index === ev.completionIndex; anchors.verticalCenter: parent.verticalCenter; anchors.right: parent.right; anchors.rightMargin: 6; text: qsTr("Tab"); color: Theme.subtext; font.pixelSize: 10 }
+                    TapHandler { onTapped: { ev.completionIndex = index; ev.acceptCompletion(); } }
+                }
+            }
+        }
+    }
+
     Label {
         anchors.centerIn: parent
         visible: ev.node === null
@@ -640,8 +746,8 @@ Rectangle {
             rightPadding: 0
             topPadding: 2
             bottomPadding: 2
-            onTextChanged: if (!de.loading) saveTimer.restart()
-            onActiveFocusChanged: { if (activeFocus) { ev.activeId = de.docId; ev.activeArea = area; ev.editorFocused(); } else de.flush(); }
+            onTextChanged: { if (!de.loading) { saveTimer.restart(); if (activeFocus) ev.updateCompletion(area); } }
+            onActiveFocusChanged: { if (activeFocus) { ev.activeId = de.docId; ev.activeArea = area; ev.editorFocused(); } else { de.flush(); if (ev.completionArea === area) ev.hideCompletion(); } }
 
             // ---- right-click menu with spelling suggestions. Qt 6.9+ has a
             // built-in context menu, which we replace with ours; older Qt has
@@ -707,6 +813,7 @@ Rectangle {
             }
             Connections { target: Api; function onSpellingChanged() { styler.rehighlight(); } }
             Keys.onPressed: (e) => {
+                if (ev.completionKey(e)) { e.accepted = true; return; }
                 if (ev.smartKey(area, e)) { e.accepted = true; return; }
                 if ((e.modifiers & Qt.ControlModifier) && !(e.modifiers & (Qt.ShiftModifier | Qt.AltModifier))) {
                     if (e.key === Qt.Key_B) { ev.activeArea = area; ev.toggleEmphasis(2); e.accepted = true; }
@@ -722,7 +829,11 @@ Rectangle {
                 quoteColor: Theme.subtext
                 commentColor: Theme.dark ? Qt.rgba(0.85, 0.68, 0.2, 0.24) : Qt.rgba(0.96, 0.78, 0.2, 0.34)
             }
-            onCursorPositionChanged: if (activeFocus) ev.activeCursor = cursorPosition
+            onCursorPositionChanged: if (activeFocus) {
+                ev.activeCursor = cursorPosition;
+                // Moving away (click, arrow keys) closes the suggestions.
+                if (ev.completionArea === area && (cursorPosition < ev.completionStart || ev.isLetter(text[cursorPosition]))) ev.hideCompletion();
+            }
             // Keep the caret on screen as you type, move or the text reflows.
             // Deferred so the page has grown to fit a new line first.
             onCursorRectangleChanged: if (activeFocus) Qt.callLater(ev.revealCursor, area)

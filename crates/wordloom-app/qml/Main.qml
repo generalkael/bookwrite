@@ -82,7 +82,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "styled", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "complete", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -131,6 +131,11 @@ ApplicationWindow {
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
                 else if (v === "timeline") win.ws.showLanes(false);
                 else if (v === "lanes") win.ws.showLanes(true, { place: true });
+                else if (v === "complete") {
+                    const row = Api.get("binder", []).find(r => r.title === "Night Watch");
+                    if (row) win.ws.select(row.id, "editor");
+                    Qt.callLater(() => { const a = win.ws.mainEditor().firstArea(); if (a) { a.forceActiveFocus(); a.cursorPosition = a.length; a.insert(a.length, "\n\nShe thought of Tob"); } });
+                }
                 else if (v === "styled") { const row = Api.get("binder", []).find(r => r.title === "Night Watch"); if (row) win.ws.select(row.id, "editor"); }
                 else if (v === "start") win.closeProject();
             }
@@ -259,6 +264,7 @@ ApplicationWindow {
             Action { text: qsTr("Show &Binder"); checkable: true; checked: win.ws ? win.ws.showBinder : true; onTriggered: win.ws.showBinder = !win.ws.showBinder }
             Action { text: qsTr("Show &Details"); shortcut: "Ctrl+Alt+I"; checkable: true; checked: win.ws ? win.ws.showInspector : true; onTriggered: win.ws.showInspector = !win.ws.showInspector }
             MenuSeparator {}
+            Action { text: qsTr("Complete &Names"); checkable: true; checked: Theme.completeNames; onTriggered: Theme.completeNames = !Theme.completeNames }
             Action { text: qsTr("Smart &Punctuation"); checkable: true; checked: Theme.smartPunctuation; onTriggered: Theme.smartPunctuation = !Theme.smartPunctuation }
             Action { text: qsTr("Check &Spelling"); shortcut: "F7"; checkable: true; checked: Theme.spellCheck; onTriggered: Theme.spellCheck = !Theme.spellCheck }
             Action { text: qsTr("Styled &Markdown"); checkable: true; checked: Theme.styledMarkdown; onTriggered: Theme.styledMarkdown = !Theme.styledMarkdown }

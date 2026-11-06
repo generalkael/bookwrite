@@ -39,6 +39,8 @@ QtObject {
     property bool spellCheck: true
     // “Smart” quotes, dashes and ellipses as you type (EditorView.smartKey).
     property bool smartPunctuation: true
+    // Suggest character and place names as you type (EditorView).
+    property bool completeNames: true
 
     // Remembered between runs (~/.config/Wordloom/Wordloom.conf on Linux).
     property Settings prefs: Settings {
@@ -50,6 +52,7 @@ QtObject {
         property alias styledMarkdown: theme.styledMarkdown
         property alias spellCheck: theme.spellCheck
         property alias smartPunctuation: theme.smartPunctuation
+        property alias completeNames: theme.completeNames
     }
 
     readonly property int gap: 8

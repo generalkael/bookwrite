@@ -90,6 +90,7 @@ const READ_ONLY: &[&str] = &[
     "analyse",
     "wordEstimate",
     "goTo",
+    "nameList",
     "smarten",
     "labels",
     "meta",
@@ -349,6 +350,7 @@ impl App {
             "toggleExpanded" => unit(self.s()?.toggle_expanded(a.str(0)))?,
             "reveal" => unit(self.s()?.reveal(a.str(0)))?,
             "goTo" => self.s()?.go_to(a.str(0)),
+            "nameList" => json!(crate::mentions::all_names(&self.s()?.project)),
             "smarten" => json!(crate::smart::smarten(a.str(0))),
             "setAllExpanded" => {
                 self.s()?.set_all_expanded(a.bool(0));

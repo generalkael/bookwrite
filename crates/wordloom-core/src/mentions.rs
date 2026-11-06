@@ -90,6 +90,22 @@ pub fn count(text: &str, names: &[String]) -> Vec<usize> {
     counts
 }
 
+/// Every name a character or place goes by (outside the Trash), for name
+/// completion in the editor: sorted, without duplicates.
+pub fn all_names(p: &Project) -> Vec<String> {
+    let trash = p.root(RootRole::Trash);
+    let mut out: Vec<String> = p
+        .nodes
+        .values()
+        .filter(|n| matches!(n.kind, NodeKind::Character | NodeKind::Place))
+        .filter(|n| !p.ancestors(n.id).contains(&trash))
+        .flat_map(|n| names(p, n.id))
+        .collect();
+    out.sort_by_key(|s| s.to_lowercase());
+    out.dedup();
+    out
+}
+
 #[derive(Serialize, Debug)]
 pub struct Appearance {
     pub id: NodeId,
@@ -182,6 +198,35 @@ mod tests {
             .add_node(chars, None, NodeKind::Character, "The Keeper")
             .unwrap();
         assert_eq!(names(&p, k), strs(&["The Keeper"]));
+    }
+
+    #[test]
+    fn all_names_for_completion() {
+        let mut p = Project::new("B", "");
+        let chars = p.root(RootRole::Characters);
+        let m = p
+            .add_node(chars, None, NodeKind::Character, "Mara Quinn")
+            .unwrap();
+        p.node_mut(m)
+            .unwrap()
+            .fields
+            .insert("Also known as".into(), "Mae".into());
+        p.add_node(
+            p.root(RootRole::Places),
+            None,
+            NodeKind::Place,
+            "Skerry Light",
+        )
+        .unwrap();
+        let gone = p
+            .add_node(chars, None, NodeKind::Character, "Zed Old")
+            .unwrap();
+        let trash = p.root(RootRole::Trash);
+        p.move_node(gone, trash, 0).unwrap();
+        assert_eq!(
+            all_names(&p),
+            strs(&["Mae", "Mara", "Mara Quinn", "Skerry", "Skerry Light"])
+        );
     }
 
     #[test]
