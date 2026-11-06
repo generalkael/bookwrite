@@ -1078,20 +1078,103 @@ impl Session {
 
     // ----- snapshots --------------------------------------------------------
 
+    /// A document's snapshots, newest first. For a folder: one entry per
+    /// snapshot name used inside it, `{id: "name:<title>", title, created
+    /// (the newest), count, group: true, text}`, so a chapter snapshot can
+    /// be restored or deleted as one.
     pub fn snapshots(&self, id: &str) -> Result<Value> {
-        Ok(json!(storage::list_snapshots(&self.dir, parse_id(id)?)?))
+        let nid = parse_id(id)?;
+        if self.project.node(nid)?.children.is_empty() {
+            return Ok(json!(storage::list_snapshots(&self.dir, nid)?));
+        }
+        // title -> (newest, titles of the documents that have it)
+        let mut groups: Vec<(String, chrono::DateTime<chrono::Utc>, Vec<String>)> = Vec::new();
+        for d in self.project.subtree(nid) {
+            let mut seen: Vec<&str> = Vec::new();
+            let list = storage::list_snapshots(&self.dir, d)?;
+            for snap in &list {
+                if seen.contains(&snap.title.as_str()) {
+                    continue;
+                }
+                seen.push(&snap.title);
+                let doc = self.project.nodes[&d].title.clone();
+                match groups.iter_mut().find(|g| g.0 == snap.title) {
+                    Some(g) => {
+                        g.1 = g.1.max(snap.created);
+                        g.2.push(doc);
+                    }
+                    None => groups.push((snap.title.clone(), snap.created, vec![doc])),
+                }
+            }
+        }
+        groups.sort_by_key(|g| std::cmp::Reverse(g.1));
+        Ok(json!(groups
+            .into_iter()
+            .map(|(title, created, docs)| json!({
+                "id": format!("name:{title}"),
+                "title": title,
+                "created": created,
+                "count": docs.len(),
+                "group": true,
+                "text": format!("{} document(s): {}", docs.len(), docs.join(", ")),
+            }))
+            .collect::<Vec<_>>()))
     }
 
-    pub fn take_snapshot(&self, id: &str, title: &str) -> Result<()> {
+    /// For a folder snapshot ("name:<title>"): each document inside with a
+    /// snapshot of that name, and that snapshot's id (the newest of them).
+    fn named_snapshots(&self, folder: NodeId, title: &str) -> Result<Vec<(NodeId, Uuid)>> {
+        let mut out = Vec::new();
+        for d in self.project.subtree(folder) {
+            if let Some(s) = storage::list_snapshots(&self.dir, d)?
+                .into_iter()
+                .find(|s| s.title == title)
+            {
+                out.push((d, s.id));
+            }
+        }
+        Ok(out)
+    }
+
+    /// Snapshot a document, or every document with text inside a folder
+    /// (all under the same name, so a chapter's versions match up).
+    /// Returns how many snapshots were taken.
+    pub fn take_snapshot(&self, id: &str, title: &str) -> Result<usize> {
         let id = parse_id(id)?;
-        storage::take_snapshot(&self.dir, id, title, self.project.text(id))?;
-        Ok(())
+        let node = self.project.node(id)?;
+        if node.children.is_empty() {
+            storage::take_snapshot(&self.dir, id, title, self.project.text(id))?;
+            return Ok(1);
+        }
+        let title = if title.trim().is_empty() {
+            chrono::Utc::now()
+                .format("Snapshot %Y-%m-%d %H:%M")
+                .to_string()
+        } else {
+            title.trim().to_string()
+        };
+        let mut n = 0;
+        for d in self.project.subtree(id) {
+            let text = self.project.text(d);
+            if !text.trim().is_empty() {
+                storage::take_snapshot(&self.dir, d, &title, text)?;
+                n += 1;
+            }
+        }
+        Ok(n)
     }
 
     /// Restore a snapshot, first snapshotting the current text so nothing is
     /// ever lost.
     pub fn restore_snapshot(&mut self, id: &str, snap: &str) -> Result<()> {
         let nid = parse_id(id)?;
+        // A folder snapshot: restore every document that has one by that name.
+        if let Some(title) = snap.strip_prefix("name:") {
+            for (d, sid) in self.named_snapshots(nid, title)? {
+                self.restore_snapshot(&d.to_string(), &sid.to_string())?;
+            }
+            return Ok(());
+        }
         let sid = parse_id(snap)?;
         let snaps = storage::list_snapshots(&self.dir, nid)?;
         let s = snaps
@@ -1127,7 +1210,14 @@ impl Session {
     }
 
     pub fn delete_snapshot(&self, id: &str, snap: &str) -> Result<()> {
-        storage::delete_snapshot(&self.dir, parse_id(id)?, parse_id(snap)?)
+        let nid = parse_id(id)?;
+        if let Some(title) = snap.strip_prefix("name:") {
+            for (d, sid) in self.named_snapshots(nid, title)? {
+                storage::delete_snapshot(&self.dir, d, sid)?;
+            }
+            return Ok(());
+        }
+        storage::delete_snapshot(&self.dir, nid, parse_id(snap)?)
     }
 
     /// Words in the names of characters, places and timeline tracks, for
@@ -1662,6 +1752,51 @@ mod tests {
         // A different folder gets its own first backup.
         let other = tempfile::tempdir().unwrap();
         assert!(s.auto_backup(other.path(), 2).unwrap()["path"].is_string());
+    }
+
+    #[test]
+    fn a_folder_snapshot_saves_every_document_inside() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut s = Session::create(tmp.path(), "Snaps", "").unwrap();
+        let ms = s.root_id("manuscript").unwrap();
+        let ch = s.add(&ms, "folder", "Ch", true).unwrap();
+        let a = s.add(&ch, "text", "A", true).unwrap();
+        let b = s.add(&ch, "text", "B", true).unwrap();
+        let empty = s.add(&ch, "text", "Empty", true).unwrap();
+        s.set_text(&a, "Alpha.").unwrap();
+        s.set_text(&b, "Beta.").unwrap();
+        assert_eq!(s.take_snapshot(&ch, "Before revision").unwrap(), 2);
+        for (id, text) in [(&a, "Alpha."), (&b, "Beta.")] {
+            let list = storage::list_snapshots(&s.dir, Uuid::parse_str(id).unwrap()).unwrap();
+            assert_eq!(list.len(), 1);
+            assert_eq!(list[0].title, "Before revision");
+            assert_eq!(list[0].text, text);
+        }
+        // The chapter lists it once, and restores it as one.
+        let groups = s.snapshots(&ch).unwrap();
+        assert_eq!(groups[0]["title"], "Before revision");
+        assert_eq!(groups[0]["count"], 2);
+        s.set_text(&a, "Alpha, revised.").unwrap();
+        s.set_text(&b, "Beta, revised.").unwrap();
+        s.restore_snapshot(&ch, "name:Before revision").unwrap();
+        assert_eq!(s.text(&a).unwrap(), "Alpha.");
+        assert_eq!(s.text(&b).unwrap(), "Beta.");
+        // Restoring saved the revised text, also listed by name.
+        let groups = s.snapshots(&ch).unwrap();
+        assert!(groups
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|g| g["title"] == "Before restoring" && g["count"] == 2));
+        s.delete_snapshot(&ch, "name:Before revision").unwrap();
+        let groups = s.snapshots(&ch).unwrap();
+        assert!(!groups
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|g| g["title"] == "Before revision"));
+        // A document on its own still gets one, even when empty.
+        assert_eq!(s.take_snapshot(&empty, "").unwrap(), 1);
     }
 
     #[test]

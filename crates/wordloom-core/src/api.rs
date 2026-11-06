@@ -528,7 +528,7 @@ impl App {
             "removeRelation" => unit(self.s()?.remove_relation(a.str(0)))?,
             "placeOnMap" => unit(self.s()?.place_on_map(a.str(0), a.float(1), a.float(2)))?,
             "compareSnapshots" => self.s()?.compare_snapshots(a.str(0), a.str(1), a.str(2))?,
-            "takeSnapshot" => unit(self.s()?.take_snapshot(a.str(0), a.str(1)))?,
+            "takeSnapshot" => json!(self.s()?.take_snapshot(a.str(0), a.str(1))?),
             "restoreSnapshot" => unit(self.s()?.restore_snapshot(a.str(0), a.str(1)))?,
             "deleteSnapshot" => unit(self.s()?.delete_snapshot(a.str(0), a.str(1)))?,
             // --- timeline ---

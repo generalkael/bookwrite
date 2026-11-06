@@ -40,6 +40,7 @@ Rectangle {
     onNodeIdChanged: { reloadSnapshots(); reloadComments(); meta = Api.get("labels", meta); }
     Component.onCompleted: meta = Api.get("labels", meta)
 
+    function snapshotTaken(n) { return n === 1 ? qsTr("Snapshot taken") : n === 0 ? qsTr("Nothing to snapshot: no text in this folder yet") : qsTr("Snapshot taken of %1 documents").arg(n); }
     function reloadSnapshots() { snaps = nodeId ? Api.get("snapshots", [], nodeId) : []; snapIndex = -1; }
     function set(field, value) { if (node) Api.call("setField", node.id, field, value); }
 
@@ -334,7 +335,8 @@ Rectangle {
                         text: qsTr("Take")
                         onClicked: {
                             ip.flushRequested();
-                            if (Api.call("takeSnapshot", ip.nodeId, snapName.text) !== undefined) { snapName.text = ""; ip.reloadSnapshots(); Api.say(qsTr("Snapshot taken")); }
+                            const n = Api.call("takeSnapshot", ip.nodeId, snapName.text);
+                            if (n !== undefined) { snapName.text = ""; ip.reloadSnapshots(); Api.say(ip.snapshotTaken(n)); }
                         }
                     }
                 }
@@ -352,23 +354,35 @@ Rectangle {
                         contentItem: ColumnLayout {
                             spacing: 0
                             Label { text: modelData.title; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
-                            Label { text: new Date(modelData.created).toLocaleString(Qt.locale(), Locale.ShortFormat); color: Theme.subtext; font.pixelSize: 11 }
+                            Label {
+                                text: new Date(modelData.created).toLocaleString(Qt.locale(), Locale.ShortFormat) + (modelData.group ? " · " + (modelData.count === 1 ? qsTr("1 document") : qsTr("%1 documents").arg(modelData.count)) : "")
+                                color: Theme.subtext; font.pixelSize: 11
+                            }
                         }
                     }
                 }
-                Label { visible: ip.snaps.length === 0; text: qsTr("No snapshots yet. Take one before a big revision."); color: Theme.subtext; wrapMode: Text.Wrap; Layout.fillWidth: true; Layout.margins: 8 }
+                Label {
+                    visible: ip.snaps.length === 0
+                    text: ip.node && ip.node.child_count > 0
+                        ? qsTr("No snapshots yet. Taking one here saves every document in this folder at once, under one name, before a big revision.")
+                        : qsTr("No snapshots yet. Take one before a big revision.")
+                    color: Theme.subtext; wrapMode: Text.Wrap; Layout.fillWidth: true; Layout.margins: 8
+                }
                 RowLayout {
                     visible: ip.snapIndex >= 0
                     Layout.leftMargin: 8
+                    readonly property bool group: ip.snapIndex >= 0 && !!ip.snaps[ip.snapIndex] && !!ip.snaps[ip.snapIndex].group
                     Button {
-                        text: qsTr("Restore")
+                        text: parent.group ? qsTr("Restore All") : qsTr("Restore")
                         onClicked: {
                             ip.flushRequested();
                             if (Api.call("restoreSnapshot", ip.nodeId, ip.snaps[ip.snapIndex].id) !== undefined) { ip.reloadSnapshots(); Api.say(qsTr("Restored (previous text saved as a snapshot)")); }
                         }
+                        ToolTip.visible: hovered && parent.group
+                        ToolTip.text: qsTr("Every document in this folder goes back to this snapshot; their current text is saved as “Before restoring”")
                     }
-                    Button { text: qsTr("Compare…"); onClicked: { ip.flushRequested(); ip.compareRequested(ip.snaps[ip.snapIndex].id); } ToolTip.visible: hovered; ToolTip.text: qsTr("Side by side with the current text") }
-                    Button { text: qsTr("Delete"); onClicked: { Api.call("deleteSnapshot", ip.nodeId, ip.snaps[ip.snapIndex].id); ip.reloadSnapshots(); } }
+                    Button { visible: !parent.group; text: qsTr("Compare…"); onClicked: { ip.flushRequested(); ip.compareRequested(ip.snaps[ip.snapIndex].id); } ToolTip.visible: hovered; ToolTip.text: qsTr("Side by side with the current text") }
+                    Button { text: parent.group ? qsTr("Delete All") : qsTr("Delete"); onClicked: { Api.call("deleteSnapshot", ip.nodeId, ip.snaps[ip.snapIndex].id); ip.reloadSnapshots(); } }
                 }
                 ScrollView {
                     visible: ip.snapIndex >= 0

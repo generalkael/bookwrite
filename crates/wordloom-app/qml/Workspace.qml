@@ -170,7 +170,8 @@ Item {
     function snapshot() {
         if (!focusedId) return;
         flush();
-        if (Api.call("takeSnapshot", focusedId, "") !== undefined) { Api.say(qsTr("Snapshot taken")); inspector.reloadSnapshots(); }
+        const n = Api.call("takeSnapshot", focusedId, "");
+        if (n !== undefined) { Api.say(inspector.snapshotTaken(n)); inspector.reloadSnapshots(); }
     }
     function splitAtCursor() {
         const ed = inSplit ? splitEditor : editorView;

@@ -460,6 +460,23 @@ Item {
             win.setSpellLanguage("");
             check(Theme.spellLanguage === "", "Automatic follows the system again");
         }],
+        ["chapter snapshot", () => {
+            ws().select(rowId("The Storm"), "corkboard");
+            const arrival = rowId("Arrival"), keeper = rowId("The Keeper");
+            const before = [Api.call("text", arrival), Api.call("text", keeper)];
+            const n = Api.call("takeSnapshot", rowId("The Storm"), "Chapter test");
+            check(n === 2, "a folder snapshot saves each scene in it (" + n + ")");
+            const ip = ws().inspectorRef();
+            ip.reloadSnapshots();
+            const g = ip.snaps.find(x => x.title === "Chapter test");
+            check(g && g.group && g.count === 2, "the chapter lists it once, for both scenes");
+            Api.call("setText", arrival, "Changed."); Api.call("setText", keeper, "Changed too.");
+            Api.call("restoreSnapshot", rowId("The Storm"), g.id);
+            check(Api.call("text", arrival) === before[0] && Api.call("text", keeper) === before[1], "Restore All puts both scenes back");
+            Api.call("deleteSnapshot", rowId("The Storm"), g.id);
+            ip.reloadSnapshots();
+            check(!ip.snaps.some(x => x.title === "Chapter test"), "Delete All removes it from both");
+        }],
         ["character grid", () => { grid.open(); }],
         ["character grid", () => {
             const g = grid.grid, tobias = g.rows.find(r => r.title === "Tobias Wren");
