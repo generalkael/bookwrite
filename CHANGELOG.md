@@ -54,6 +54,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Drag and drop on the corkboard.** Drag a card by any part that isn't text to move it before or
+  after another card (a bar marks the spot), or onto the middle of a folder card to move it
+  inside. Undo puts it back. Dragging across a card's text still selects the text.
 - **Outliner filter.** Filter… (title, synopsis, keywords, custom fields), a label and a status
   narrow the outline; matches are shown under their (dimmed) folders, with a count of matches and
   words. ✕ or Esc clears it.

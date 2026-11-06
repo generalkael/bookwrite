@@ -30,7 +30,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Smart punctuation** | As you type, "quotes" become “curly quotes”, apostrophes become ’, `--` becomes an em dash — and `...` an ellipsis …, as in a typeset book. Whether a quote opens or closes depends on what's around it, so “Wait—” closes properly. A line of dashes (a scene break) and text inside comments are left as typed. View ▸ Smart Punctuation turns it off; Edit ▸ Convert to Smart Punctuation converts a whole document you pasted or imported (Ctrl+Z undoes it). |
 | **Focus mode** | F11 hides everything except the page. |
 | **Reading mode** | ❦ Read (Ctrl+7) shows the whole manuscript, or just the selected chapter, as a read-only book page: title page, centred chapter headings, scene breaks and book-style indents, built from the same compile step as export. Adjust the text size and column width, page with Page Up / Down or Space, and double-click (or *Edit*) to go back to writing. |
-| **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card, resize cards, reorder them from the context menu. |
+| **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card and resize cards. **Drag a card** by its edge, ruled area or footer (anywhere but the text) to move it: a bar shows where it will land, and dropping it on the middle of a folder card moves it into that folder. Edit ▸ Undo puts it back. Move Earlier / Move Later are also on the right-click menu. |
 | **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place, with folders that fold, a filter by text, label and status, and optional keyword and custom-field columns (POV, Setting, …). See [Using the outliner](#using-the-outliner). |
 | **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes and inline comments, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
@@ -113,7 +113,7 @@ in the outliner can be undone with Edit ▸ Undo (“Undo Edit Synopsis”, “U
    draft to revised. Double-click any title to jump in and write.
 
 The **corkboard** (Ctrl+2) shows the same synopses, labels and statuses as index cards for one
-folder at a time; right-click a card to move it earlier or later. The outliner is better for
+folder at a time, and is the place to rearrange scenes by dragging the cards. The outliner is better for
 seeing the whole book at once.
 
 ### The timeline (Gantt)
@@ -323,6 +323,7 @@ crates/
     src/controller.rs  one cxx-qt QObject (QML singleton `Wordloom`) wrapping api::App
     src/styler.*       C++ QSyntaxHighlighter for styled Markdown, spelling and repeats (MarkdownStyler in QML)
     src/pdfexport.*    C++ PDF writer (QPdfWriter): title page, running header, page numbers
+    src/inputsim.*     C++ self-test aid: real mouse events, so drag and drop is tested end to end
     qml/*.qml          all views and dialogs
 ```
 
@@ -336,7 +337,7 @@ PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 to take them in the dark theme.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, outliner folding, columns and filter, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, outliner folding, columns and filter, corkboard drag and drop, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

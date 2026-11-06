@@ -86,6 +86,7 @@ Item {
     }
 
     function outlinerRef() { return outliner; }
+    function corkboardRef() { return corkboard; }
     function flush() {
         if (editorView) editorView.flush();
         if (splitEditor) splitEditor.flush();
@@ -368,6 +369,7 @@ Item {
                         onOpenRequested: (id) => ws.selectMain(id, "editor")
                     }
                     CorkboardView {
+                        id: corkboard
                         nodeId: ws.currentId
                         node: ws.current
                         active: ws.viewMode === "corkboard"

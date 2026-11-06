@@ -36,6 +36,47 @@ Rectangle {
         containerTitle = info ? info.title : "";
         cards = containerId ? Api.get("children", [], containerId) : [];
     }
+    // ---- drag and drop: move a card before / after another, or into a folder card ----
+    property string dragId: ""
+    property string dragTitle: ""
+    property point dragPos: Qt.point(0, 0)   // pointer, in cb's coordinates
+    property int dropIndex: -1
+    property string dropMode: ""             // "before", "after", "inside" or "" (no move)
+    function startDrag(id, title) { dragId = id; dragTitle = title; dropIndex = -1; dropMode = ""; }
+    // `scenePos`: the pointer in window coordinates.
+    function updateDrag(scenePos) {
+        dragPos = cb.mapFromItem(null, scenePos.x, scenePos.y);
+        const p = grid.contentItem.mapFromItem(null, scenePos.x, scenePos.y);
+        let i = grid.indexAt(p.x, p.y);
+        let mode = "";
+        if (i < 0) {
+            // Past the last card: drop at the end.
+            if (cards.length && p.y >= 0) { i = cards.length - 1; mode = "after"; }
+        } else {
+            const item = grid.itemAtIndex(i);
+            const fx = item ? (p.x - item.x) / item.width : 0.5;
+            if (cards[i].kind === "folder" && fx > 0.3 && fx < 0.7) mode = "inside";
+            else mode = fx < 0.5 ? "before" : "after";
+        }
+        // Dropping a card next to (or onto) itself changes nothing.
+        const from = cards.findIndex(c => c.id === dragId);
+        if (i === from || (mode === "after" && i === from - 1) || (mode === "before" && i === from + 1)) mode = "";
+        dropIndex = i;
+        dropMode = mode;
+    }
+    // A spot on card `i` that isn't text (just inside its left edge), in
+    // window coordinates: where a real drag can start.
+    function cardGrip(i) { const it = grid.itemAtIndex(i); return it ? it.mapToItem(null, 12, it.height / 2) : null; }
+    // A point on card `i` (fraction `fx` across it), in window coordinates.
+    function cardPoint(i, fx) { const it = grid.itemAtIndex(i); return it ? it.mapToItem(null, it.width * fx, it.height / 2) : null; }
+    // Returns true if the card moved.
+    function finishDrag() {
+        const id = dragId, mode = dropMode, target = dropIndex >= 0 && dropIndex < cards.length ? cards[dropIndex].id : "";
+        dragId = ""; dropIndex = -1; dropMode = "";
+        if (!id || !mode || !target) return false;
+        return Api.call("dropOn", id, target, mode) !== undefined;
+    }
+
     // Find the parent by scanning the binder (cheap for typical projects).
     function parentOf(id) {
         const rows = Api.get("binder", []);
@@ -92,7 +133,7 @@ Rectangle {
                     radius: 3
                     border.width: cell.modelData.id === cb.nodeId ? 2 : 1
                     border.color: cell.modelData.id === cb.nodeId ? Theme.accent : Qt.rgba(0, 0, 0, 0.18)
-                    opacity: cell.modelData.include_in_compile ? 1 : 0.7
+                    opacity: cell.modelData.id === cb.dragId ? 0.35 : cell.modelData.include_in_compile ? 1 : 0.7
 
                     // Label colour strip
                     Rectangle {
@@ -158,6 +199,29 @@ Rectangle {
                         onDoubleTapped: cb.openRequested(cell.modelData.id)
                     }
                     TapHandler { acceptedButtons: Qt.RightButton; onTapped: cardMenu.popup() }
+                    // Drag from anywhere that isn't text (the edges, the
+                    // ruled area, the footer, the icon); the title and
+                    // synopsis keep the mouse for selecting text.
+                    DragHandler {
+                        id: dragger
+                        target: null
+                        acceptedButtons: Qt.LeftButton
+                        cursorShape: active ? Qt.ClosedHandCursor : Qt.ArrowCursor
+                        onActiveChanged: {
+                            if (active) cb.startDrag(cell.modelData.id, cell.modelData.title);
+                            else cb.finishDrag();
+                        }
+                        onCentroidChanged: if (active) cb.updateDrag(centroid.scenePosition)
+                    }
+                    // "Drop inside this folder" highlight.
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: cb.dropMode === "inside" && cb.dropIndex === cell.index
+                        color: "transparent"
+                        border.width: 3
+                        border.color: Theme.accent
+                        radius: 3
+                    }
                     Menu {
                         id: cardMenu
                         MenuItem { text: qsTr("Open in Editor"); onTriggered: cb.openRequested(cell.modelData.id) }
@@ -171,6 +235,35 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // Where the dragged card will land: a bar between cards.
+    Rectangle {
+        readonly property var item: cb.dropIndex >= 0 && (cb.dropMode === "before" || cb.dropMode === "after") ? grid.itemAtIndex(cb.dropIndex) : null
+        visible: item !== null
+        width: 4
+        radius: 2
+        color: Theme.accent
+        // mapToItem isn't a live binding: read contentY so scrolling moves it.
+        x: { grid.contentY; return item ? grid.contentItem.mapToItem(cb, item.x + (cb.dropMode === "after" ? item.width : 0), 0).x - 2 : 0; }
+        y: { grid.contentY; return item ? grid.contentItem.mapToItem(cb, 0, item.y).y + 8 : 0; }
+        height: item ? item.height - 16 : 0
+        z: 5
+    }
+    // The card under the pointer while dragging.
+    Rectangle {
+        visible: cb.dragId !== ""
+        // Beside the pointer, kept inside the board.
+        x: Math.max(4, Math.min(cb.width - width - 4, cb.dragPos.x + 14))
+        y: Math.max(4, Math.min(cb.height - height - 4, cb.dragPos.y + 10))
+        width: Math.min(cb.cardWidth, 220)
+        height: 28
+        radius: 3
+        color: Theme.card
+        border.color: Theme.accent
+        opacity: 0.9
+        z: 6
+        Label { anchors.fill: parent; anchors.margins: 6; text: cb.dragTitle; elide: Text.ElideRight; font.bold: true; color: Theme.ink; verticalAlignment: Text.AlignVCenter }
     }
 
     Label {

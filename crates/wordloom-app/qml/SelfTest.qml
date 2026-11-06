@@ -1,5 +1,6 @@
 import QtQuick
 import com.wordloom.app
+import com.wordloom.styling
 
 // `wordloom --sample=DIR --selftest`: drives the real UI through checks for
 // bugs fixed in the past, prints PASS / FAIL lines and exits with status 1
@@ -14,6 +15,7 @@ Item {
     property var goTo                    // GoToPopup
     property var autoBackup              // Main.qml's Automatic Backups dialog
     property int step: 0
+    InputSim { id: input }
     property int failures: 0
     property int passes: 0
     property string current: ""
@@ -257,6 +259,43 @@ Item {
             const dir = Api.get("meta", null).path;
             const r = Api.call("backupZip", dir.substring(0, dir.lastIndexOf("/")) + "/selftest-backup.zip");
             check(r && r.files >= 5 && r.bytes > 1000, "Back Up to Zip packs the project (" + (r ? r.files + " files, " + r.bytes + " bytes" : "failed") + ")");
+        }],
+        ["corkboard drag", () => { ws().select(rowId("The Storm"), "corkboard"); }],
+        ["corkboard drag", () => {
+            const c = ws().corkboardRef(), titles = () => c.cards.map(x => x.title).join(",");
+            check(titles() === "Arrival,The Keeper", "the corkboard shows The Storm's scenes (" + titles() + ")");
+            c.startDrag(rowId("The Keeper"), "The Keeper");
+            c.updateDrag(c.cardPoint(1, 0.5));
+            check(c.dropMode === "", "dropping a card on itself does nothing");
+            c.updateDrag(c.cardPoint(0, 0.2));
+            check(c.dropMode === "before" && c.dropIndex === 0, "the left half of a card drops before it (" + c.dropMode + " " + c.dropIndex + ")");
+            check(c.finishDrag() && titles() === "The Keeper,Arrival", "dragging a card reorders the scenes (" + titles() + ")");
+            Api.call("undo");
+            check(titles() === "Arrival,The Keeper", "Undo puts it back (" + titles() + ")");
+            // The same with real mouse events, starting on the card's edge.
+            input.drag(win, c.cardGrip(1), c.cardPoint(0, 0.2));
+            check(titles() === "The Keeper,Arrival", "a mouse drag moves the card (" + titles() + ")");
+            if (titles() === "The Keeper,Arrival") Api.call("undo");
+        }],
+        // Its own step: after Undo the cards are rebuilt on the next layout.
+        ["corkboard drag", () => {
+            const c = ws().corkboardRef(), titles = () => c.cards.map(x => x.title).join(",");
+            const from = c.cardPoint(1, 0.5), to = c.cardPoint(0, 0.2);
+            check(from !== null && to !== null, "the cards are laid out");
+            if (from && to) input.drag(win, from, to);
+            check(titles() === "Arrival,The Keeper" && c.dragId === "", "dragging across the synopsis text selects it instead of moving the card (" + titles() + ", drag " + c.dragId + " " + c.dropMode + ")");
+            ws().select(Api.call("rootId", "manuscript"), "corkboard");
+        }],
+        ["corkboard drag", () => {
+            const c = ws().corkboardRef(), ret = rowId("The Return"), log = rowId("The Log");
+            const iLog = c.cards.findIndex(x => x.id === log);
+            c.startDrag(ret, "The Return");
+            c.updateDrag(c.cardPoint(iLog, 0.5));
+            check(c.dropMode === "inside", "the middle of a folder card drops into the folder (" + c.dropMode + ")");
+            c.finishDrag();
+            check(Api.get("children", [], log).some(x => x.id === ret), "the card moves into the folder");
+            Api.call("undo");
+            check(c.cards.some(x => x.id === ret), "Undo brings it back");
         }],
         ["outliner", () => {
             Api.call("setField", rowId("Arrival"), "field:POV", "Mara");

@@ -62,6 +62,8 @@ fn main() {
             "src/styler.cpp",
             "src/pdfexport.h",
             "src/pdfexport.cpp",
+            "src/inputsim.h",
+            "src/inputsim.cpp",
         ])
         .build();
 }
