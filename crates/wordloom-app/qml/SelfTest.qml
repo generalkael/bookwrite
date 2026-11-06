@@ -258,6 +258,28 @@ Item {
             const r = Api.call("backupZip", dir.substring(0, dir.lastIndexOf("/")) + "/selftest-backup.zip");
             check(r && r.files >= 5 && r.bytes > 1000, "Back Up to Zip packs the project (" + (r ? r.files + " files, " + r.bytes + " bytes" : "failed") + ")");
         }],
+        ["outliner", () => {
+            Api.call("setField", rowId("Arrival"), "field:POV", "Mara");
+            ws().select(Api.call("rootId", "manuscript"), "outliner");
+        }],
+        ["outliner", () => {
+            const o = ws().outlinerRef(), all = o.rows.length, storm = o.rows.find(x => x.title === "The Storm");
+            check(storm && all > storm.child_count, "the outliner lists the manuscript (" + all + " rows)");
+            o.toggle(storm.id);
+            check(o.rows.length === all - storm.child_count && !o.rows.some(x => x.title === "Arrival"), "collapsing a folder hides what's inside it");
+            o.setAllCollapsed(false);
+            check(o.rows.length === all, "Expand All shows everything again");
+            check(o.fieldKeys.indexOf("POV") >= 0, "custom fields used below are offered as columns (" + o.fieldKeys + ")");
+            o.toggleColumn("field:POV");
+            check(o.hasColumn("field:POV") && o.cellText(o.rows.find(x => x.title === "Arrival"), "field:POV") === "Mara", "a field column shows each item's value");
+            o.setCell(o.rows.find(x => x.title === "The Keeper"), "field:POV", "Tobias");
+            check(Api.get("nodeInfo", {}, rowId("The Keeper")).fields.POV === "Tobias", "editing a field cell saves it");
+            o.setCell(o.rows.find(x => x.title === "The Keeper"), "keywords", "storm, arrival");
+            check(Api.get("nodeInfo", {}, rowId("The Keeper")).keywords.join("|") === "storm|arrival", "keywords are edited comma separated");
+            o.toggleColumn("field:POV");
+            check(!o.hasColumn("field:POV"), "the column can be hidden again");
+            Api.call("setField", rowId("Arrival"), "field:POV", ""); Api.call("setField", rowId("The Keeper"), "field:POV", ""); Api.call("setField", rowId("The Keeper"), "keywords", "");
+        }],
         ["story bible", () => {
             const dir = Api.get("meta", null).path, base = "file://" + dir.substring(0, dir.lastIndexOf("/")) + "/selftest-bible";
             const bible = win.bibleRef();

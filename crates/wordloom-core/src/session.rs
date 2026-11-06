@@ -439,6 +439,7 @@ impl Session {
                     "child_count": cn.children.len(),
                     "include_in_compile": cn.include_in_compile,
                     "keywords": cn.keywords,
+                    "fields": cn.fields,
                 })
             })
             .collect();

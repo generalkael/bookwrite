@@ -139,6 +139,11 @@ ApplicationWindow {
                 }
                 else if (v === "relation") { win.ws.viewMode = "relations"; const m = Api.get("relations", null); if (m && m.links.length) win.ws.relationDialogRef().openEdit(m.links[0]); }
                 if (v === "corkboard" || v === "outliner") win.ws.select(Api.call("rootId", "manuscript"), v);
+                if (v === "outliner") Qt.callLater(() => {
+                    const o = win.ws.outlinerRef(), log = o.rows.find(x => x.title === "The Log");
+                    if (!o.hasColumn("keywords")) o.toggleColumn("keywords");
+                    if (log && !o.collapsed[log.id]) o.toggle(log.id);
+                });
                 else if (v === "editor") { win.ws.viewMode = "editor"; }
                 else if (v === "timeline") win.ws.showLanes(false);
                 else if (v === "lanes") win.ws.showLanes(true, { place: true });

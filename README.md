@@ -31,7 +31,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Focus mode** | F11 hides everything except the page. |
 | **Reading mode** | ❦ Read (Ctrl+7) shows the whole manuscript, or just the selected chapter, as a read-only book page: title page, centred chapter headings, scene breaks and book-style indents, built from the same compile step as export. Adjust the text size and column width, page with Page Up / Down or Space, and double-click (or *Edit*) to go back to writing. |
 | **Corkboard** | Index cards with label colour strips, status stamps and word counts. Edit titles and synopses on the card, resize cards, reorder them from the context menu. |
-| **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place. See [Using the outliner](#using-the-outliner). |
+| **Outliner** | A table of the whole subtree: synopsis, label, status, words, target and progress, all editable in place, with folders that fold and optional keyword and custom-field columns (POV, Setting, …). See [Using the outliner](#using-the-outliner). |
 | **Details panel** | The right-hand panel (Show/Hide Details, Ctrl+Alt+I): synopsis, label, status, keywords, word target, include-in-compile, **character sheets / place sheets / scene facts** (custom fields), document notes and inline comments, snapshots, and the timeline events linked to the item. |
 | **Undo & redo** | Project-wide: ↶/↷ on the toolbar and Edit ▸ Undo/Redo (Ctrl+Z / Ctrl+Shift+Z when you're not typing in a text box) reverse binder moves, renames, trash and empty trash, replace-all, metadata, labels, targets, and every timeline edit. The menu names the step (“Undo Move Event”). Typing has the editor's own undo, so undoing an old change never throws away text written since. Up to 200 steps per session. |
 | **Relationship map** | ◇ Relations (Ctrl+6) shows every character as a card you can drag around, with labelled arrows for how they relate (“Mara *distrusts* Tobias”). Add a relationship from the toolbar or a card's right-click menu, and click a label to edit it, add notes, swap its direction or delete it. The Details panel lists each character's relationships. |
@@ -63,11 +63,23 @@ step further. While the outliner is showing, clicking another folder in the bind
 table to that folder. Clicking a document opens it in the editor. The Characters, Places,
 Research and Notes sections work the same way.
 
+**Folding.** Click the ▸ / ▾ beside a folder to hide or show what's inside it, so you can look at
+a book chapter by chapter. **Collapse All** and **Expand All**, above the table, do every folder
+at once. The line above the table also counts the items and words below the selected folder.
+
+**More columns.** **Columns ▾** adds *Keywords* and any custom field used by an item below the
+selected folder (*POV*, *Setting*, *Time*, a character's *Role*…) as extra columns you can edit.
+Keywords are typed comma separated; clearing a field's cell removes that field from the item. To
+start a new field, give it to one scene in the Details panel (type a name in *New field name*
+and click +) and it appears in
+the menu. Your choice of columns is remembered. When the table is wider than the pane, a scroll
+bar appears along the bottom (or use Shift + mouse wheel).
+
 **The columns:**
 
 | Column | What it shows | How to change it |
 |---|---|---|
-| Title | The item's name and type icon | Double-click to open the item in the editor. Rename and reorder in the binder (F2, Ctrl+↑ ↓). |
+| Title | The item's name and type icon, with ▸ / ▾ on folders | Double-click to open the item in the editor. Rename and reorder in the binder (F2, Ctrl+↑ ↓). |
 | Synopsis | The one-line summary, the same text as the corkboard card and the Details panel | Click and type. It's saved when you press Enter or click elsewhere. |
 | Label | The item's label (e.g. a POV character or plot thread) | Pick from the list; *No Label* clears it. |
 | Status | Where the item stands (To Do, First Draft, Revised…) | Pick from the list; *No Status* clears it. |
@@ -85,7 +97,8 @@ in the outliner can be undone with Edit ▸ Undo (“Undo Edit Synopsis”, “U
 2. Select the Manuscript and press Ctrl+3. Go down the Synopsis column writing one line per scene:
    what happens and why it matters.
 3. Give scenes (or whole chapters) a Target, and set each Status to *To Do*.
-4. Use Label for whatever you want to track across the book, such as point of view or subplot.
+4. Use Label for whatever you want to track across the book, such as point of view or subplot,
+   or add a *POV* custom field and show it with Columns ▾.
    Its colour shows on corkboard cards and as a dot on binder rows, so you can see the balance at a
    glance.
 5. As you draft, the Words and Progress columns fill in. Change Status as scenes move from first
@@ -248,7 +261,7 @@ duplicates can always find them. To reclaim space, use **File ▸ Clean Up Unuse
 deletes only files that no item (in the Trash or not) and no undo or redo step refers to. **Save As** copies `files/` and `snapshots/` to the new project.
 
 Your preferences (light/dark, editor font size, page width, styled Markdown, smart punctuation, name completion, line highlight and its colour, repeated-word highlighting, the backup folders and automatic-backup settings, which panels are
-shown, timeline lanes and the window size) are remembered between runs in
+shown, timeline lanes, the outliner's extra columns and the window size) are remembered between runs in
 `~/.config/Wordloom/Wordloom.conf` (in the Flatpak, under `~/.var/app/io.github.generalkael.Wordloom/`).
 They are per user, not stored in projects.
 
@@ -314,7 +327,7 @@ Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog i
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, outliner folding and columns, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

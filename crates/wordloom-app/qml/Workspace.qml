@@ -85,6 +85,7 @@ Item {
         }
     }
 
+    function outlinerRef() { return outliner; }
     function flush() {
         if (editorView) editorView.flush();
         if (splitEditor) splitEditor.flush();
@@ -374,6 +375,7 @@ Item {
                         onSelectRequested: (id) => ws.select(id, "corkboard")
                     }
                     OutlinerView {
+                        id: outliner
                         nodeId: ws.currentId
                         node: ws.current
                         active: ws.viewMode === "outliner"
