@@ -64,6 +64,55 @@ Rectangle {
         dropIndex = i;
         dropMode = mode;
     }
+    // ---- keyboard: ← → ↑ ↓ Home End move a highlight between cards, Enter
+    // opens (a folder on the board, a document in the editor), Backspace
+    // goes up a folder, Ctrl+arrows move the card, Delete trashes it ----
+    property string keyId: ""                // the highlighted card
+    property string keyAfterReload: ""       // highlight this card once the board reloads
+    readonly property int columns: Math.max(1, Math.floor(grid.width / grid.cellWidth))
+    readonly property int keyIndex: cards.findIndex(c => c.id === keyId)
+    onCardsChanged: {
+        const want = [keyAfterReload, keyId, nodeId].find(id => id && cards.some(c => c.id === id));
+        keyId = want || (cards.length ? cards[0].id : "");
+        keyAfterReload = "";
+    }
+    function highlight(i) {
+        if (!cards.length) return;
+        i = Math.max(0, Math.min(cards.length - 1, i));
+        keyId = cards[i].id;
+        grid.positionViewAtIndex(i, GridView.Contain);
+    }
+    function handleKey(e) {
+        const i = keyIndex, ctrl = e.modifiers & Qt.ControlModifier;
+        const step = (e.key === Qt.Key_Left) ? -1 : (e.key === Qt.Key_Right) ? 1
+                   : (e.key === Qt.Key_Up) ? -columns : (e.key === Qt.Key_Down) ? columns : 0;
+        if (step !== 0) {
+            // Ctrl: one place earlier or later (the binder's order).
+            if (ctrl) { if (i >= 0) Api.call("shift", cards[i].id, step < 0 ? -1 : 1); }
+            else highlight(i < 0 ? 0 : i + step);
+            return true;
+        }
+        if (e.key === Qt.Key_Home) { highlight(0); return true; }
+        if (e.key === Qt.Key_End) { highlight(cards.length - 1); return true; }
+        if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter) && i >= 0) {
+            if (cards[i].child_count > 0) selectRequested(cards[i].id); else openRequested(cards[i].id);
+            return true;
+        }
+        if (e.key === Qt.Key_Backspace) {
+            const up = parentOf(containerId);
+            if (up) { keyAfterReload = containerId; selectRequested(up); }
+            return true;
+        }
+        if (e.key === Qt.Key_Delete && i >= 0) {
+            const next = cards[i + 1] || cards[i - 1];
+            keyAfterReload = next ? next.id : "";
+            Api.call("trash", cards[i].id);
+            return true;
+        }
+        return false;
+    }
+    function focusBoard() { grid.forceActiveFocus(); }
+
     // A spot on card `i` that isn't text (just inside its left edge), in
     // window coordinates: where a real drag can start.
     function cardGrip(i) { const it = grid.itemAtIndex(i); return it ? it.mapToItem(null, 12, it.height / 2) : null; }
@@ -117,6 +166,17 @@ Rectangle {
             cellHeight: cb.cardWidth * 0.66 + 16
             model: cb.cards
             ScrollBar.vertical: ScrollBar {}
+            activeFocusOnTab: true
+            Keys.onPressed: (e) => { if (cb.handleKey(e)) e.accepted = true; }
+            // Shows that the keys go to the board.
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                border.width: grid.activeFocus ? 2 : 0
+                border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.5)
+                radius: 4
+                z: -1
+            }
 
             delegate: Item {
                 id: cell
@@ -195,7 +255,7 @@ Rectangle {
 
                     TapHandler {
                         acceptedButtons: Qt.LeftButton
-                        onTapped: cb.selectRequested(cell.modelData.id)
+                        onTapped: { cb.keyId = cell.modelData.id; cb.selectRequested(cell.modelData.id); grid.forceActiveFocus(); }
                         onDoubleTapped: cb.openRequested(cell.modelData.id)
                     }
                     TapHandler { acceptedButtons: Qt.RightButton; onTapped: cardMenu.popup() }
@@ -212,6 +272,16 @@ Rectangle {
                             else cb.finishDrag();
                         }
                         onCentroidChanged: if (active) cb.updateDrag(centroid.scenePosition)
+                    }
+                    // The keyboard highlight.
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        visible: grid.activeFocus && cb.keyId === cell.modelData.id
+                        color: "transparent"
+                        border.width: 2
+                        border.color: Theme.accent
+                        radius: 5
                     }
                     // "Drop inside this folder" highlight.
                     Rectangle {

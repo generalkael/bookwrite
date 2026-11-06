@@ -1,6 +1,7 @@
 #include "inputsim.h"
 
 #include <QGuiApplication>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPointingDevice>
 #include <QQuickWindow>
@@ -28,4 +29,15 @@ void InputSim::drag(QQuickWindow *window, QPointF from, QPointF to, int steps)
     for (int i = 1; i <= steps; ++i)
         send(QEvent::MouseMove, from + (to - from) * (qreal(i) / steps), Qt::NoButton, Qt::LeftButton);
     send(QEvent::MouseButtonRelease, to, Qt::LeftButton, Qt::NoButton);
+}
+
+void InputSim::key(QQuickWindow *window, int key, int modifiers)
+{
+    if (!window)
+        return;
+    const auto mods = Qt::KeyboardModifiers(modifiers);
+    QKeyEvent press(QEvent::KeyPress, key, mods);
+    QGuiApplication::sendEvent(window, &press);
+    QKeyEvent release(QEvent::KeyRelease, key, mods);
+    QGuiApplication::sendEvent(window, &release);
 }

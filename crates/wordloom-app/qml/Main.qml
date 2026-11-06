@@ -154,6 +154,7 @@ ApplicationWindow {
                 }
                 else if (v === "relation") { win.ws.viewMode = "relations"; const m = Api.get("relations", null); if (m && m.links.length) win.ws.relationDialogRef().openEdit(m.links[0]); }
                 if (v === "corkboard" || v === "outliner") win.ws.select(Api.call("rootId", "manuscript"), v);
+                if (v === "corkboard") Qt.callLater(() => { const c = win.ws.corkboardRef(); c.focusBoard(); c.highlight(1); });
                 if (v === "outliner") Qt.callLater(() => {
                     const o = win.ws.outlinerRef(), log = o.rows.find(x => x.title === "The Log");
                     if (!o.hasColumn("keywords")) o.toggleColumn("keywords");

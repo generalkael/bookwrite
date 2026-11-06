@@ -54,6 +54,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Corkboard keyboard control.** Arrows, Home and End move a highlight between cards; Enter
+  opens a card (a folder's cards, or a document in the editor); Backspace goes up a folder;
+  Ctrl+arrows move the card; Delete trashes it.
 - **Spelling language.** View ▸ Spelling Language lists the installed Hunspell dictionaries by
   name and switches between them (or back to *Automatic*); the choice is remembered. Dictionaries
   in `~/.local/share/hunspell` are found too, including from the Flatpak.

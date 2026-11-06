@@ -315,6 +315,36 @@ Item {
             Api.call("undo");
             check(c.cards.some(x => x.id === ret), "Undo brings it back");
         }],
+        ["corkboard keys", () => { ws().select(rowId("The Storm"), "corkboard"); }],
+        ["corkboard keys", () => {
+            const c = ws().corkboardRef(), titles = () => c.cards.map(x => x.title).join(",");
+            const key = (k, m) => input.key(win, k, m || 0);
+            c.focusBoard();
+            c.keyId = c.cards[0].id;
+            key(Qt.Key_Right);
+            check(c.keyIndex === 1, "→ highlights the next card (" + c.keyIndex + ")");
+            key(Qt.Key_Left, Qt.ControlModifier);
+            check(titles() === "The Keeper,Arrival" && c.cards[c.keyIndex].title === "The Keeper", "Ctrl+← moves the card earlier and keeps it highlighted (" + titles() + ")");
+            Api.call("undo");
+            key(Qt.Key_Backspace);
+        }],
+        ["corkboard keys", () => {
+            const c = ws().corkboardRef(), key = (k, m) => input.key(win, k, m || 0);
+            check(c.containerTitle === "Manuscript" && c.cards[c.keyIndex].title === "The Storm", "Backspace goes up a folder, highlighting where you were (" + c.containerTitle + ", " + (c.keyIndex >= 0 ? c.cards[c.keyIndex].title : "none") + ")");
+            key(Qt.Key_Return);
+        }],
+        ["corkboard keys", () => {
+            const c = ws().corkboardRef(), key = (k, m) => input.key(win, k, m || 0);
+            check(c.containerTitle === "The Storm" && ws().viewMode === "corkboard", "Enter on a folder card shows its cards (" + c.containerTitle + ")");
+            key(Qt.Key_End);
+            check(c.cards[c.keyIndex].title === "The Keeper", "End highlights the last card");
+            key(Qt.Key_Delete);
+            check(c.cards.map(x => x.title).join(",") === "Arrival" && c.cards[c.keyIndex].title === "Arrival", "Delete trashes the card and highlights its neighbour");
+            Api.call("undo");
+            key(Qt.Key_End);
+            key(Qt.Key_Return);
+            check(ws().viewMode === "editor" && ws().current && ws().current.title === "The Keeper", "Enter on a document opens it in the editor (" + ws().viewMode + ")");
+        }],
         ["outliner", () => {
             Api.call("setField", rowId("Arrival"), "field:POV", "Mara");
             ws().select(Api.call("rootId", "manuscript"), "outliner");

@@ -17,4 +17,7 @@ public:
     // Hover over `from`, press the left button there (window coordinates), move to `to` in
     // `steps` steps, and release there.
     Q_INVOKABLE void drag(QQuickWindow *window, QPointF from, QPointF to, int steps = 12);
+    // Press and release `key` (a Qt.Key_… value) with `modifiers`
+    // (Qt.ControlModifier, …), delivered to the window's focused item.
+    Q_INVOKABLE void key(QQuickWindow *window, int key, int modifiers = 0);
 };
