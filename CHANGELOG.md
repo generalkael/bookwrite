@@ -62,6 +62,7 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   as editable columns, remembered between runs. A line under the table counts items and words.
   When the table is wider than the pane it scrolls sideways instead of cutting off the Target and
   Progress columns.
+- `--screenshots=DIR --dark` takes the screenshot tour in the dark theme.
 - README: a *Using the outliner* guide (opening it, every column, planning a book with it).
 - **Story bible export.** File ▸ Export Story Bible… writes all characters and places into one
   Word, HTML, Markdown or plain-text document: synopsis, custom fields, sheet text, notes,

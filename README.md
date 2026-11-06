@@ -332,7 +332,8 @@ re-queries what it shows when that happens. This keeps the FFI surface tiny: add
 a Rust method, one line in `api.rs`, and some QML.
 
 Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog in turn, saves a
-PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
+PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`. Add `--dark`
+to take them in the dark theme.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
 (editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, outliner folding, columns and filter, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, spelling, view order,

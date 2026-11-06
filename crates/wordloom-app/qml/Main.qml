@@ -70,16 +70,18 @@ ApplicationWindow {
         Api.call("close");
     }
 
-    // Command line: `wordloom [PROJECT] [--sample=DIR] [--screenshots=DIR] [--selftest]`.
+    // Command line: `wordloom [PROJECT] [--sample=DIR] [--screenshots=DIR [--dark]] [--selftest]`.
     Component.onCompleted: {
         const args = Qt.application.arguments.slice(1);
         for (const a of args) {
             if (a.startsWith("--screenshots=")) shotTour.dir = a.substring(14);
+            else if (a === "--dark") shotTour.dark = true;
             else if (a === "--selftest") selfTest.pending = true;
             else if (a.startsWith("--sample=")) Api.call("newDemoProject", a.substring(9));
             else if (!a.startsWith("-")) win.openPath(a);
         }
-        if (shotTour.dir) shotTour.start();
+        // --dark only applies to the tour (whose settings are kept apart).
+        if (shotTour.dir) { Theme.forced = shotTour.dark ? "dark" : ""; shotTour.start(); }
         if (selfTest.pending) Qt.callLater(selfTest.start);
     }
 
@@ -89,6 +91,7 @@ ApplicationWindow {
     Timer {
         id: shotTour
         property string dir: ""
+        property bool dark: false
         property int step: 0
         readonly property var views: ["editor", "corkboard", "outliner", "styled", "complete", "linebar", "repeats", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "reader", "focus", "start"]
         interval: 700
