@@ -60,6 +60,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
 - `wordloom --bench=DIR` times every view on a generated novel-sized project.
 - The editor shares one right-click menu between all the documents it shows, instead of building a
   menu per document: a folder of 200 scenes opens about 20% faster.
+- A long composite (a folder of many scenes, or the whole manuscript) shows its first parts at
+  once and adds the rest a few at a time in the background, instead of freezing the window: the
+  200-scene manuscript appears in under 0.1 s instead of 3.5 s.
 - **Restore from Zip Backup.** File ▸ Restore from Zip Backup… unpacks a backup into a folder you
   choose (beside, never over, an existing copy) and opens it.
 - **Corkboard keyboard control.** Arrows, Home and End move a highlight between cards; Enter

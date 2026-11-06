@@ -467,6 +467,25 @@ Item {
             check(sprint.lastSprint !== null && sprint.lastSprint.words === 4, "a sprint counts the words typed (" + (sprint.lastSprint ? sprint.lastSprint.words : "none") + ")");
             check(Api.get("sprints", null).count >= 1, "the sprint is saved");
             sprint.close();
+        }],
+        // Last: it adds a folder of twelve scenes to the sample.
+        ["long composite", () => {
+            const ms = Api.call("rootId", "manuscript"), f = Api.call("add", ms, "folder", "Many Scenes", true);
+            for (let i = 1; i <= 12; ++i) {
+                const d = Api.call("add", f, "text", "Part " + i, true);
+                Api.call("setText", d, "Words of part " + i + ".");
+            }
+            ws().select(f, "editor");
+            check(ed().docs.length === 13 && !ed().built && ed().firstArea() !== null, "a long composite shows its first parts at once and builds the rest after");
+            check(ed().built, "anything that needs every part (find, word lists) builds the rest first");
+        }],
+        ["long composite", () => {
+            ws().select(rowId("Many Scenes"), "corkboard");
+            ws().viewMode = "editor";
+        }],
+        ["long composite", () => {
+            const ed2 = ed();
+            check(ed2.built && ed2.editors().length === 12 && ed2.editors()[11].text === "Words of part 12.", "and the rest arrive by themselves (the folder itself has no text) (" + ed2.editors().length + ")");
         }]
     ]
 

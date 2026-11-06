@@ -257,6 +257,7 @@ Rectangle {
     }
     // Select the `n`th comment of document `docId` (as listed in Details).
     function showComment(docId, n) {
+        ensureBuilt();
         for (let i = 0; i < rep.count; ++i) {
             const it = rep.itemAt(i);
             if (!it || it.docId !== docId) continue;
@@ -317,6 +318,7 @@ Rectangle {
     property int matchCount: 0
     property int matchNumber: 0          // 1-based index of the selected match, 0 if none
     function editors() {
+        ensureBuilt();
         const out = [];
         for (let i = 0; i < rep.count; ++i) { const it = rep.itemAt(i); if (it && it.editor.visible) out.push(it.editor); }
         return out;
@@ -414,8 +416,31 @@ Rectangle {
         }
     }
 
+    // ---- The documents shown are built a few at a time: a long composite
+    // (a whole manuscript) would otherwise freeze the window for seconds.
+    // The first ones appear at once, the rest follow in small batches.
+    // Anything that needs every document calls ensureBuilt() first.
+    ListModel { id: docModel }
+    readonly property bool built: docModel.count >= docs.length
+    function buildMore(n) {
+        const end = Math.min(docs.length, docModel.count + n);
+        for (let i = docModel.count; i < end; ++i) {
+            const d = docs[i];
+            docModel.append({ did: d.id, dtitle: d.title, ddepth: d.depth, dfolder: d.folder });
+        }
+        if (built) growTimer.stop();
+    }
+    function startBuilding() {
+        growTimer.stop();
+        docModel.clear();
+        buildMore(8);
+        if (!built) growTimer.start();
+    }
+    function ensureBuilt() { if (!built) buildMore(docs.length); }
+    Timer { id: growTimer; interval: 1; repeat: true; onTriggered: ev.buildMore(4) }
+
     function rebuild(force) {
-        if (!node || node.file) { docs = []; return; }
+        if (!node || node.file) { docs = []; startBuilding(); return; }
         const out = [{ id: node.id, title: node.title, depth: 0, folder: node.kind === "folder" }];
         if (node.child_count > 0) collect(node.id, 1, out);
         const sig = out.map(d => d.id + d.title).join("|");
@@ -423,6 +448,7 @@ Rectangle {
         if (force || sig !== old) {
             flush();
             docs = out;
+            startBuilding();
             if (force) scroller.contentItem.contentY = 0;
         } else {
             for (let i = 0; i < rep.count; ++i) { const it = rep.itemAt(i); if (it) it.syncFromStore(); }
@@ -649,15 +675,18 @@ Rectangle {
 
                         Repeater {
                             id: rep
-                            model: ev.docs
+                            model: docModel
                             delegate: DocEditor {
-                                required property var modelData
+                                required property string did
+                                required property string dtitle
+                                required property int ddepth
+                                required property bool dfolder
                                 required property int index
                                 width: col.width
-                                docId: modelData.id
-                                docTitle: modelData.title
-                                depth: modelData.depth
-                                isFolder: modelData.folder
+                                docId: did
+                                docTitle: dtitle
+                                depth: ddepth
+                                isFolder: dfolder
                                 composite: ev.docs.length > 1
                                 first: index === 0
                             }
