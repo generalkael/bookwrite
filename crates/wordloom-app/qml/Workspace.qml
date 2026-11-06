@@ -172,6 +172,16 @@ Item {
         if (!inSplit && viewMode !== "editor") viewMode = "editor";
         (inSplit ? splitEditor : editorView).insertComment();
     }
+    // Open a document from a character's "Appears in" list, with the name
+    // in the find bar so each mention is a keypress away.
+    function showMention(docId, name) {
+        select(docId, "editor");
+        Qt.callLater(() => {
+            editorView.openFind(false);
+            editorView.findText = name;
+            editorView.findStep(0);
+        });
+    }
     // Jump to a comment listed in the Details panel.
     function showComment(docId, n) {
         if (viewMode !== "editor") viewMode = "editor";
@@ -188,6 +198,7 @@ Item {
         compareDialog.openFor(currentId, snapId);
     }
     function compareDialogRef() { return compareDialog; }
+    function inspectorRef() { return inspector; }
     function editAnEvent() { viewMode = "timeline"; gantt.editFirstEvent(); }
     function showLanes(on, collapsed) { viewMode = "timeline"; gantt.lanes = on; gantt.collapsed = collapsed || ({}); }
     function searchFor(q) { binder.searchText = q; }
@@ -389,6 +400,7 @@ Item {
                 onCompareRequested: (snapId) => ws.compareSnapshot(snapId)
                 onOpenRelations: ws.viewMode = "relations"
                 onCommentRequested: (docId, n) => ws.showComment(docId, n)
+                onAppearanceRequested: (docId, name) => ws.showMention(docId, name)
             }
         }
 

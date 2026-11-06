@@ -383,6 +383,13 @@ impl Session {
         Ok(json!(cards))
     }
 
+    /// The manuscript documents that mention character / place `id`.
+    pub fn appearances(&self, id: &str) -> Result<Value> {
+        let id = parse_id(id)?;
+        self.project.node(id)?;
+        Ok(json!(crate::mentions::appearances(&self.project, id)))
+    }
+
     /// Inline comments in `id` and everything under it, in binder order.
     pub fn comments(&self, id: &str) -> Result<Value> {
         let p = &self.project;

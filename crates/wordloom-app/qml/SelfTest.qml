@@ -112,6 +112,18 @@ Item {
                   "the window's controls use the app theme, not the system colours");
             history.close();
         }],
+        ["appearances", () => {
+            ws().select(rowId("Tobias Wren"));
+        }],
+        ["appearances", () => {
+            const ap = ws().inspectorRef().appearances;
+            check(ap !== null && ap.total > 0 && ap.documents.length > 0, "Details lists the scenes that mention Tobias (" + (ap ? ap.total : "none") + ")");
+            if (ap && ap.documents.length) ws().showMention(ap.documents[0].id, ap.documents[0].name);
+        }],
+        ["appearances", () => {
+            check(ws().viewMode === "editor" && ed().findOpen && ed().matchCount > 0, "clicking one opens the scene with the name found (" + ed().matchCount + ")");
+            ed().closeFind();
+        }],
         ["zip backup", () => {
             const dir = Api.get("meta", null).path;
             const r = Api.call("backupZip", dir.substring(0, dir.lastIndexOf("/")) + "/selftest-backup.zip");

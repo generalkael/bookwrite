@@ -86,6 +86,7 @@ const READ_ONLY: &[&str] = &[
     "children",
     "text",
     "comments",
+    "appearances",
     "labels",
     "meta",
     "search",
@@ -353,6 +354,7 @@ impl App {
             "children" => self.s()?.children(a.str(0))?,
             "text" => json!(self.s()?.text(a.str(0))?),
             "comments" => self.s()?.comments(a.str(0))?,
+            "appearances" => self.s()?.appearances(a.str(0))?,
             "setText" => unit(self.s()?.set_text(a.str(0), a.str(1)))?,
             "setField" => {
                 let v = match a.0.get(2) {

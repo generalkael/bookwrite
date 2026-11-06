@@ -22,12 +22,17 @@ Rectangle {
     signal commentRequested(string docId, int n)
     // {>> comments <<} in this item and the items under it.
     property var comments: []
+    // Manuscript documents that mention this character or place by name.
+    signal appearanceRequested(string docId, string name)
+    property var appearances: null
+    readonly property bool tracksAppearances: node !== null && (node.kind === "character" || node.kind === "place")
     function reloadComments() {
         // (After a delete the old id can linger for a moment.)
         const list = nodeId && Api.get("exists", false, nodeId) ? Api.get("comments", [], nodeId) : [];
         const seen = {};
         for (const c of list) { c.n = seen[c.node] || 0; seen[c.node] = c.n + 1; }
         comments = list;
+        appearances = tracksAppearances && Api.get("exists", false, nodeId) ? Api.get("appearances", null, nodeId) : null;
     }
 
     readonly property int rev: Wordloom.revision
@@ -39,8 +44,8 @@ Rectangle {
     function set(field, value) { if (node) Api.call("setField", node.id, field, value); }
 
     readonly property var suggestedFields: node
-        ? (node.kind === "character" ? ["Role", "Age", "Appearance", "Goal", "Motivation", "Conflict", "Arc"]
-           : node.kind === "place" ? ["Region", "Era", "Atmosphere", "Significance"]
+        ? (node.kind === "character" ? ["Role", "Also known as", "Age", "Appearance", "Goal", "Motivation", "Conflict", "Arc"]
+           : node.kind === "place" ? ["Also known as", "Region", "Era", "Atmosphere", "Significance"]
            : node.kind === "text" ? ["POV", "Setting", "Time"] : [])
         : []
     readonly property var fieldKeys: {
@@ -207,6 +212,44 @@ Rectangle {
                     Label {
                         visible: ip.node !== null && ip.node.kind === "character" && ip.node.relations.length === 0
                         text: qsTr("None yet. Connect characters on the relationship map.")
+                        color: Theme.subtext
+                        font.pixelSize: 11
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
+
+                    // Appearances in the manuscript
+                    Label {
+                        visible: ip.tracksAppearances
+                        Layout.fillWidth: true
+                        Layout.topMargin: 6
+                        text: !ip.appearances || ip.appearances.total === 0 ? qsTr("Appears in")
+                            : qsTr("Appears in %1 · %2").arg(Api.plural(ip.appearances.documents.length, qsTr("document")))
+                                .arg(Api.plural(ip.appearances.total, qsTr("mention")))
+                        font.bold: true
+                        color: Theme.text
+                    }
+                    Repeater {
+                        model: ip.tracksAppearances && ip.appearances ? ip.appearances.documents : []
+                        delegate: ItemDelegate {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            padding: 3
+                            onClicked: ip.appearanceRequested(modelData.id, modelData.name)
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Open it and find “%1”").arg(modelData.name)
+                            contentItem: RowLayout {
+                                Label { text: modelData.title; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
+                                Label { text: String(modelData.count); color: Theme.subtext }
+                            }
+                        }
+                    }
+                    Label {
+                        visible: ip.tracksAppearances
+                        text: !ip.appearances ? "" : (ip.appearances.total === 0 ? qsTr("Not mentioned in the manuscript yet. ") : "")
+                            + qsTr("Looks for %1 (whole words, matching case). Add other names to the “Also known as” field, separated by commas.")
+                                .arg(ip.appearances.names.map(n => "“" + n + "”").join(", "))
+                        textFormat: Text.PlainText
                         color: Theme.subtext
                         font.pixelSize: 11
                         wrapMode: Text.Wrap

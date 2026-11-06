@@ -54,6 +54,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Where characters and places appear.** Select a character or place and the Details panel lists
+  the manuscript documents that mention it, with a count; click one to open it with the name in
+  the find bar. Names are matched as whole words with matching case: the title, a first name
+  (“Mara” for “Mara Quinn”), and anything in the new *Also known as* field.
 - **File ▸ Back Up to Zip…** saves the whole project (documents, snapshots, imported files) as
   one `.zip`, named with the date and time, in the folder you used last time. Unzip it to get the
   `Title.wordloom` folder back. The lock and the rolling `project.json` backups are left out.

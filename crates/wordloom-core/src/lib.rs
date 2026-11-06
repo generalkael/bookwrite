@@ -18,6 +18,7 @@ pub mod diff;
 mod docx;
 mod epub;
 pub mod history;
+pub mod mentions;
 pub mod model;
 pub mod names;
 pub mod recent;
