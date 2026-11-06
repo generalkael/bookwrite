@@ -396,6 +396,47 @@ impl Session {
         Ok(json!(crate::analysis::analyse(&self.project, root)))
     }
 
+    /// Import a manuscript (.docx, .md, .txt) into a new folder at the end of
+    /// the Manuscript: one folder per chapter, one document per scene.
+    pub fn import_manuscript(&mut self, path: &Path) -> Result<Value> {
+        let book = crate::import::read(path)?;
+        let words: usize = book
+            .chapters
+            .iter()
+            .flat_map(|c| &c.scenes)
+            .flat_map(|s| &s.paras)
+            .map(|t| stats::count_words(t))
+            .sum();
+        if words == 0 {
+            return Err(Error::Invalid("No text found to import".into()));
+        }
+        let p = &mut self.project;
+        let ms = p.root(RootRole::Manuscript);
+        let name = book.title.clone().unwrap_or_else(|| {
+            path.file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "Imported".into())
+        });
+        let folder = p.add_node(ms, None, NodeKind::Folder, &name)?;
+        let mut scenes = 0;
+        for c in &book.chapters {
+            let ch = p.add_node(folder, None, NodeKind::Folder, &c.title)?;
+            for (k, s) in c.scenes.iter().enumerate() {
+                let title = s
+                    .title
+                    .clone()
+                    .unwrap_or_else(|| format!("Scene {}", k + 1));
+                let d = p.add_node(ch, None, NodeKind::Text, &title)?;
+                p.set_text(d, s.paras.join("\n\n"))?;
+                scenes += 1;
+            }
+        }
+        self.changed();
+        Ok(
+            json!({"folder": folder, "chapters": book.chapters.len(), "scenes": scenes, "words": words}),
+        )
+    }
+
     /// Binder items matching `query` for Go to… (recent items if empty).
     pub fn go_to(&self, query: &str) -> Value {
         json!(crate::goto::go_to(&self.project, query, 40))

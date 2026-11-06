@@ -189,6 +189,7 @@ ApplicationWindow {
             Action { text: qsTr("&Save"); shortcut: StandardKey.Save; enabled: Wordloom.projectOpen; onTriggered: win.saveNow() }
             Action { text: qsTr("Save &As…"); enabled: Wordloom.projectOpen; onTriggered: saveAsDialog.open() }
             Action { text: qsTr("&Back Up to Zip…"); enabled: Wordloom.projectOpen; onTriggered: backupDialog.start() }
+            Action { text: qsTr("Import &Manuscript…"); enabled: win.ws !== null; onTriggered: manuscriptDialog.open() }
             Action { text: qsTr("&Import File…"); shortcut: "Ctrl+Shift+I"; enabled: win.ws !== null; onTriggered: importDialog.open() }
             Action { text: qsTr("Clean Up &Unused Files…"); enabled: win.ws !== null; onTriggered: cleanupDialog.check() }
             Action { text: qsTr("Take &Snapshot"); shortcut: "Ctrl+5"; enabled: win.ws !== null; onTriggered: win.ws.snapshot() }
@@ -461,6 +462,24 @@ ApplicationWindow {
             const r = Api.call("backupZip", f);
             if (r) Api.say(qsTr("Backed up %1 files (%2) to %3").arg(r.files).arg(Api.fmtBytes(r.bytes)).arg(r.path));
         }
+    }
+    // File ▸ Import Manuscript…: a whole book from Word, Markdown or text,
+    // split into chapters and scenes (wordloom-core's import.rs).
+    FileDialog {
+        id: manuscriptDialog
+        title: qsTr("Import a Manuscript")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Manuscripts (*.docx *.md *.markdown *.txt)"), qsTr("All files (*)")]
+        onAccepted: win.importManuscript(selectedFile.toString())
+    }
+    function importManuscript(file) {
+        if (win.ws) win.ws.flush();
+        const r = Api.call("importManuscript", file);
+        if (!r) return null;
+        win.ws.select(r.folder, "corkboard");
+        Api.say(qsTr("Imported %1 in %2 and %3. Edit ▸ Undo removes it again.")
+            .arg(Api.plural(r.words, qsTr("word"))).arg(Api.plural(r.chapters, qsTr("chapter"))).arg(Api.plural(r.scenes, qsTr("scene"))));
+        return r;
     }
     FileDialog {
         id: importDialog

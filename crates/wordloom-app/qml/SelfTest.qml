@@ -173,6 +173,15 @@ Item {
             check(longPdf.ok && longPdf.pages >= ms.pages + 10, "a long chapter continues over many pages (" + longPdf.pages + ")");
             compile.selectFormat("markdown", 0);
         }],
+        ["import manuscript", () => {
+            // Round trip: export the manuscript as Markdown, import it back.
+            const meta = Api.get("meta", null), dir = meta.path.substring(0, meta.path.lastIndexOf("/"));
+            const before = Api.get("stats", null).manuscript_words;
+            const file = Api.call("export", "file://" + dir + "/selftest-export.md", { format: "markdown" });
+            const r = file ? win.importManuscript("file://" + file) : null;
+            check(r !== null && r.chapters === 3 && r.scenes >= 4 && r.words === before, "an exported manuscript imports back: " + JSON.stringify(r) + " of " + before + " words");
+            check(ws().viewMode === "corkboard" && ws().current && ws().current.title === meta.title, "the imported book opens on the corkboard, named after its title (" + ws().viewMode + ", " + (ws().current ? ws().current.title : "none") + ")");
+        }],
         ["zip backup", () => {
             const dir = Api.get("meta", null).path;
             const r = Api.call("backupZip", dir.substring(0, dir.lastIndexOf("/")) + "/selftest-backup.zip");

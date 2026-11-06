@@ -54,6 +54,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Import Manuscript** (File ▸ Import Manuscript…): bring in a whole book from Word (.docx),
+  Markdown or plain text. It becomes a folder in the Manuscript with a folder per chapter and a
+  document per scene, split at headings, “Chapter 12” / “Prologue” lines and scene breaks, with
+  italics and bold kept. One Undo removes it again.
 - **Smart punctuation.** As you type, straight quotes become “curly” ones and apostrophes ’, two
   hyphens become an em dash — and three dots an ellipsis …; a line of dashes (a scene break) and
   text in comments stay as typed. View ▸ Smart Punctuation turns it off. Edit ▸ Convert to Smart

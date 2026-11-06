@@ -20,6 +20,7 @@ mod docx;
 mod epub;
 pub mod goto;
 pub mod history;
+pub mod import;
 pub mod mentions;
 pub mod model;
 pub mod names;

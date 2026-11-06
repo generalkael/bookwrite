@@ -36,6 +36,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Writing sprints** | Project ▸ Writing Sprint… (Ctrl+Shift+R): pick a length (5–60 minutes or your own) and an optional word goal, and write. The status bar counts down and shows words written so far; pause, finish early or cancel from the sprint window. Finished sprints are kept in the project, with your totals, best sprint and best pace. |
 | **Text analysis** | Project ▸ Text Analysis… (Ctrl+Shift+A) looks at the whole manuscript or the selected item for habits worth a look when revising: your **most used words** (common words like “the” and “said” left out), **repeated three-word phrases** (“turned to look”), **-ly adverbs**, the **longest sentences**, the average sentence length, and how much of the text is **dialogue**. Click a word or phrase to search the project for it, or a long sentence to open its document there. Comments and Markdown markers are ignored, and the word total matches Writing Statistics. |
 | **Name generator** | Project ▸ Name Generator… (Ctrl+Shift+G) suggests character names in English, Irish & Scottish, Nordic, Slavic, Italian/Spanish/French or invented fantasy styles, feminine, masculine or either. Each name has *Add as Character*. |
+| **Import Manuscript** | File ▸ Import Manuscript… brings in a book you've already written, from Word (.docx), Markdown or plain text, and opens it on the corkboard. Chapters start at headings (Word's *Heading 1*, Markdown `#`) or lines like “Chapter 12”, “CHAPTER TWELVE: The Wreck”, “Part II” or “Prologue”; scenes start at *Heading 2* (which becomes the scene's title) or at scene breaks (`* * *`, `#`, `~`, `---`). Each chapter becomes a folder of scene documents inside a folder named after the book, italics and bold are kept, and text before the first chapter goes in *Front Matter*. Word's heading styles are recognised in any language. Edit ▸ Undo removes the whole import. |
 | **Research files** | Import images and PDFs (File ▸ Import File…, or drop files on the binder). They're copied into the project and shown in the editor: images with fit / zoom, PDFs page by page. Other file types open in your default app. |
 | **Snapshots** | Named versions per document. Restoring one first saves the current text as a snapshot, so you can't lose work that way. **Compare…** shows a snapshot side by side with the current text (or another snapshot): paragraphs line up, changed words are highlighted, and a count shows words added and removed. |
 | **Go to…** | Ctrl+P opens a quick switcher: type part of an item's title, or just some of its letters in order (“nght wtch” finds Night Watch), use ↑ ↓, and press Enter to open it. It finds items inside collapsed folders and in every section (trashed items come last), and opens the binder down to the item. With nothing typed it lists the items you changed most recently. |
@@ -225,6 +226,7 @@ crates/
     zip.rs         minimal zip writer for EPUB and DOCX
     search.rs      search & case-insensitive replace
     goto.rs        Go to…: ranking binder items by title
+    import.rs      Import Manuscript: .docx / Markdown / text → chapters and scenes
     smart.rs       smart quotes, dashes and ellipses
     relations.rs   character relationships and map positions
     names.rs       character name generator (name lists + fantasy syllables)
@@ -251,7 +253,7 @@ Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog i
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, zip backup, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, import, zip backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.
@@ -269,4 +271,5 @@ Wordloom is released under the [MIT License](LICENSE).
 The built-in US English dictionary (`crates/wordloom-core/dict/`) comes from
 [SCOWL](https://wordlist.aspell.net) and is © Kevin Atkinson and others under the permissive terms
 in `crates/wordloom-core/dict/COPYRIGHT-en_US.txt`. Spell checking uses the
-[spellbook](https://crates.io/crates/spellbook) crate (MPL-2.0).
+[spellbook](https://crates.io/crates/spellbook) crate (MPL-2.0). Reading Word files uses
+[miniz_oxide](https://crates.io/crates/miniz_oxide) (MIT / Apache-2.0 / Zlib).

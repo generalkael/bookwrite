@@ -154,6 +154,7 @@ fn undo_label(method: &str, a: &Args) -> Option<(String, Option<String>)> {
         "setMeta" => "Project Details",
         "add" => "Add Item",
         "importFile" => "Import File",
+        "importManuscript" => "Import Manuscript",
         "addRelation" => "Add Relationship",
         "updateRelation" => {
             return Some((
@@ -406,6 +407,7 @@ impl App {
             }
             "compile" => json!(self.s()?.compile(&a.json(0))?),
             "importFile" => json!(self.s()?.import_file(a.str(0), &to_path(a.str(1)))?),
+            "importManuscript" => self.s()?.import_manuscript(&to_path(a.str(0)))?,
             "backupZip" => self.s()?.backup_zip(&to_path(a.str(0)))?,
             "export" => {
                 let p = self.s()?.export(&to_path(a.str(0)), &a.json(1))?;
@@ -604,6 +606,49 @@ mod tests {
             .call("updateRelation", &json!([rel, "x", ""]).to_string())
             .error
             .is_some());
+    }
+
+    #[test]
+    fn import_manuscript_and_undo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut app = App::new(tmp.path().join("recent.json"));
+        let url = url::Url::from_file_path(tmp.path()).unwrap().to_string();
+        ok(&app.call("newProject", &json!([url, "Book", "Me"]).to_string()));
+        let src = tmp.path().join("old draft.md");
+        std::fs::write(
+            &src,
+            "# One\n\nAlpha beta.\n\n***\n\nGamma.\n\n# Two\n\nDelta.",
+        )
+        .unwrap();
+        let src = url::Url::from_file_path(&src).unwrap().to_string();
+        let r = ok(&app.call("importManuscript", &json!([src]).to_string()));
+        assert_eq!(
+            (
+                r["chapters"].as_u64(),
+                r["scenes"].as_u64(),
+                r["words"].as_u64()
+            ),
+            (Some(2), Some(3), Some(4))
+        );
+        let folder = r["folder"].as_str().unwrap().to_string();
+        let info = ok(&app.call("nodeInfo", &json!([folder]).to_string()));
+        assert_eq!(info["title"], "old draft");
+        assert_eq!(info["total_words"], 4);
+        assert_eq!(app.undo_redo().0.as_deref(), Some("Import Manuscript"));
+        ok(&app.call("undo", ""));
+        assert_eq!(
+            ok(&app.call("exists", &json!([folder]).to_string())),
+            json!(false)
+        );
+        // Other files are refused with a clear message.
+        let bad = tmp.path().join("x.pdf");
+        std::fs::write(&bad, b"%PDF").unwrap();
+        let bad = url::Url::from_file_path(&bad).unwrap().to_string();
+        assert!(app
+            .call("importManuscript", &json!([bad]).to_string())
+            .error
+            .unwrap()
+            .contains(".docx"));
     }
 
     #[test]
