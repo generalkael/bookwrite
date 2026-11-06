@@ -57,7 +57,9 @@ impl Default for WordloomRust {
     fn default() -> Self {
         // The screenshot tour keeps its own list, so it never adds the
         // sample project to the user's recent projects.
-        let tour = std::env::args().any(|a| a.starts_with("--screenshots=") || a == "--selftest");
+        let tour = std::env::args().any(|a| {
+            a.starts_with("--screenshots=") || a == "--selftest" || a.starts_with("--bench=")
+        });
         let recent_file = dirs::config_dir()
             .unwrap_or_else(std::env::temp_dir)
             .join(if tour {

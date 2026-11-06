@@ -273,6 +273,15 @@ Item {
             const r = Api.call("backupZip", dir.substring(0, dir.lastIndexOf("/")) + "/selftest-backup.zip");
             check(r && r.files >= 5 && r.bytes > 1000, "Back Up to Zip packs the project (" + (r ? r.files + " files, " + r.bytes + " bytes" : "failed") + ")");
         }],
+        ["hidden editor", () => {
+            ws().select(rowId("Arrival"), "editor");
+            const ms = Api.call("rootId", "manuscript");
+            ws().select(ms, "corkboard");
+            check(ed().stale && !ed().docs.some(d => d.id === ms), "a hidden editor doesn't build what's selected (a whole manuscript would take seconds)");
+            ws().viewMode = "editor";
+            check(!ed().stale && ed().docs.length > 0 && ed().docs[0].id === ms, "it catches up when shown (" + (ed().docs.length ? ed().docs[0].title : "none") + ")");
+            ws().select(rowId("Arrival"), "editor");
+        }],
         ["corkboard drag", () => { ws().select(rowId("The Storm"), "corkboard"); }],
         ["corkboard drag", () => {
             const c = ws().corkboardRef(), titles = () => c.cards.map(x => x.title).join(",");

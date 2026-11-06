@@ -350,10 +350,16 @@ Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog i
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`. Add `--dark`
 to take them in the dark theme.
 
+`wordloom --bench=DIR` builds a novel-sized project in DIR (40 chapters, 200 scenes, about
+168,000 words), opens each view in turn, prints `BENCH <step>: <ms>` lines and quits. Use it
+to check a change doesn't slow things down. Each time includes the 50 ms between steps; on a
+typical laptop every view but the editor's whole-manuscript view and the reader opens in well
+under 0.5 s.
+
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, footnotes, line highlight, repeated words, outliner folding, columns and filter, project templates, spelling language, corkboard drag and drop and keys, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, restore from zip, spelling, view order,
+(a hidden editor not building what's selected, editor scrolling and sizing, binder selection, formatting, inline comments, footnotes, line highlight, repeated words, outliner folding, columns and filter, project templates, spelling language, corkboard drag and drop and keys, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, story bible, import, zip backup, automatic backup, restore from zip, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
-on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
+on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. The developer modes keep
 their own preferences and recent-projects list.
 
 ## Roadmap

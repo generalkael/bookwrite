@@ -79,13 +79,14 @@ ApplicationWindow {
         Api.call("close");
     }
 
-    // Command line: `wordloom [PROJECT] [--sample=DIR] [--screenshots=DIR [--dark]] [--selftest]`.
+    // Command line: `wordloom [PROJECT] [--sample=DIR] [--screenshots=DIR [--dark]] [--selftest] [--bench=DIR]`.
     Component.onCompleted: {
         if (Theme.spellLanguage) Api.call("spellSetLanguage", Theme.spellLanguage);
         const args = Qt.application.arguments.slice(1);
         for (const a of args) {
             if (a.startsWith("--screenshots=")) shotTour.dir = a.substring(14);
             else if (a === "--dark") shotTour.dark = true;
+            else if (a.startsWith("--bench=")) { Api.call("newLargeProject", a.substring(8)); Qt.callLater(() => bench.start()); }
             else if (a === "--selftest") selfTest.pending = true;
             else if (a.startsWith("--sample=")) Api.call("newDemoProject", a.substring(9));
             else if (!a.startsWith("-")) win.openPath(a);
@@ -95,6 +96,42 @@ ApplicationWindow {
         if (selfTest.pending) Qt.callLater(selfTest.start);
     }
 
+    // Developer aid: `wordloom --bench=DIR` builds a novel-sized project in
+    // DIR (demo::create_large: 40 chapters, 200 scenes, ~168,000 words),
+    // times each view, prints "BENCH <step>: <ms>" lines and quits. Each
+    // time includes the 50 ms between steps, so the views have laid out.
+    Timer {
+        id: bench
+        property int step: -1
+        property double t0: 0
+        interval: 50
+        repeat: true
+        function row(title) { return (Api.get("binder", []).find(r => r.title === title) || {}).id || ""; }
+        readonly property var steps: [
+            ["editor: one scene", () => win.ws.select(row("Scene 1.3"), "editor")],
+            ["corkboard: manuscript", () => win.ws.select(Api.call("rootId", "manuscript"), "corkboard")],
+            ["outliner: manuscript", () => win.ws.select(Api.call("rootId", "manuscript"), "outliner")],
+            ["outliner: filter", () => { win.ws.outlinerRef().filterText = "scene 4"; }],
+            ["outliner: clear filter", () => { win.ws.outlinerRef().clearFilter(); }],
+            ["reader: manuscript", () => win.ws.select(Api.call("rootId", "manuscript"), "reader")],
+            ["editor: one chapter (5 scenes)", () => win.ws.select(row("Chapter 5"), "editor")],
+            ["editor: whole manuscript", () => win.ws.select(Api.call("rootId", "manuscript"), "editor")],
+            ["editor: repeated words on", () => { Theme.highlightRepeats = true; }],
+            ["editor: type a character", () => { const a = win.ws.mainEditor().firstArea(); a.forceActiveFocus(); a.insert(0, "x"); }],
+            ["editor: back to one scene", () => { Theme.highlightRepeats = false; win.ws.select(row("Scene 1.2"), "editor"); }],
+            ["text analysis", () => analysisDialog.open()],
+            ["statistics", () => { analysisDialog.close(); statsDialog.open(); }],
+            ["search", () => { statsDialog.close(); win.ws.searchFor("lamp"); }],
+        ]
+        onTriggered: {
+            const now = Date.now();
+            if (step >= 0) Api.call("log", "BENCH " + steps[step][0] + ": " + (now - t0) + " ms");
+            step++;
+            if (step >= steps.length) { stop(); Qt.quit(); return; }
+            t0 = Date.now();
+            steps[step][1]();
+        }
+    }
     SelfTest { id: selfTest; property bool pending: false; win: win; history: historyWindow; sprint: sprintDialog; analysis: analysisDialog; compile: compileDialog; goTo: goTo; autoBackup: autoBackupDialog }
 
     // Developer aid: visit every view, save a PNG of each, then quit.

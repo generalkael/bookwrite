@@ -239,6 +239,50 @@ const MAP_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="800" he
 </svg>
 "##;
 
+/// A novel-sized project for timing the app (`wordloom --bench=DIR`):
+/// 40 chapters of 5 scenes, about 168,000 words of filler, and one
+/// character whose name appears throughout.
+pub fn create_large(parent: &Path) -> Result<Session> {
+    let mut s = Session::create(parent, "Large Book (Benchmark)", "Wordloom")?;
+    let ms = s.root_id("manuscript")?;
+    for c in s.project.nodes[&s.project.root(RootRole::Manuscript)]
+        .children
+        .clone()
+    {
+        s.project.trash(c)?;
+    }
+    let chars = s.root_id("characters")?;
+    s.add(&chars, "character", "Mara Quinn", true)?;
+    const WORDS: [&str; 16] = [
+        "the", "harbour", "keeper", "lamp", "storm", "Mara", "said", "quietly", "towards",
+        "island", "night", "wind", "window", "boat", "rope", "light",
+    ];
+    let mut seed = 7u64;
+    let mut para = || {
+        let mut p = String::new();
+        for i in 0..120 {
+            seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+            if i > 0 {
+                p.push(' ');
+            }
+            p.push_str(WORDS[(seed >> 33) as usize % WORDS.len()]);
+        }
+        p.push('.');
+        p
+    };
+    for c in 1..=40 {
+        let ch = s.add(&ms, "folder", &format!("Chapter {c}"), true)?;
+        for k in 1..=5 {
+            let d = s.add(&ch, "text", &format!("Scene {c}.{k}"), true)?;
+            let text: Vec<String> = (0..7).map(|_| para()).collect();
+            s.set_text(&d, &text.join("\n\n"))?;
+        }
+    }
+    s.empty_trash();
+    s.save()?;
+    Ok(s)
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -250,5 +294,13 @@ mod tests {
         assert!(!s.project.timeline.problems().is_empty());
         let again = crate::Session::open(&s.dir).unwrap();
         assert_eq!(again.project.timeline.events.len(), 7);
+    }
+
+    #[test]
+    fn large_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        let s = super::create_large(tmp.path()).unwrap();
+        let words = s.stats(None)["manuscript_words"].as_u64().unwrap();
+        assert!((160_000..=175_000).contains(&words), "{words}");
     }
 }

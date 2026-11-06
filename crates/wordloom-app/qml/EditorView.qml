@@ -34,9 +34,22 @@ Rectangle {
     // The user started typing in (or clicked into) this editor.
     signal editorFocused()
 
+    // Only a shown editor keeps up with the selection and edits: building
+    // the documents of a big folder (the whole manuscript) takes seconds, so
+    // a hidden one just notes it's out of date and catches up when shown.
+    property bool active: true
+    property bool stale: false
+    property bool staleNode: false
     readonly property int rev: Wordloom.revision
-    onRevChanged: { rebuild(false); reloadNames(); }
-    onNodeIdChanged: rebuild(true)
+    onRevChanged: { if (active) { rebuild(false); reloadNames(); } else stale = true; }
+    onNodeIdChanged: { if (active) rebuild(true); else { stale = true; staleNode = true; } }
+    onActiveChanged: {
+        if (!active || !stale) return;
+        const force = staleNode;
+        stale = false; staleNode = false;
+        rebuild(force);
+        reloadNames();
+    }
 
     function flush() {
         for (let i = 0; i < rep.count; ++i) { const it = rep.itemAt(i); if (it) it.flush(); }

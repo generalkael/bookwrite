@@ -304,6 +304,18 @@ impl App {
                 };
                 self.opened(s)?
             }
+            // `wordloom --bench=DIR`: a novel-sized project to time views with.
+            "newLargeProject" => {
+                let parent = to_path(a.str(0));
+                let existing = crate::storage::new_bundle_path(&parent, "Large Book (Benchmark)");
+                let s = if crate::storage::is_project(&existing) {
+                    Session::open_with(&existing, true)?
+                } else {
+                    std::fs::create_dir_all(&parent)?;
+                    crate::demo::create_large(&parent)?
+                };
+                self.opened(s)?
+            }
             "openProject" => {
                 // Second argument true: open even if another Wordloom has it.
                 let s = Session::open_with(&to_path(a.str(0)), a.bool(1))?;

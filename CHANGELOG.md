@@ -54,6 +54,10 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Faster with big books.** The editor no longer lays out what's selected while another view is
+  showing: picking the Manuscript on the corkboard of a 168,000-word novel took nearly 4 seconds
+  and now takes a few milliseconds, as does opening a chapter from the reader.
+- `wordloom --bench=DIR` times every view on a generated novel-sized project.
 - **Restore from Zip Backup.** File ▸ Restore from Zip Backup… unpacks a backup into a folder you
   choose (beside, never over, an existing copy) and opens it.
 - **Corkboard keyboard control.** Arrows, Home and End move a highlight between cards; Enter

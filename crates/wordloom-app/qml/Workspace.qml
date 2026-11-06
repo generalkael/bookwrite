@@ -72,8 +72,13 @@ Item {
     // with no text of its own opens as a corkboard of its contents.
     function selectMain(id, mode) {
         flush();
+        // A hidden editor doesn't build what's selected (EditorView.active).
+        // Going to the editor: select first, so it builds once, the right
+        // item. Leaving it: switch first, so it doesn't build the new item
+        // (a whole manuscript, say) on its way out.
+        if (mode === "editor") { currentId = id; viewMode = mode; return; }
+        if (mode) { viewMode = mode; currentId = id; return; }
         currentId = id;
-        if (mode) { viewMode = mode; return; }
         if (!current || viewMode === "reader") return;   // keep reading; the reader follows the selection
         const isGroup = current.is_root || current.kind === "folder";
         if (!isGroup) {
@@ -368,6 +373,7 @@ Item {
                         id: editorView
                         nodeId: ws.currentId
                         node: ws.current
+                        active: ws.viewMode === "editor" || ws.focusMode
                         focusMode: ws.focusMode
                         targeted: ws.splitId !== "" && !ws.inSplit
                         onEditorFocused: ws.splitFocused = false
@@ -412,6 +418,7 @@ Item {
                 EditorView {
                     id: splitEditor
                     visible: ws.splitId !== "" && !ws.focusMode
+                    active: visible
                     // Opens at half the space; drag the handle to change it.
                     SplitView.preferredWidth: centre.width / 2
                     SplitView.minimumWidth: 180

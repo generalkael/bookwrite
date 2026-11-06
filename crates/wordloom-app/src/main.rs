@@ -12,7 +12,9 @@ fn main() {
             .set_application_name(&QString::from("Wordloom"));
         // The screenshot tour changes window size and view options; keep those
         // out of the user's saved preferences.
-        let tour = std::env::args().any(|a| a.starts_with("--screenshots=") || a == "--selftest");
+        let tour = std::env::args().any(|a| {
+            a.starts_with("--screenshots=") || a == "--selftest" || a.starts_with("--bench=")
+        });
         let org = if tour {
             "Wordloom-screenshots"
         } else {
