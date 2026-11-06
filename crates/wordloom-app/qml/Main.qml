@@ -86,7 +86,7 @@ ApplicationWindow {
         id: shotTour
         property string dir: ""
         property int step: 0
-        readonly property var views: ["editor", "corkboard", "outliner", "styled", "complete", "linebar", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "reader", "focus", "start"]
+        readonly property var views: ["editor", "corkboard", "outliner", "styled", "complete", "linebar", "repeats", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "autobackup", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -107,6 +107,7 @@ ApplicationWindow {
                 win.ws.searchFor(v === "search" ? "lighthouse" : "");
                 win.ws.focusMode = v === "focus";
                 Theme.lineHighlight = v === "linebar";
+                Theme.highlightRepeats = v === "repeats";
                 if (v !== "split") win.ws.splitId = "";
                 // The last research item: an imported file in the sample.
                 const research = Api.get("children", [], Api.call("rootId", "research"));
@@ -146,6 +147,11 @@ ApplicationWindow {
                     const row = Api.get("binder", []).find(r => r.title === "Arrival");
                     if (row) win.ws.select(row.id, "editor");
                     Qt.callLater(() => { const a = win.ws.mainEditor().firstArea(); if (a) { a.forceActiveFocus(); a.cursorPosition = a.text.indexOf("lighthouse turned"); } });
+                }
+                else if (v === "repeats") {
+                    const row = Api.get("binder", []).find(r => r.title === "Arrival");
+                    if (row) win.ws.select(row.id, "editor");
+                    Qt.callLater(() => { const a = win.ws.mainEditor().firstArea(); if (a) { a.forceActiveFocus(); a.insert(a.length, "\n\nShe climbed toward the lamp room, and the lamp room smelled of oil, and the stairs climbed on."); } });
                 }
                 else if (v === "styled") { const row = Api.get("binder", []).find(r => r.title === "Night Watch"); if (row) win.ws.select(row.id, "editor"); }
                 else if (v === "start") win.closeProject();
@@ -277,6 +283,7 @@ ApplicationWindow {
             Action { text: qsTr("Show &Binder"); checkable: true; checked: win.ws ? win.ws.showBinder : true; onTriggered: win.ws.showBinder = !win.ws.showBinder }
             Action { text: qsTr("Show &Details"); shortcut: "Ctrl+Alt+I"; checkable: true; checked: win.ws ? win.ws.showInspector : true; onTriggered: win.ws.showInspector = !win.ws.showInspector }
             MenuSeparator {}
+            Action { text: qsTr("Highlight Re&peated Words"); checkable: true; checked: Theme.highlightRepeats; onTriggered: Theme.highlightRepeats = !Theme.highlightRepeats }
             Action { text: qsTr("&Highlight Current Line"); checkable: true; checked: Theme.lineHighlight; onTriggered: Theme.lineHighlight = !Theme.lineHighlight }
             Menu {
                 title: qsTr("Line Highlight &Colour")

@@ -24,6 +24,7 @@ More screenshots: [timeline](docs/screenshots/timeline.png) ·
 | **Editor** | A distraction-light paper page that fills the window (or a fixed column width: ⇔ cycles Fit, 560 … 1100 px), adjustable font size, Markdown preview, and typewriter scrolling. The page scrolls to keep the caret in view as you type. In a narrow pane the editor's view and format buttons move into a ⋯ menu. **Styled Markdown**: headings, **bold**, *italic*, block quotes and scene breaks are shown styled as you type, with their Markdown markers faded, while the file on disk stays plain Markdown. The format bar (B, I, H, “, * * *, { } for a comment) and Ctrl+B / Ctrl+I add or remove the markers for you (Ctrl+Z undoes them), and View ▸ Styled Markdown turns styling off. **Composite mode**: select a folder and every document inside it appears as one continuous manuscript you can edit, with each part saving separately. **Split editor** (◫ or Ctrl+\\, or *Open in Split Editor* in the binder): keep one document beside the main view while you work elsewhere; ⇄ swaps the two. The same document can be open in both panes. Picking an item in the binder (or with Go to…) opens it in whichever pane you were last typing in, marked by a thin accent line on that pane's header; the binder highlight, the Details panel, the word count and commands like Snapshot and Duplicate follow that pane's document. |
 | **Appearances** | Select a character or place and the Details panel shows **Appears in**: every manuscript document that mentions it, with how many times, in manuscript order. Click one to open it with the name in the find bar (F3 steps through the mentions). Wordloom looks for the title, the first name of a multi-word name (“Mara” for “Mara Quinn”) and the names in the *Also known as* field (comma-separated), as whole words with matching case, so “Rose” isn't found in “rose from her chair”. Text in comments doesn't count. |
 | **Inline comments** | Notes to yourself inside the text, written `{>> like this <<}`. Edit ▸ Insert Comment (Ctrl+Alt+M) or { } on the format bar adds one at the caret. They're highlighted in the editor and left out of word counts, compile, reading mode and the preview, so you can leave “check this date” right where it matters. The Details panel's Notes tab lists every comment in the item (or the folder's items); click one to jump to it. |
+| **Repeated words** | View ▸ Highlight Repeated Words tints a word in soft blue when it's used again within about 40 words in the same paragraph (“she climbed toward the lamp room, and the lamp room…”), so echoes stand out while you revise. Both uses are marked. Words shorter than four letters, common words (“that”, “said”, “would”, “through”), capitalised words (names, sentence starts) and text inside comments are ignored; case and curly or straight apostrophes don't matter. It updates as you type and is off by default. |
 | **Current-line highlight** | View ▸ Highlight Current Line shows a bar across the page behind the line you're typing on, following the caret (on the line as wrapped on screen). Choose its colour in View ▸ Line Highlight Colour: amber, blue, green, rose or grey, or *Custom Colour…* for any colour and transparency. The presets are translucent, so they work in light and dark themes. |
 | **Name completion** | Start typing a character's or place's name with a capital letter (“Tob”) and the editor offers the names it could be (“Tobias”, “Tobias Wren”) just under the caret. Tab takes the highlighted one, ↑ ↓ choose another, Esc (or just carrying on typing) dismisses them. It knows titles, first names and the *Also known as* field, and completes names of more than one word (“Mara Q” → “Mara Quinn”). View ▸ Complete Names turns it off. |
 | **Smart punctuation** | As you type, "quotes" become “curly quotes”, apostrophes become ’, `--` becomes an em dash — and `...` an ellipsis …, as in a typeset book. Whether a quote opens or closes depends on what's around it, so “Wait—” closes properly. A line of dashes (a scene break) and text inside comments are left as typed. View ▸ Smart Punctuation turns it off; Edit ▸ Convert to Smart Punctuation converts a whole document you pasted or imported (Ctrl+Z undoes it). |
@@ -201,7 +202,7 @@ Imported files are not deleted when their item is trashed or the trash is emptie
 duplicates can always find them. To reclaim space, use **File ▸ Clean Up Unused Files…**: it
 deletes only files that no item (in the Trash or not) and no undo or redo step refers to. **Save As** copies `files/` and `snapshots/` to the new project.
 
-Your preferences (light/dark, editor font size, page width, styled Markdown, smart punctuation, name completion, line highlight and its colour, the backup folders and automatic-backup settings, which panels are
+Your preferences (light/dark, editor font size, page width, styled Markdown, smart punctuation, name completion, line highlight and its colour, repeated-word highlighting, the backup folders and automatic-backup settings, which panels are
 shown, timeline lanes and the window size) are remembered between runs in
 `~/.config/Wordloom/Wordloom.conf` (in the Flatpak, under `~/.var/app/io.github.generalkael.Wordloom/`).
 They are per user, not stored in projects.
@@ -241,6 +242,7 @@ crates/
     goto.rs        Go to…: ranking binder items by title
     import.rs      Import Manuscript: .docx / Markdown / text → chapters and scenes
     smart.rs       smart quotes, dashes and ellipses
+    repeats.rs     repeated words nearby in a paragraph (the editor's echo tint)
     relations.rs   character relationships and map positions
     names.rs       character name generator (name lists + fantasy syllables)
     spell.rs       spell checking (spellbook + Hunspell dictionaries; dict/ holds the built-in en_US)
@@ -252,7 +254,7 @@ crates/
     demo.rs        the sample project
   wordloom-app/    the Qt front end
     src/controller.rs  one cxx-qt QObject (QML singleton `Wordloom`) wrapping api::App
-    src/styler.*       C++ QSyntaxHighlighter for styled Markdown (MarkdownStyler in QML)
+    src/styler.*       C++ QSyntaxHighlighter for styled Markdown, spelling and repeats (MarkdownStyler in QML)
     src/pdfexport.*    C++ PDF writer (QPdfWriter): title page, running header, page numbers
     qml/*.qml          all views and dialogs
 ```
@@ -266,7 +268,7 @@ Developer aid: `wordloom PROJECT --screenshots=DIR` opens each view and dialog i
 PNG of each, and quits. It also works headless with `QT_QPA_PLATFORM=offscreen`.
 
 `wordloom --sample=DIR --selftest` drives the real UI through checks for bugs fixed in the past
-(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, import, zip backup, automatic backup, spelling, view order,
+(editor scrolling and sizing, binder selection, formatting, inline comments, line highlight, repeated words, name completion, smart punctuation, appearances, Go to, find & replace, text analysis, PDF export, import, zip backup, automatic backup, spelling, view order,
 the history window, sprints), prints PASS / FAIL lines and exits non-zero on failure. CI runs it
 on every push. Add a step to `qml/SelfTest.qml` when you fix a UI bug. Both developer modes keep
 their own preferences and recent-projects list.

@@ -744,6 +744,7 @@ Rectangle {
 
         TextArea {
             id: area
+            function tintAt(pos) { return styler.backgroundAt(pos); }
             visible: !ev.preview && !(de.composite && de.isFolder && text.length === 0 && !activeFocus)
             Layout.fillWidth: true
             wrapMode: TextEdit.Wrap
@@ -840,6 +841,8 @@ Rectangle {
                 document: area.textDocument
                 enabled: Theme.styledMarkdown
                 spellCheck: Theme.spellCheck
+                repeats: Theme.highlightRepeats
+                repeatColor: Theme.dark ? Qt.rgba(0.35, 0.6, 1, 0.26) : Qt.rgba(0.3, 0.55, 0.95, 0.22)
                 markColor: Theme.dark ? "#6f6d68" : "#b3afa6"
                 quoteColor: Theme.subtext
                 commentColor: Theme.dark ? Qt.rgba(0.85, 0.68, 0.2, 0.24) : Qt.rgba(0.96, 0.78, 0.2, 0.34)

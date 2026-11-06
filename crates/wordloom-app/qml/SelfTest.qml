@@ -77,6 +77,23 @@ Item {
             a.cursorPosition = 0;
             check(ed().showComment(id, 0) && a.selectedText === "{>> fix <<}", "clicking it selects the comment in the editor");
         }],
+        ["repeated words", () => {
+            const a = ed().firstArea();
+            a.text = "The window was dark. Beyond the window, a lantern swung.";
+            Theme.highlightRepeats = true;
+        }],
+        ["repeated words", () => {
+            const a = ed().firstArea(), t = a.text;
+            const tinted = (word, nth) => { let i = -1; for (let n = 0; n <= nth; n++) i = t.indexOf(word, i + 1); const c = a.tintAt(i + 1); return c.a > 0 && c.b > c.r; }; // the blue repeat tint, not spelling's red
+            check(tinted("window", 0) && tinted("window", 1), "both uses of a repeated word are tinted");
+            check(!tinted("lantern", 0) && !tinted("dark", 0), "words used once are not");
+            Theme.highlightRepeats = false;
+        }],
+        ["repeated words", () => {
+            const a = ed().firstArea();
+            check(a.tintAt(a.text.indexOf("window") + 1).a === 0, "it can be switched off (" + a.tintAt(a.text.indexOf("window") + 1) + ")");
+            a.text = "";
+        }],
         ["line highlight", () => {
             const a = ed().firstArea();
             a.text = "First line\nSecond line\nThird line";

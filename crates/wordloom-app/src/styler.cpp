@@ -6,7 +6,9 @@
 #include "pdfexport.h"
 
 #include <QRegularExpression>
+#include <QTextBlock>
 #include <QTextCharFormat>
+#include <QTextLayout>
 #include <QTextDocument>
 #include <QtQml/qqml.h>
 #include <algorithm>
@@ -59,6 +61,21 @@ void MarkdownHighlighter::underlineMisspellings(const QString &text, const std::
     }
 }
 
+// A soft tint behind words repeated nearby in the paragraph (wordloom-core's
+// repeats.rs decides which).
+void MarkdownHighlighter::tintRepeats(const QString &text)
+{
+    const QByteArray utf8 = text.toUtf8();
+    const rust::Vec<uint32_t> spans = repeated_words(rust::Str(utf8.constData(), size_t(utf8.size())));
+    for (size_t i = 0; i + 1 < spans.size(); i += 2) {
+        for (int k = int(spans[i]); k < int(spans[i + 1]) && k < int(text.size()); ++k) {
+            QTextCharFormat f = format(k);
+            f.setBackground(repeatTint);
+            setFormat(k, 1, f);
+        }
+    }
+}
+
 MarkdownHighlighter::MarkdownHighlighter(QTextDocument *doc)
     : QSyntaxHighlighter(doc)
 {
@@ -98,7 +115,9 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
         setCurrentBlockState(0);
         return;
     }
-    if (!styling) { // spell checking only
+    if (!styling) { // spell checking and repeats only
+        if (repeats)
+            tintRepeats(text);
         if (spellCheck)
             underlineMisspellings(text, std::vector<char>(size_t(text.size()), 0));
         setCurrentBlockState(0);
@@ -242,6 +261,8 @@ void MarkdownHighlighter::highlightBlock(const QString &text)
     }
 
     // Last, so the styling above doesn't overwrite the marks.
+    if (repeats)
+        tintRepeats(text);
     if (spellCheck)
         underlineMisspellings(text, marker);
 }
@@ -305,6 +326,40 @@ void MarkdownStyler::setCommentColor(const QColor &c)
     Q_EMIT commentColorChanged();
 }
 
+void MarkdownStyler::setRepeats(bool on)
+{
+    if (m_repeats == on)
+        return;
+    m_repeats = on;
+    attach();
+    Q_EMIT repeatsChanged();
+}
+
+void MarkdownStyler::setRepeatColor(const QColor &c)
+{
+    if (m_repeatColor == c)
+        return;
+    m_repeatColor = c;
+    attach();
+    Q_EMIT repeatColorChanged();
+}
+
+QColor MarkdownStyler::backgroundAt(int position) const
+{
+    QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
+    if (!doc)
+        return QColor(Qt::transparent);
+    const QTextBlock block = doc->findBlock(position);
+    if (!block.isValid() || !block.layout())
+        return QColor(Qt::transparent);
+    const int at = position - block.position();
+    for (const QTextLayout::FormatRange &r : block.layout()->formats()) {
+        if (at >= r.start && at < r.start + r.length && r.format.hasProperty(QTextFormat::BackgroundBrush))
+            return r.format.background().color();
+    }
+    return QColor(Qt::transparent);
+}
+
 void MarkdownStyler::rehighlight()
 {
     if (m_highlighter)
@@ -314,8 +369,8 @@ void MarkdownStyler::rehighlight()
 void MarkdownStyler::attach()
 {
     QTextDocument *doc = m_document ? m_document->textDocument() : nullptr;
-    // Styling or spell checking needs the highlighter.
-    if ((!m_enabled && !m_spellCheck) || !doc) {
+    // Styling, spell checking or repeats need the highlighter.
+    if ((!m_enabled && !m_spellCheck && !m_repeats) || !doc) {
         if (m_highlighter) {
             m_highlighter->setDocument(nullptr);
             delete m_highlighter;
@@ -331,6 +386,8 @@ void MarkdownStyler::attach()
     m_highlighter->markColor = m_markColor;
     m_highlighter->quoteColor = m_quoteColor;
     m_highlighter->commentTint = m_commentColor;
+    m_highlighter->repeats = m_repeats;
+    m_highlighter->repeatTint = m_repeatColor;
     m_highlighter->rehighlight();
 }
 

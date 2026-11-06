@@ -27,6 +27,7 @@ pub mod names;
 pub mod print;
 pub mod recent;
 pub mod relations;
+pub mod repeats;
 pub mod search;
 pub mod session;
 pub mod smart;

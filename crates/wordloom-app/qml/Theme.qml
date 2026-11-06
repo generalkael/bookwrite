@@ -44,6 +44,7 @@ QtObject {
     // A bar behind the line being edited (EditorView), in a colour of your
     // choice; translucent by default so it suits light and dark themes.
     property bool lineHighlight: false
+    property bool highlightRepeats: false   // tint words repeated nearby (repeats.rs)
     property color lineHighlightColor: "#40f2c14e"
 
     // Remembered between runs (~/.config/Wordloom/Wordloom.conf on Linux).
@@ -58,6 +59,7 @@ QtObject {
         property alias smartPunctuation: theme.smartPunctuation
         property alias completeNames: theme.completeNames
         property alias lineHighlight: theme.lineHighlight
+        property alias highlightRepeats: theme.highlightRepeats
         property alias lineHighlightColor: theme.lineHighlightColor
     }
 
