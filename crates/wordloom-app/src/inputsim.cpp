@@ -17,8 +17,9 @@ void InputSim::drag(QQuickWindow *window, QPointF from, QPointF to, int steps)
     const auto send = [window](QEvent::Type type, QPointF pos, Qt::MouseButton button, Qt::MouseButtons buttons) {
         const QPointF global = window->mapToGlobal(pos);
         QMouseEvent e(type, pos, pos, global, button, buttons, Qt::NoModifier, QPointingDevice::primaryPointingDevice());
+        // Delivered synchronously. No processEvents(): a nested event loop
+        // would let the self-test's own timer run its next step mid-drag.
         QGuiApplication::sendEvent(window, &e);
-        QCoreApplication::processEvents();
     };
     // Hover first, as a real pointer does.
     send(QEvent::MouseMove, from, Qt::NoButton, Qt::NoButton);

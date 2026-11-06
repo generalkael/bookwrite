@@ -272,8 +272,13 @@ Item {
             check(c.finishDrag() && titles() === "The Keeper,Arrival", "dragging a card reorders the scenes (" + titles() + ")");
             Api.call("undo");
             check(titles() === "Arrival,The Keeper", "Undo puts it back (" + titles() + ")");
+        }],
+        // Steps of their own: after Undo the cards are rebuilt on the next layout.
+        ["corkboard drag", () => {
             // The same with real mouse events, starting on the card's edge.
-            input.drag(win, c.cardGrip(1), c.cardPoint(0, 0.2));
+            const c = ws().corkboardRef(), titles = () => c.cards.map(x => x.title).join(",");
+            const from = c.cardGrip(1), to = c.cardPoint(0, 0.2);
+            if (from && to) input.drag(win, from, to);
             check(titles() === "The Keeper,Arrival", "a mouse drag moves the card (" + titles() + ")");
             if (titles() === "The Keeper,Arrival") Api.call("undo");
         }],
