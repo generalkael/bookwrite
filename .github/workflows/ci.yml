@@ -39,6 +39,14 @@ jobs:
       - name: Flatpak crate list matches Cargo.lock
         run: python3 packaging/flatpak/cargo-sources.py --check
       - run: cargo fmt --all --check
+      # Some Qt versions' qmlcachegen reject Java-reserved words (long, int,
+      # char…) as JavaScript names, which newer Qt accepts: catch them early.
+      - name: No reserved words as QML variable names
+        run: |
+          words='abstract|boolean|byte|char|double|final|float|goto|int|long|native|package|private|protected|public|short|static|synchronized|throws|transient|volatile'
+          if grep -nE "\b(const|let|var) +($words)\b|function +[A-Za-z_]*\([^)]*\b($words)\b" crates/wordloom-app/qml/*.qml; then
+            echo "Rename the variables above."; exit 1
+          fi
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: cargo build --release -p wordloom

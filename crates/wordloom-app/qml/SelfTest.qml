@@ -149,8 +149,8 @@ Item {
             // A long chapter runs on over many pages.
             const para = "The keeper climbed the hundred and twelve steps again, counting each one under his breath, and the lamp waited at the top as it always had. ";
             Api.call("setText", rowId("Arrival"), Array(60).fill(para + para).join("\n\n"));
-            const long = compile.writePdf(base + "/selftest-long.pdf");
-            check(long.ok && long.pages >= ms.pages + 10, "a long chapter continues over many pages (" + long.pages + ")");
+            const longPdf = compile.writePdf(base + "/selftest-long.pdf");
+            check(longPdf.ok && longPdf.pages >= ms.pages + 10, "a long chapter continues over many pages (" + longPdf.pages + ")");
             compile.selectFormat("markdown", 0);
         }],
         ["zip backup", () => {
