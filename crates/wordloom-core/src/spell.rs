@@ -73,6 +73,100 @@ fn load_system(lang: &str) -> Option<(Dictionary, String)> {
     None
 }
 
+/// Every installed dictionary's language code (e.g. "de_DE", "en_GB",
+/// "en_US-large"), sorted, plus the built-in "en_US".
+pub fn available() -> Vec<String> {
+    let mut out: Vec<String> = vec!["en_US".into()];
+    for dir in dictionary_dirs() {
+        let Ok(rd) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for e in rd.filter_map(|e| e.ok()) {
+            let path = e.path();
+            if path.extension().is_some_and(|x| x == "aff") && path.with_extension("dic").is_file()
+            {
+                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    // Hyphenation and thesaurus files share the folders.
+                    if !stem.starts_with("hyph_") && !stem.starts_with("th_") {
+                        out.push(stem.to_string());
+                    }
+                }
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// A readable name for a dictionary code: "English (UK)" for "en_GB".
+pub fn language_name(code: &str) -> String {
+    let (base, extra) = match code.split_once(['-', '.']) {
+        Some((b, e)) => (b, Some(e)),
+        None => (code, None),
+    };
+    let (lang, region) = match base.split_once('_') {
+        Some((l, r)) => (l, Some(r.split('_').next().unwrap_or(r))),
+        None => (base, None),
+    };
+    let lang_name = match lang {
+        "en" => "English",
+        "de" => "German",
+        "fr" => "French",
+        "es" => "Spanish",
+        "it" => "Italian",
+        "pt" => "Portuguese",
+        "nl" => "Dutch",
+        "sv" => "Swedish",
+        "da" => "Danish",
+        "nb" => "Norwegian Bokmål",
+        "nn" => "Norwegian Nynorsk",
+        "fi" => "Finnish",
+        "pl" => "Polish",
+        "cs" => "Czech",
+        "ru" => "Russian",
+        "uk" => "Ukrainian",
+        "el" => "Greek",
+        "tr" => "Turkish",
+        "hu" => "Hungarian",
+        "ro" => "Romanian",
+        "ga" => "Irish",
+        "cy" => "Welsh",
+        "ca" => "Catalan",
+        "eu" => "Basque",
+        "gl" => "Galician",
+        _ => return code.to_string(),
+    };
+    let region_name = region.map(|r| match r {
+        "US" => "US".to_string(),
+        "GB" => "UK".to_string(),
+        "AU" => "Australia".to_string(),
+        "CA" => "Canada".to_string(),
+        "NZ" => "New Zealand".to_string(),
+        "IE" => "Ireland".to_string(),
+        "ZA" => "South Africa".to_string(),
+        "IN" => "India".to_string(),
+        "DE" => "Germany".to_string(),
+        "AT" => "Austria".to_string(),
+        "CH" => "Switzerland".to_string(),
+        "FR" => "France".to_string(),
+        "BE" => "Belgium".to_string(),
+        "ES" => "Spain".to_string(),
+        "MX" => "Mexico".to_string(),
+        "BR" => "Brazil".to_string(),
+        "PT" => "Portugal".to_string(),
+        other => other.to_string(),
+    });
+    let mut name = match region_name {
+        Some(r) => format!("{lang_name} ({r})"),
+        None => lang_name.to_string(),
+    };
+    if let Some(e) = extra {
+        name.push_str(&format!(" [{e}]"));
+    }
+    name
+}
+
 impl Speller {
     /// Load the best dictionary for `lang` (default: the environment's
     /// language), and the personal word list at `personal_path`.
@@ -177,6 +271,8 @@ impl Speller {
 
 static GLOBAL: OnceLock<Mutex<Option<Speller>>> = OnceLock::new();
 static PERSONAL_PATH: OnceLock<PathBuf> = OnceLock::new();
+/// The language chosen in View ▸ Spelling Language (None: automatic).
+static LANGUAGE: Mutex<Option<String>> = Mutex::new(None);
 
 /// Where the personal word list lives; call once at startup.
 pub fn set_personal_path(path: PathBuf) {
@@ -187,8 +283,41 @@ pub fn set_personal_path(path: PathBuf) {
 pub fn with<R>(f: impl FnOnce(&mut Speller) -> R) -> R {
     let cell = GLOBAL.get_or_init(|| Mutex::new(None));
     let mut guard = cell.lock().unwrap_or_else(|e| e.into_inner());
-    let speller = guard.get_or_insert_with(|| Speller::load(None, PERSONAL_PATH.get().cloned()));
+    let speller = guard.get_or_insert_with(|| {
+        let lang = LANGUAGE.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        Speller::load(lang.as_deref(), PERSONAL_PATH.get().cloned())
+    });
     f(speller)
+}
+
+/// Switch the checker to `lang` (empty: the system language), keeping the
+/// open project's names. Returns the dictionary now in use, e.g.
+/// "de_DE (/usr/share/hunspell)"; if `lang` isn't installed, the system
+/// language's (or the built-in US English) is used instead.
+pub fn set_language(lang: &str) -> String {
+    let lang = Some(lang.trim().to_string()).filter(|l| !l.is_empty());
+    *LANGUAGE.lock().unwrap_or_else(|e| e.into_inner()) = lang.clone();
+    let cell = GLOBAL.get_or_init(|| Mutex::new(None));
+    let mut guard = cell.lock().unwrap_or_else(|e| e.into_inner());
+    let project = guard.take().map(|s| s.project).unwrap_or_default();
+    let mut speller = Speller::load(lang.as_deref(), PERSONAL_PATH.get().cloned());
+    speller.project = project;
+    let source = speller.source.clone();
+    *guard = Some(speller);
+    source
+}
+
+/// The language chosen with [`set_language`] ("" for automatic), and the
+/// environment's language.
+pub fn language() -> (String, String) {
+    (
+        LANGUAGE
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+            .unwrap_or_default(),
+        env_language().unwrap_or_default(),
+    )
 }
 
 /// Like [`with`], but does nothing if the checker hasn't been loaded yet.
@@ -203,6 +332,16 @@ pub fn if_loaded(f: impl FnOnce(&mut Speller)) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn language_names_and_list() {
+        assert_eq!(language_name("en_GB"), "English (UK)");
+        assert_eq!(language_name("de_DE_frami"), "German (Germany)");
+        assert_eq!(language_name("en_US-large"), "English (US) [large]");
+        assert_eq!(language_name("xx_YY"), "xx_YY");
+        assert_eq!(language_name("fr"), "French");
+        assert!(available().contains(&"en_US".to_string()));
+    }
 
     #[test]
     fn checks_suggests_and_learns() {

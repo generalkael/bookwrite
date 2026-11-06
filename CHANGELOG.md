@@ -54,6 +54,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Spelling language.** View ▸ Spelling Language lists the installed Hunspell dictionaries by
+  name and switches between them (or back to *Automatic*); the choice is remembered. Dictionaries
+  in `~/.local/share/hunspell` are found too, including from the Flatpak.
 - **Project templates.** File ▸ New Project… offers Blank, Novel (three acts of chapters with
   guiding synopses, protagonist, antagonist, setting, premise note), Short Story (five scenes) and
   Non-fiction (front matter, chapters of sections, back matter, outline and sources notes).

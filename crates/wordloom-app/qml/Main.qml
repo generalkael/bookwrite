@@ -64,6 +64,15 @@ ApplicationWindow {
         if (ws) ws.flush();
         if (Api.call("save") !== undefined) Api.say("Saved");
     }
+    // View ▸ Spelling Language: switch dictionaries ("" = the system's) and
+    // redraw the underlines.
+    function setSpellLanguage(code) {
+        Theme.spellLanguage = code;
+        const r = Api.call("spellSetLanguage", code);
+        Api.spellingChanged();
+        if (r) Api.say(qsTr("Spelling: %1").arg(r.dictionary));
+        return r;
+    }
     function closeProject() {
         if (ws) ws.flush();
         autoBackupDialog.beforeClose();
@@ -72,6 +81,7 @@ ApplicationWindow {
 
     // Command line: `wordloom [PROJECT] [--sample=DIR] [--screenshots=DIR [--dark]] [--selftest]`.
     Component.onCompleted: {
+        if (Theme.spellLanguage) Api.call("spellSetLanguage", Theme.spellLanguage);
         const args = Qt.application.arguments.slice(1);
         for (const a of args) {
             if (a.startsWith("--screenshots=")) shotTour.dir = a.substring(14);
@@ -342,6 +352,32 @@ ApplicationWindow {
             Action { text: qsTr("Complete &Names"); checkable: true; checked: Theme.completeNames; onTriggered: Theme.completeNames = !Theme.completeNames }
             Action { text: qsTr("Smart &Punctuation"); checkable: true; checked: Theme.smartPunctuation; onTriggered: Theme.smartPunctuation = !Theme.smartPunctuation }
             Action { text: qsTr("Check &Spelling"); shortcut: "F7"; checkable: true; checked: Theme.spellCheck; onTriggered: Theme.spellCheck = !Theme.spellCheck }
+            Menu {
+                id: spellLanguageMenu
+                title: qsTr("Spelling &Language")
+                // Installed dictionaries, read each time the menu opens.
+                property var info: ({ chosen: "", system: "", systemName: "", list: [] })
+                onAboutToShow: info = Api.call("spellLanguages") || info
+                MenuItem {
+                    text: spellLanguageMenu.info.system ? qsTr("Automatic: %1").arg(spellLanguageMenu.info.systemName) : qsTr("Automatic")
+                    checkable: true
+                    checked: Theme.spellLanguage === ""
+                    onTriggered: win.setSpellLanguage("")
+                }
+                MenuSeparator {}
+                Instantiator {
+                    model: spellLanguageMenu.info.list
+                    delegate: MenuItem {
+                        required property var modelData
+                        text: modelData.name
+                        checkable: true
+                        checked: Theme.spellLanguage === modelData.code
+                        onTriggered: win.setSpellLanguage(modelData.code)
+                    }
+                    onObjectAdded: (index, object) => spellLanguageMenu.insertItem(2 + index, object)
+                    onObjectRemoved: (index, object) => spellLanguageMenu.removeItem(object)
+                }
+            }
             Action { text: qsTr("Styled &Markdown"); checkable: true; checked: Theme.styledMarkdown; onTriggered: Theme.styledMarkdown = !Theme.styledMarkdown }
             Action { text: qsTr("Larger Text"); shortcut: StandardKey.ZoomIn; onTriggered: Theme.editorSize = Math.min(40, Theme.editorSize + 1) }
             Action { text: qsTr("Smaller Text"); shortcut: StandardKey.ZoomOut; onTriggered: Theme.editorSize = Math.max(9, Theme.editorSize - 1) }

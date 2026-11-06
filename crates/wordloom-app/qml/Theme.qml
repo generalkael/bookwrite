@@ -37,6 +37,7 @@ QtObject {
     property bool styledMarkdown: true
     // Underline misspelled words in the editor.
     property bool spellCheck: true
+    property string spellLanguage: ""   // a Hunspell code such as "en_GB"; "" follows the system
     // “Smart” quotes, dashes and ellipses as you type (EditorView.smartKey).
     property bool smartPunctuation: true
     // Suggest character and place names as you type (EditorView).
@@ -56,6 +57,7 @@ QtObject {
         property alias pageWidth: theme.pageWidth
         property alias styledMarkdown: theme.styledMarkdown
         property alias spellCheck: theme.spellCheck
+        property alias spellLanguage: theme.spellLanguage
         property alias smartPunctuation: theme.smartPunctuation
         property alias completeNames: theme.completeNames
         property alias lineHighlight: theme.lineHighlight

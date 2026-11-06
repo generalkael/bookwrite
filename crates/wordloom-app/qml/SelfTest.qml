@@ -367,6 +367,17 @@ Item {
             win.openPath(meta.path);
             check(Api.get("meta", null).title === meta.title, "the sample opens again");
         }],
+        ["spelling language", () => {
+            const info = Api.call("spellLanguages");
+            check(info && info.list.some(x => x.code === "en_US" && x.name === "English (US)"), "the installed dictionaries are listed, with names");
+            const r = win.setSpellLanguage("en_US");
+            check(Theme.spellLanguage === "en_US" && r && r.dictionary.indexOf("en_US") === 0, "choosing a language loads it (" + (r ? r.dictionary : "") + ")");
+            check(Api.call("spellCheck", "colour") === false && Api.call("spellCheck", "Mara") === true, "US English rejects “colour” and still knows the project's names");
+            const missing = win.setSpellLanguage("zz_ZZ");
+            check(missing && missing.dictionary.length > 0, "a language that isn't installed falls back (" + (missing ? missing.dictionary : "") + ")");
+            win.setSpellLanguage("");
+            check(Theme.spellLanguage === "", "Automatic follows the system again");
+        }],
         ["story bible", () => {
             const dir = Api.get("meta", null).path, base = "file://" + dir.substring(0, dir.lastIndexOf("/")) + "/selftest-bible";
             const bible = win.bibleRef();

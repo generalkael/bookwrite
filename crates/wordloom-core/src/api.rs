@@ -107,6 +107,8 @@ const READ_ONLY: &[&str] = &[
     "spellCheck",
     "spellAdd",
     "spellInfo",
+    "spellLanguages",
+    "spellSetLanguage",
     "nameStyles",
     "generateNames",
     "unusedFiles",
@@ -436,6 +438,20 @@ impl App {
                 json!(true)
             }
             "spellInfo" => json!({ "dictionary": crate::spell::with(|s| s.source.clone()) }),
+            "spellLanguages" => {
+                let (chosen, system) = crate::spell::language();
+                json!({
+                    "chosen": chosen,
+                    "system": system,
+                    "systemName": crate::spell::language_name(&system),
+                    "dictionary": crate::spell::with(|s| s.source.clone()),
+                    "list": crate::spell::available()
+                        .into_iter()
+                        .map(|c| json!({"code": c, "name": crate::spell::language_name(&c)}))
+                        .collect::<Vec<_>>(),
+                })
+            }
+            "spellSetLanguage" => json!({ "dictionary": crate::spell::set_language(a.str(0)) }),
             "nameStyles" => json!(crate::names::styles()),
             "generateNames" => {
                 let seed = std::time::SystemTime::now()
