@@ -5,8 +5,15 @@
 
 #include <QObject>
 #include <QPointF>
+#include <QString>
+#include <QtGui/qtguiglobal.h>
 
 class QQuickWindow;
+
+// Exported by QtGui (QTest uses it the same way): offers a key press to the
+// shortcut map, as the platform does for a real one; true if a shortcut took it.
+Q_GUI_EXPORT bool qt_sendShortcutOverrideEvent(QObject *o, ulong timestamp, int k, Qt::KeyboardModifiers mods,
+                                               const QString &text = QString(), bool autorep = false, ushort count = 1);
 
 class InputSim : public QObject
 {
@@ -21,6 +28,7 @@ public:
     // Qt.RightButton, …) there, holding `modifiers` (Qt.ControlModifier, …).
     Q_INVOKABLE void click(QQuickWindow *window, QPointF at, int button = Qt::LeftButton, int modifiers = 0);
     // Press and release `key` (a Qt.Key_… value) with `modifiers`
-    // (Qt.ControlModifier, …), delivered to the window's focused item.
+    // (Qt.ControlModifier, …): to a matching shortcut, as a real key press
+    // would be, or else to the window's focused item.
     Q_INVOKABLE void key(QQuickWindow *window, int key, int modifiers = 0);
 };

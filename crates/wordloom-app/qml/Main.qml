@@ -369,6 +369,9 @@ ApplicationWindow {
             Action { text: qsTr("&Relationship Map"); shortcut: "Ctrl+6"; onTriggered: win.ws.viewMode = "relations" }
             Action { text: qsTr("Rea&ding Mode"); shortcut: "Ctrl+7"; onTriggered: win.ws.viewMode = "reader" }
             MenuSeparator {}
+            Action { text: qsTr("Go &Back"); shortcut: "Alt+Left"; enabled: win.ws ? win.ws.canGoBack : false; onTriggered: win.ws.goBack() }
+            Action { text: qsTr("Go For&ward"); shortcut: "Alt+Right"; enabled: win.ws ? win.ws.canGoForward : false; onTriggered: win.ws.goForward() }
+            MenuSeparator {}
             Action { text: qsTr("&Split Editor"); shortcut: "Ctrl+\\"; checkable: true; checked: win.ws ? win.ws.splitId !== "" : false; onTriggered: win.ws.toggleSplit() }
             Action { text: qsTr("&Focus Mode"); shortcut: "F11"; checkable: true; checked: win.ws ? win.ws.focusMode : false; onTriggered: win.ws.focusMode = !win.ws.focusMode }
             Action { text: qsTr("Show &Binder"); checkable: true; checked: win.ws ? win.ws.showBinder : true; onTriggered: win.ws.showBinder = !win.ws.showBinder }

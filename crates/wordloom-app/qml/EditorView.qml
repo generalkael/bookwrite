@@ -33,6 +33,8 @@ Rectangle {
     signal closeRequested()
     // The user started typing in (or clicked into) this editor.
     signal editorFocused()
+    // The caret moved in one of the documents (for Back / Forward).
+    signal caretMoved(string docId, int pos)
 
     // Only a shown editor keeps up with the selection and edits: building
     // the documents of a big folder (the whole manuscript) takes seconds, so
@@ -275,6 +277,23 @@ Rectangle {
             }
         }
         return false;
+    }
+
+    // Put the caret back at `pos` in document `docId` (Back / Forward),
+    // building a long composite only as far as that document.
+    function placeCursor(docId, pos) {
+        const k = docs.findIndex(d => d.id === docId);
+        if (k < 0) return false;
+        if (docModel.count <= k) buildMore(k + 1 - docModel.count);
+        const it = rep.itemAt(k);
+        if (!it || !it.editor.visible) return false;
+        const a = it.editor;
+        a.forceActiveFocus();
+        a.cursorPosition = Math.max(0, Math.min(pos, a.length));
+        activeArea = a;
+        activeId = docId;
+        Qt.callLater(revealCursor, a, true);
+        return true;
     }
 
     // Scroll so the caret in `a` is visible (or centred, in typewriter mode).
@@ -921,7 +940,10 @@ Rectangle {
                 quoteColor: Theme.subtext
                 commentColor: Theme.dark ? Qt.rgba(0.85, 0.68, 0.2, 0.24) : Qt.rgba(0.96, 0.78, 0.2, 0.34)
             }
-            onCursorPositionChanged: if (activeFocus) {
+            onCursorPositionChanged: {
+                // A find hit selects text without focusing it, so it counts too.
+                if (activeFocus || ev.activeArea === area) ev.caretMoved(de.docId, cursorPosition);
+                if (!activeFocus) return;
                 ev.activeCursor = cursorPosition;
                 // Moving away (click, arrow keys) closes the suggestions.
                 if (ev.completionArea === area && (cursorPosition < ev.completionStart || ev.isLetter(text[cursorPosition]))) ev.hideCompletion();

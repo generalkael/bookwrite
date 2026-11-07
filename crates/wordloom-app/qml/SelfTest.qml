@@ -522,6 +522,34 @@ Item {
             win.openPath(meta.path);
             check(Api.get("meta", null).path === meta.path, "the original opens again");
         }],
+        ["back and forward", () => {
+            win.requestActivate();
+            ws().select(rowId("Arrival"), "editor");
+            const a = ed().firstArea();
+            a.forceActiveFocus();
+            a.cursorPosition = 7;
+            ws().select(rowId("The Storm"), "corkboard");
+        }],
+        // (One step per place: changes in one go count as one place.)
+        ["back and forward", () => { ws().select(rowId("The Keeper")); }],
+        ["back and forward", () => {
+            check(ws().canGoBack && !ws().canGoForward, "places visited are remembered");
+            ed().firstArea().forceActiveFocus();
+            input.key(win, Qt.Key_Left, Qt.AltModifier);
+            check(ws().viewMode === "corkboard" && ws().current.title === "The Storm", "Alt+← goes back to the last place, in its view, even from the text (" + ws().viewMode + ", " + ws().current.title + ")");
+            input.key(win, Qt.Key_Left, Qt.AltModifier);
+        }],
+        ["back and forward", () => {
+            const a = ed().firstArea();
+            check(ws().viewMode === "editor" && ws().current.title === "Arrival", "and again, to the document before");
+            check(a.activeFocus && a.cursorPosition === 7, "with the caret where it was (" + a.cursorPosition + ")");
+            input.click(win, Qt.point(win.width / 2, win.height / 2), Qt.ForwardButton);
+            check(ws().viewMode === "corkboard" && ws().current.title === "The Storm" && ws().canGoForward, "the mouse's Forward button goes forward");
+            ws().select(rowId("Arrival"));
+        }],
+        ["back and forward", () => {
+            check(!ws().canGoForward && ws().canGoBack, "going somewhere new drops the Forward steps");
+        }],
         ["sprint", () => {
             ws().select(rowId("Arrival"), "editor");
             sprint.durationMin = 1; sprint.goal = 3; sprint.start();

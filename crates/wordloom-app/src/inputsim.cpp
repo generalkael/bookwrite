@@ -37,6 +37,11 @@ void InputSim::key(QQuickWindow *window, int key, int modifiers)
     if (!window)
         return;
     const auto mods = Qt::KeyboardModifiers(modifiers);
+    // As a real key press: the focused item may claim it (ShortcutOverride),
+    // otherwise a matching Shortcut or menu Action takes it.
+    QObject *target = window->focusObject() ? window->focusObject() : window;
+    if (qt_sendShortcutOverrideEvent(target, 0, key, mods, QString(), false, 1))
+        return;
     QKeyEvent press(QEvent::KeyPress, key, mods);
     QGuiApplication::sendEvent(window, &press);
     QKeyEvent release(QEvent::KeyRelease, key, mods);

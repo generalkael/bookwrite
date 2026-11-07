@@ -54,6 +54,9 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Back and Forward.** Alt+← / Alt+→, the ← → toolbar buttons, View ▸ Go Back / Go Forward or
+  the mouse's side buttons step through the places you've been (an item in a view), like a web
+  browser, returning the editor's caret to where it was.
 - **Chapter snapshots.** Taking a snapshot of a folder saves every document inside it under one
   name; the folder's Snapshots tab lists each name once, with Restore All and Delete All.
 - **Character grid.** Project ▸ Character Grid… charts each character's (or place's) mentions per

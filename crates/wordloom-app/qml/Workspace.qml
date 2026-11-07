@@ -49,7 +49,8 @@ Item {
 
     readonly property int rev: Wordloom.revision
     onRevChanged: refresh()
-    onCurrentIdChanged: refresh()
+    onCurrentIdChanged: { refresh(); Qt.callLater(recordNav); }
+    onViewModeChanged: Qt.callLater(recordNav)
     onSplitIdChanged: { if (splitId === "") splitFocused = false; refresh(); }
 
     function refresh() {
@@ -88,6 +89,52 @@ Item {
         } else if (viewMode === "editor" && current.child_count > 0 && current.words === 0) {
             viewMode = "corkboard";
         }
+    }
+
+    // ---- Back / Forward (Alt+← / Alt+→, or the mouse's side buttons) ----
+    // Like a web browser: every place you go (an item in a view) is
+    // remembered, with where the editor's caret was when you left, so Back
+    // returns to the very spot after following a mention, a search hit or
+    // a corkboard card. Choosing somewhere new drops the Forward steps.
+    property var navList: []            // [{id, mode, doc, pos}]
+    property int navPos: -1
+    readonly property bool canGoBack: navPos > 0
+    readonly property bool canGoForward: navPos >= 0 && navPos < navList.length - 1
+    readonly property int navLimit: 100
+    function recordNav() {
+        if (currentId === "") return;
+        const cur = navList[navPos];
+        if (cur && cur.id === currentId && cur.mode === viewMode) return;
+        const list = navList.slice(0, navPos + 1);
+        list.push({ id: currentId, mode: viewMode, doc: "", pos: -1 });
+        while (list.length > navLimit) list.shift();
+        navList = list;
+        navPos = list.length - 1;
+    }
+    // The caret moved in the main editor: remember it with this place.
+    function noteCaret(doc, pos) {
+        const cur = navList[navPos];
+        if (!cur || cur.id !== currentId || cur.mode !== "editor" || viewMode !== "editor") return;
+        cur.doc = doc;
+        cur.pos = pos;
+    }
+    function goBack() { navStep(-1); }
+    function goForward() { navStep(1); }
+    function navStep(dir) {
+        let i = navPos + dir;
+        // Skip places whose item has since been deleted.
+        while (i >= 0 && i < navList.length && !Api.get("exists", false, navList[i].id)) i += dir;
+        if (i < 0 || i >= navList.length) return false;
+        flush();
+        const e = navList[i];
+        navPos = i;
+        if (e.mode === "editor") { currentId = e.id; viewMode = e.mode; }
+        else { viewMode = e.mode; currentId = e.id; }
+        if (e.mode === "editor" && e.doc !== "") {
+            const doc = e.doc, pos = e.pos;
+            Qt.callLater(() => editorView.placeCursor(doc, pos));
+        }
+        return true;
     }
 
     function outlinerRef() { return outliner; }
@@ -280,6 +327,15 @@ Item {
             RowLayout {
                 anchors.fill: parent
                 spacing: 4
+                ToolButton {
+                    text: "←"; font.pixelSize: 16; enabled: ws.canGoBack; onClicked: ws.goBack()
+                    ToolTip.visible: hovered; ToolTip.text: qsTr("Back (Alt+←)")
+                }
+                ToolButton {
+                    text: "→"; font.pixelSize: 16; enabled: ws.canGoForward; onClicked: ws.goForward()
+                    ToolTip.visible: hovered; ToolTip.text: qsTr("Forward (Alt+→)")
+                }
+                ToolSeparator {}
                 ToolButton { text: "+ " + qsTr("Document"); onClicked: ws.addItem("text"); ToolTip.visible: hovered; ToolTip.text: qsTr("New document (Ctrl+N)") }
                 ToolButton { text: "+ " + qsTr("Folder"); onClicked: ws.addItem("folder") }
                 ToolSeparator {}
@@ -379,6 +435,7 @@ Item {
                         targeted: ws.splitId !== "" && !ws.inSplit
                         onEditorFocused: ws.splitFocused = false
                         onOpenRequested: (id) => ws.selectMain(id, "editor")
+                        onCaretMoved: (doc, pos) => ws.noteCaret(doc, pos)
                     }
                     CorkboardView {
                         id: corkboard
@@ -537,6 +594,17 @@ Item {
         onClicked: ws.focusMode = false
     }
     Shortcut { sequence: "Escape"; enabled: ws.focusMode; onActivated: ws.focusMode = false }
+    // The mouse's Back / Forward side buttons, anywhere in the window. On a
+    // layer above everything, since the text and lists take any press they
+    // get; other buttons pass straight through it.
+    Item {
+        anchors.fill: parent
+        z: 1000
+        TapHandler {
+            acceptedButtons: Qt.BackButton | Qt.ForwardButton
+            onTapped: (point, button) => { if (button === Qt.BackButton) ws.goBack(); else ws.goForward(); }
+        }
+    }
 
     CompareDialog {
         id: compareDialog
