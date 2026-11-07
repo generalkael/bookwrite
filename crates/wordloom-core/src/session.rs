@@ -296,6 +296,43 @@ impl Session {
         Ok(())
     }
 
+    /// Star or unstar an item (a section can't be starred). Returns
+    /// whether it's starred now.
+    pub fn set_favorite(&mut self, id: &str, on: bool) -> Result<bool> {
+        let id = parse_id(id)?;
+        if self.project.is_root(id) {
+            return Err(Error::Invalid("a section can't be a favourite".into()));
+        }
+        self.project.node_mut(id)?.favorite = on;
+        self.dirty = true;
+        Ok(on)
+    }
+
+    /// The Favourites list: starred items in binder order, with where they
+    /// are ("Manuscript › The Storm").
+    pub fn favorites(&self) -> Value {
+        let p = &self.project;
+        let rows: Vec<Value> = p
+            .favorites()
+            .into_iter()
+            .map(|id| {
+                let n = &p.nodes[&id];
+                let mut path: Vec<&str> = p
+                    .ancestors(id)
+                    .iter()
+                    .rev()
+                    .map(|a| p.nodes[a].title.as_str())
+                    .collect();
+                if path.len() > 2 {
+                    path.drain(1..path.len() - 1);
+                    path.insert(1, "…");
+                }
+                json!({"id": id, "title": n.title, "kind": n.kind, "where": path.join(" › ")})
+            })
+            .collect();
+        json!(rows)
+    }
+
     pub fn set_all_expanded(&mut self, expanded: bool) {
         for n in self.project.nodes.values_mut() {
             if !n.children.is_empty() {
@@ -338,6 +375,7 @@ impl Session {
             "include_in_compile": n.include_in_compile,
             "target_words": n.target_words,
             "fields": n.fields,
+            "favorite": n.favorite,
             "file": n.file.as_ref().map(|f| self.file_info(f)),
             "words": p.own_words(id),
             "total_words": p.total_words(id),

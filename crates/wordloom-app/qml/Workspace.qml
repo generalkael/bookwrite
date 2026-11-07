@@ -227,6 +227,13 @@ Item {
         const id = Api.call("split", ed.activeId, ed.activeCursor, "");
         if (id) { select(id, "editor"); binder.startRename(id); }
     }
+    // Star or unstar the selected item (Project ▸ Add to Favourites).
+    function toggleFavorite() {
+        if (!focusedId || !focusedNode || focusedNode.is_root) return;
+        const on = !focusedNode.favorite;
+        Api.call("setFavorite", focusedId, on);
+        Api.say(on ? qsTr("Added “%1” to Favourites").arg(focusedNode.title) : qsTr("Removed “%1” from Favourites").arg(focusedNode.title));
+    }
     function mergeNext() { if (focusedId) { flush(); Api.call("mergeWithNext", focusedId); } }
     function focusSearch() { binder.focusSearch(); }
     // Find (and replace) in the open document: the split editor if you are

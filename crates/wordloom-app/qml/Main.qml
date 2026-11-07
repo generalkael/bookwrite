@@ -141,7 +141,7 @@ ApplicationWindow {
         property string dir: ""
         property bool dark: false
         property int step: 0
-        readonly property var views: ["editor", "multiselect", "corkboard", "carddrag", "outliner", "styled", "complete", "linebar", "repeats", "footnote", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "grid", "autobackup", "newproject", "reader", "focus", "start"]
+        readonly property var views: ["editor", "multiselect", "favorites", "corkboard", "carddrag", "outliner", "styled", "complete", "linebar", "repeats", "footnote", "timeline", "lanes", "event", "search", "goto", "compile", "pdf", "stats", "settings", "add", "undo", "split", "file", "compare", "relations", "relation", "names", "history", "sprint", "analysis", "grid", "autobackup", "newproject", "reader", "focus", "start"]
         interval: 700
         repeat: true
         // Even ticks switch view, odd ticks capture it.
@@ -166,6 +166,7 @@ ApplicationWindow {
                 Theme.highlightRepeats = v === "repeats";
                 if (v !== "split") win.ws.splitId = "";
                 win.ws.binderRef().clearPicks();
+                if (v !== "favorites") for (const f of Api.get("favorites", [])) Api.call("setFavorite", f.id, false);
                 // The last research item: an imported file in the sample.
                 const research = Api.get("children", [], Api.call("rootId", "research"));
                 const fileItem = research.length ? research[research.length - 1].id : "";
@@ -218,6 +219,11 @@ ApplicationWindow {
                     const rows = Api.get("binder", []), id = (t) => rows.find(r => r.title === t).id;
                     win.ws.select(id("Arrival"), "editor");
                     Qt.callLater(() => { const b = win.ws.binderRef(); b.togglePick(id("The Keeper")); b.togglePick(id("Night Watch")); });
+                }
+                else if (v === "favorites") {
+                    const rows = Api.get("binder", []), id = (t) => rows.find(r => r.title === t).id;
+                    for (const t of ["Night Watch", "Mara Quinn", "Lighthouse operation, 1890s"]) Api.call("setFavorite", id(t), true);
+                    win.ws.select(id("Night Watch"), "editor");
                 }
                 else if (v === "carddrag") {
                     win.ws.select(Api.get("binder", []).find(r => r.title === "The Storm").id, "corkboard");
@@ -348,6 +354,11 @@ ApplicationWindow {
             Action { text: qsTr("D&uplicate"); shortcut: "Ctrl+D"; onTriggered: win.ws.duplicate() }
             Action { text: qsTr("Split at Cursor"); shortcut: "Ctrl+K"; onTriggered: win.ws.splitAtCursor() }
             Action { text: qsTr("Merge with Next"); shortcut: "Ctrl+Shift+M"; onTriggered: win.ws.mergeNext() }
+            Action {
+                text: win.ws && win.ws.focusedNode && win.ws.focusedNode.favorite ? qsTr("Remove from Fa&vourites") : qsTr("Add to Fa&vourites")
+                shortcut: "Ctrl+Shift+D"
+                onTriggered: win.ws.toggleFavorite()
+            }
             Action { text: qsTr("Move to &Trash"); onTriggered: win.ws.trashCurrent() }
             Action { text: qsTr("&Empty Trash"); onTriggered: win.ws.emptyTrash() }
             MenuSeparator {}

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtCore
 import com.wordloom.app
 
 // The binder: project tree with drag-and-drop, inline rename, keyboard
@@ -26,11 +27,21 @@ Rectangle {
 
     function reload() {
         rows = Api.get("binder", []);
+        favorites = Api.get("favorites", []);
         // Forget picks that went away (trashed, undone, collapsed out of view).
         const keep = {};
         for (const r of rows) if (picked[r.id]) keep[r.id] = true;
         if (Object.keys(keep).length !== pickCount) picked = keep;
     }
+
+    // ---- Favourites: starred items, listed above the tree in binder order
+    // (right-click ▸ Add to Favourites, or Project ▸ Add to Favourites).
+    property var favorites: []
+    property bool favoritesOpen: true
+    Settings { category: "binder"; property alias favoritesOpen: pane.favoritesOpen }
+    function setFavorite(id, on) { Api.call("setFavorite", id, on); }
+    // Window coordinates of the middle of Favourites entry `i` (self-test).
+    function favoritePoint(i) { favRep.positionViewAtIndex(i, ListView.Contain); const it = favRep.itemAtIndex(i); return it ? it.mapToItem(null, it.width / 2, it.height / 2) : null; }
 
     // ---- Multi-selection: Ctrl+click adds or removes an item, Shift+click
     // picks a range. Right-click on a picked item, or Delete, acts on all
@@ -88,6 +99,71 @@ Rectangle {
             placeholderText: qsTr("Search project…")
             selectByMouse: true
             Keys.onEscapePressed: { text = ""; list.forceActiveFocus(); }
+        }
+
+        // Favourites (hidden while searching, or when nothing is starred).
+        Column {
+            id: favBox
+            Layout.fillWidth: true
+            visible: pane.favorites.length > 0 && searchField.text.trim().length === 0
+            Item {
+                width: favBox.width
+                height: 24
+                Label {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (pane.favoritesOpen ? "▾  " : "▸  ") + qsTr("★ Favourites") + (pane.favoritesOpen ? "" : "  (" + pane.favorites.length + ")")
+                    color: Theme.subtext
+                    font.bold: true
+                }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: pane.favoritesOpen = !pane.favoritesOpen }
+            }
+            // At most a third of the pane; more than that scrolls.
+            ListView {
+                id: favRep
+                width: favBox.width
+                height: Math.min(count * 26, Math.max(52, pane.height / 3))
+                clip: true
+                interactive: contentHeight > height
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar {}
+                model: pane.favoritesOpen ? pane.favorites : []
+                delegate: Item {
+                    id: fav
+                    required property var modelData
+                    width: favBox.width
+                    height: 26
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.leftMargin: 4
+                        anchors.rightMargin: 4
+                        radius: 4
+                        color: fav.modelData.id === pane.currentId ? Theme.selection : (favHover.hovered ? Qt.rgba(0.5, 0.5, 0.5, 0.12) : "transparent")
+                    }
+                    HoverHandler { id: favHover }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 8
+                        spacing: 4
+                        KindIcon { kind: fav.modelData.kind; role: "" }
+                        Label { text: fav.modelData.title; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
+                    }
+                    ToolTip.visible: favHover.hovered && fav.modelData.where !== ""
+                    ToolTip.delay: 600
+                    ToolTip.text: fav.modelData.where
+                    TapHandler { onTapped: pane.selected(fav.modelData.id); onDoubleTapped: pane.activated(fav.modelData.id) }
+                    TapHandler { acceptedButtons: Qt.RightButton; onTapped: favMenu.popup() }
+                    Menu {
+                        id: favMenu
+                        MenuItem { text: qsTr("Open"); onTriggered: pane.activated(fav.modelData.id) }
+                        MenuItem { text: qsTr("Open in Split Editor"); onTriggered: pane.openInSplit(fav.modelData.id) }
+                        MenuItem { text: qsTr("Remove from Favourites"); onTriggered: pane.setFavorite(fav.modelData.id, false) }
+                    }
+                }
+            }
+            Rectangle { width: favBox.width; height: 1; color: Theme.border }
         }
 
         SearchPane {
@@ -189,6 +265,12 @@ Rectangle {
                         font.bold: row.isRoot
                         elide: Text.ElideRight
                         Layout.fillWidth: true
+                    }
+                    Label {
+                        visible: row.modelData.favorite && pane.renamingId !== row.modelData.id
+                        text: "★"
+                        color: Theme.accent
+                        font.pixelSize: 11
                     }
                     // Progress toward this item's word target.
                     Rectangle {
@@ -294,6 +376,7 @@ Rectangle {
                     MenuSeparator {}
                     MenuItem { text: qsTr("Open in Split Editor"); enabled: !row.isRoot; onTriggered: pane.openInSplit(row.modelData.id) }
                     MenuSeparator {}
+                    MenuItem { text: row.modelData.favorite ? qsTr("Remove from Favourites") : qsTr("Add to Favourites"); enabled: !row.isRoot; onTriggered: pane.setFavorite(row.modelData.id, !row.modelData.favorite) }
                     MenuItem { text: qsTr("Rename"); enabled: !row.isRoot; onTriggered: pane.startRename(row.modelData.id) }
                     MenuItem { text: qsTr("Duplicate"); enabled: !row.isRoot; onTriggered: Api.call("duplicate", row.modelData.id) }
                     MenuItem { text: qsTr("Move Up"); enabled: !row.isRoot; onTriggered: Api.call("shift", row.modelData.id, -1) }

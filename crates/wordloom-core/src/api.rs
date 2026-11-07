@@ -92,6 +92,7 @@ impl Args<'_> {
 
 /// Methods that only read state.
 const READ_ONLY: &[&str] = &[
+    "favorites",
     "templates",
     "binder",
     "nodeInfo",
@@ -398,6 +399,8 @@ impl App {
             // --- binder ---
             "binder" => self.s()?.binder(),
             "rootId" => json!(self.s()?.root_id(a.str(0))?),
+            "setFavorite" => json!(self.s()?.set_favorite(a.str(0), a.bool(1))?),
+            "favorites" => self.s()?.favorites(),
             "toggleExpanded" => unit(self.s()?.toggle_expanded(a.str(0)))?,
             "reveal" => unit(self.s()?.reveal(a.str(0)))?,
             "goTo" => self.s()?.go_to(a.str(0)),
@@ -836,6 +839,53 @@ mod tests {
         assert_eq!(ok(&app.call("redo", "")), "Import File");
         let info = ok(&app.call("nodeInfo", &json!([id]).to_string()));
         assert_eq!(info["file"]["exists"], true);
+    }
+
+    #[test]
+    fn favourites_list_in_binder_order_and_survive_undo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut app = App::new(tmp.path().join("recent.json"));
+        let url = url::Url::from_file_path(tmp.path()).unwrap().to_string();
+        ok(&app.call("newProject", &json!([url, "Book", "Me"]).to_string()));
+        let ms = ok(&app.call("rootId", r#"["manuscript"]"#));
+        let folder = ok(&app.call("add", &json!([ms, "folder", "Part", true]).to_string()));
+        let a = ok(&app.call("add", &json!([folder, "text", "A", true]).to_string()));
+        let b = ok(&app.call("add", &json!([ms, "text", "B", true]).to_string()));
+        let titles = |app: &mut App| -> Vec<String> {
+            ok(&app.call("favorites", ""))
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|f| f["title"].as_str().unwrap().to_string())
+                .collect()
+        };
+        // Starred B first, A second: listed in binder order all the same.
+        ok(&app.call("setFavorite", &json!([b, true]).to_string()));
+        ok(&app.call("setFavorite", &json!([a, true]).to_string()));
+        assert_eq!(titles(&mut app), ["A", "B"]);
+        let fav = ok(&app.call("favorites", ""));
+        assert_eq!(fav[0]["where"], "Manuscript › Part");
+        assert_eq!(
+            ok(&app.call("nodeInfo", &json!([a]).to_string()))["favorite"],
+            true
+        );
+        assert!(app
+            .call("setFavorite", &json!([ms, true]).to_string())
+            .error
+            .is_some());
+        // Not an undo step, and an undo doesn't unstar anything.
+        ok(&app.call("setField", &json!([b, "title", "Bee"]).to_string()));
+        ok(&app.call("setFavorite", &json!([b, false]).to_string()));
+        assert_eq!(app.undo_redo().0.as_deref(), Some("Rename"));
+        ok(&app.call("undo", ""));
+        assert_eq!(titles(&mut app), ["A"]);
+        // Copies aren't starred; trashed items drop out until restored.
+        ok(&app.call("duplicate", &json!([a]).to_string()));
+        assert_eq!(titles(&mut app), ["A"]);
+        ok(&app.call("trash", &json!([folder]).to_string()));
+        assert!(titles(&mut app).is_empty());
+        ok(&app.call("undo", ""));
+        assert_eq!(titles(&mut app), ["A"]);
     }
 
     #[test]

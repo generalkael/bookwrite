@@ -54,6 +54,8 @@ Notable changes to Wordloom. Each entry lands in the same commit as the change i
   highlighted, and left out of word counts, compile, reading mode and the Markdown preview. The
   Details panel's Notes tab lists the comments in the item (and the items under it); click one to
   jump to it in the editor.
+- **Favourites.** Star items (binder right-click, or Ctrl+Shift+D) to list them under ★ Favourites
+  at the top of the binder, in binder order; starred items show ★ in the tree.
 - **Back and Forward.** Alt+← / Alt+→, the ← → toolbar buttons, View ▸ Go Back / Go Forward or
   the mouse's side buttons step through the places you've been (an item in a view), like a web
   browser, returning the editor's caret to where it was.

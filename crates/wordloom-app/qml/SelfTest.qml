@@ -550,6 +550,21 @@ Item {
         ["back and forward", () => {
             check(!ws().canGoForward && ws().canGoBack, "going somewhere new drops the Forward steps");
         }],
+        ["favourites", () => {
+            ws().select(rowId("The Keeper"));
+            input.key(win, Qt.Key_D, Qt.ControlModifier | Qt.ShiftModifier);
+            const b = ws().binderRef();
+            check(b.favorites.length === 1 && b.favorites[0].title === "The Keeper" && b.favorites[0].where === "Manuscript › The Storm", "Ctrl+Shift+D adds the item to Favourites (" + JSON.stringify(b.favorites) + ")");
+            check(b.rows.find(r => r.title === "The Keeper").favorite, "and the binder marks it with a star");
+            ws().select(rowId("Confession"));
+        }],
+        ["favourites", () => {
+            const p = ws().binderRef().favoritePoint(0);
+            input.click(win, p);
+            check(ws().current.title === "The Keeper", "clicking a favourite opens it (" + ws().current.title + ")");
+            input.key(win, Qt.Key_D, Qt.ControlModifier | Qt.ShiftModifier);
+            check(ws().binderRef().favorites.length === 0, "Ctrl+Shift+D again takes it off the list");
+        }],
         ["sprint", () => {
             ws().select(rowId("Arrival"), "editor");
             sprint.durationMin = 1; sprint.goal = 3; sprint.start();

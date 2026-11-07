@@ -142,6 +142,10 @@ pub struct Node {
     pub fields: BTreeMap<String, String>,
     #[serde(default = "yes")]
     pub expanded: bool,
+    /// Starred, to show in the binder's Favourites list. Like `expanded`,
+    /// it's a view preference: undo leaves it alone.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub favorite: bool,
     /// An imported file (image, PDF, …) this item shows, as a name inside
     /// the bundle's `files/` directory.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -173,6 +177,7 @@ impl Node {
             target_words: None,
             fields: BTreeMap::new(),
             expanded: true,
+            favorite: false,
             file: None,
             created: now,
             modified: now,
@@ -236,6 +241,7 @@ pub struct FlatRow {
     pub depth: usize,
     pub has_children: bool,
     pub expanded: bool,
+    pub favorite: bool,
     pub label_color: Option<String>,
     /// Word target, and words so far (this item and everything inside it);
     /// `words` is only filled in when there is a target.
@@ -348,6 +354,16 @@ impl Project {
                 None => return n.role.ok_or(Error::Invalid("orphan node".into())),
             }
         }
+    }
+
+    /// Starred items in binder order, leaving out anything in the Trash.
+    pub fn favorites(&self) -> Vec<NodeId> {
+        self.roots
+            .iter()
+            .filter(|r| self.nodes[*r].role != Some(RootRole::Trash))
+            .flat_map(|r| self.subtree(*r))
+            .filter(|id| self.nodes[id].favorite)
+            .collect()
     }
 
     pub fn is_root(&self, id: NodeId) -> bool {
@@ -548,6 +564,7 @@ impl Project {
         copy.id = Uuid::new_v4();
         copy.parent = Some(parent);
         copy.children = Vec::new();
+        copy.favorite = false;
         copy.created = now;
         copy.modified = now;
         let new_id = copy.id;
@@ -625,6 +642,7 @@ impl Project {
             depth,
             has_children: !n.children.is_empty(),
             expanded: n.expanded,
+            favorite: n.favorite,
             label_color: n.label.and_then(|l| self.label(l)).map(|l| l.color.clone()),
             target_words: n.target_words,
             words: n.target_words.map(|_| self.total_words(id)),

@@ -227,6 +227,7 @@ fn apply(p: &mut Project, state: Project, texts: &[TextChange], back: bool) -> P
     for n in p.nodes.values_mut() {
         if let Some(c) = current.nodes.get(&n.id) {
             n.expanded = c.expanded;
+            n.favorite = c.favorite;
         }
     }
     for t in texts {
